@@ -97,6 +97,15 @@ def run():
         pine_admin.save()
         print("✓ Created Pine Hills Admin: admin@pinehills.local (pass: admin123)")
 
+    pine_hills.owner = pine_admin
+    pine_hills.status = 'approved'
+    pine_hills.business_permit_number = 'BP-2026-MALAY-0812'
+    pine_hills.bir_tin = '123-456-789-000'
+    pine_hills.payout_method = 'GCash'
+    pine_hills.payout_account_name = 'Pine Hills Hotel Inc.'
+    pine_hills.payout_account_number = '09185551002'
+    pine_hills.save()
+
     # Pine Hills Room Types
     rt_ph_standard, _ = RoomType.objects.get_or_create(
         hotel=pine_hills,
@@ -247,6 +256,65 @@ def run():
 
     for i in range(1, 5):
         Room.objects.get_or_create(hotel=mountain_view, room_number=f"Cottage {i}", defaults={'room_type': rt_mv_std, 'floor': 'Ground'})
+
+    # 5b. Pending Hotel Application for Superadmin Review Demo
+    breeze_owner, created = User.objects.get_or_create(
+        username='breeze_owner',
+        defaults={
+            'email': 'owner@kitangladbreeze.ph',
+            'first_name': 'Rogelio',
+            'last_name': 'Dela Torre',
+            'role': 'admin',
+            'phone_number': '+63 920 444 8899'
+        }
+    )
+    if created:
+        breeze_owner.set_password('breeze123')
+        breeze_owner.save()
+        print("✓ Created Breeze Owner: owner@kitangladbreeze.ph (pass: breeze123)")
+
+    kitanglad_breeze, _ = Hotel.objects.get_or_create(
+        slug='kitanglad-breeze-eco-lodge',
+        defaults={
+            'name': 'Kitanglad Breeze Eco Lodge',
+            'tagline': 'Serene agro-tourism stay with panoramic canyon ridge views',
+            'description': 'A new eco-resort nestled along the foothills of Mount Kitanglad featuring rustic wooden cabins, strawberry picking, and fresh mountain spring water.',
+            'address': 'Sitio Kaatuan, Lantapan / Malaybalay Border, Bukidnon',
+            'city': 'Malaybalay City',
+            'province': 'Bukidnon',
+            'contact_phone': '+63 920 444 8899',
+            'contact_email': 'stay@kitangladbreeze.ph',
+            'image_url': 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
+            'amenities': ['Free Wi-Fi', 'Mountain Trekking Guides', 'Bonfire Pit', 'Solar Powered Hot Showers'],
+            'rating': 5.0,
+            'review_count': 4,
+            'status': 'pending',
+            'business_permit_number': 'BP-2026-MALAY-9941',
+            'bir_tin': '987-654-321-000',
+            'payout_method': 'GCash',
+            'payout_account_name': 'Rogelio Dela Torre',
+            'payout_account_number': '09204448899',
+            'owner': breeze_owner,
+            'is_active': True,
+        }
+    )
+    breeze_owner.hotel = kitanglad_breeze
+    breeze_owner.save()
+
+    # Room types for pending hotel
+    rt_breeze_cabin, _ = RoomType.objects.get_or_create(
+        hotel=kitanglad_breeze,
+        name='Pine Ridge Wooden Cabin',
+        defaults={
+            'description': 'Cozy A-frame cabin surrounded by native pine trees and birdsong.',
+            'base_rate': 2100.00,
+            'capacity': 2,
+            'amenities': ['1 Queen Bed', 'Balcony Deck', 'Hot Shower', 'Complimentary Breakfast'],
+            'photos': ['https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80']
+        }
+    )
+    for i in range(1, 4):
+        Room.objects.get_or_create(hotel=kitanglad_breeze, room_number=f"Cabin {i}", defaults={'room_type': rt_breeze_cabin, 'floor': 'Ground'})
 
     # 6. Sample Bookings for Pine Hills Hotel
     now = timezone.now()
