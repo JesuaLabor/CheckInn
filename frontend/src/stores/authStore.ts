@@ -8,6 +8,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
+  loginWithGoogle: (idToken: string, profile?: { email?: string; first_name?: string; last_name?: string }) => Promise<boolean>;
   quickLogin: (accountKey: 'guest' | 'pine_staff' | 'firstinn_staff' | 'pine_admin' | 'breeze_owner' | 'superadmin') => Promise<boolean>;
   setSession: (token: string, user: User) => void;
   logout: () => void;
@@ -37,6 +38,27 @@ export const useAuthStore = create<AuthState>((set) => ({
       return true;
     } catch (err: any) {
       const msg = err.response?.data?.detail || 'Invalid username or password';
+      set({ error: msg, isLoading: false });
+      return false;
+    }
+  },
+
+  loginWithGoogle: async (idToken: string, profile?: { email?: string; first_name?: string; last_name?: string }) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.post('/auth/google/', {
+        id_token: idToken,
+        email: profile?.email,
+        first_name: profile?.first_name,
+        last_name: profile?.last_name,
+      });
+      const { access, user } = res.data;
+      localStorage.setItem('checkinn_token', access);
+      localStorage.setItem('checkinn_user', JSON.stringify(user));
+      set({ token: access, user, isLoading: false });
+      return true;
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || 'Google sign-in failed.';
       set({ error: msg, isLoading: false });
       return false;
     }
