@@ -1,0 +1,74 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: checkinn_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: checkinn_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: checkinnpassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: checkinn_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: checkinn_backend
+    restart: unless-stopped
+    environment:
+      DJANGO_DEBUG: "True"
+      DJANGO_SECRET_KEY: "checkinn-prod-secret-key-malaybalay-bukidnon"
+      DB_NAME: checkinn_db
+      DB_USER: postgres
+      DB_PASSWORD: checkinnpassword
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: "redis://redis:6379/0"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: checkinn_celery
+    restart: unless-stopped
+    command: celery -A config worker --loglevel=info
+    environment:
+      DJANGO_DEBUG: "True"
+      DB_NAME: checkinn_db
+      DB_USER: postgres
+      DB_PASSWORD: checkinnpassword
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      - backend
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: checkinn_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

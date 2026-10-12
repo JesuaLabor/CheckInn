@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$DIR"
+
+echo "========================================================="
+echo "   Starting CheckInn (LocalStay Management Platform)    "
+echo "   Malaybalay City Digital Lodging Marketplace          "
+echo "========================================================="
+
+# 1. Activate backend virtualenv and run migrations + seeds
+source backend/venv/bin/activate
+echo "1. Migrating & ensuring Malaybalay seed data is loaded..."
+cd backend
+python manage.py migrate --noinput
+python seed_data.py
+cd ..
+
+# 2. Launch Django Backend
+echo "2. Launching Django REST API on http://localhost:8000..."
+backend/venv/bin/python backend/manage.py runserver 0.0.0.0:8000 &
+BACKEND_PID=$!
+
+# 3. Launch Frontend Vite Server
+echo "3. Launching React Vite Frontend on http://localhost:5173..."
+cd frontend
+npm run dev -- --host &
+FRONTEND_PID=$!
+cd ..
+
+echo ""
+echo "========================================================="
+echo "   CheckInn is LIVE!                                    "
+echo "   - Marketplace & Guest Portal: http://localhost:5173   "
+echo "   - REST API & Django Admin:    http://localhost:8000   "
+echo "========================================================="
+echo "Press Ctrl+C to stop all servers."
+
+trap "kill $BACKEND_PID $FRONTEND_PID; exit" INT TERM
+wait
