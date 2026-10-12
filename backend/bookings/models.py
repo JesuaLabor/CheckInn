@@ -95,20 +95,23 @@ class Booking(models.Model):
         return timezone.now() < self.hold_expires_at
 
     def generate_qr_token(self):
-        signer = Signer(salt='checkinn-qr-checkin')
+        signer = Signer(salt='localstay-qr-checkin')
         token_payload = f"{self.id}:{self.booking_reference}:{self.hotel_id}:{self.check_in}"
         signed_token = signer.sign(token_payload)
         self.qr_token = signed_token
         return signed_token
 
     def verify_qr_token(self, token):
-        signer = Signer(salt='checkinn-qr-checkin')
-        try:
-            val = signer.unsign(token)
-            parts = val.split(':')
-            return int(parts[0]) == self.id and parts[1] == self.booking_reference
-        except Exception:
-            return False
+        for salt in ('localstay-qr-checkin', 'checkinn-qr-checkin'):
+            signer = Signer(salt=salt)
+            try:
+                val = signer.unsign(token)
+                parts = val.split(':')
+                if int(parts[0]) == self.id and parts[1] == self.booking_reference:
+                    return True
+            except Exception:
+                continue
+        return False
 
     def __str__(self):
         return f"{self.booking_reference} - {self.guest_name} ({self.get_status_display()})"

@@ -14,7 +14,7 @@ class MultiTenantSaaSTests(TestCase):
         # Superadmin
         self.superadmin = User.objects.create_superuser(
             username='platform_admin',
-            email='platform@checkinn.ph',
+            email='platform@localstay.ph',
             password='Password123!',
             role='superadmin'
         )

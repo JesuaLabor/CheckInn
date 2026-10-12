@@ -132,7 +132,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-slate-100">
           <div>
             <h2 className="text-xl font-black text-slate-900 tracking-tight">
-              {tab === 'login' ? 'Sign In to CheckInn' : 'Register Guest Account'}
+              {tab === 'login' ? 'Sign In to LocalStay' : 'Register Guest Account'}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Malaybalay City Lodging Platform • Instant Soft-Hold Passes

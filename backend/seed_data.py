@@ -14,25 +14,25 @@ User = get_user_model()
 
 
 def run():
-    print("🌱 Seeding CheckInn database for Malaybalay City lodging...")
+    print("🌱 Seeding LocalStay database for Malaybalay City lodging...")
 
     # 1. Platform Superadmin
     if not User.objects.filter(username='superadmin').exists():
         admin = User.objects.create_superuser(
             username='superadmin',
-            email='admin@checkinn.local',
+            email='admin@localstay.local',
             password='admin123',
             first_name='Platform',
             last_name='Admin',
             role='superadmin'
         )
-        print("✓ Created Superadmin: admin@checkinn.local (pass: admin123)")
+        print("✓ Created Superadmin: admin@localstay.local (pass: admin123)")
 
     # 2. Demo Guest User
     guest_user, created = User.objects.get_or_create(
         username='juandelacruz',
         defaults={
-            'email': 'guest@checkinn.local',
+            'email': 'guest@localstay.local',
             'first_name': 'Juan',
             'last_name': 'Dela Cruz',
             'phone_number': '+63 917 123 4567',
@@ -42,7 +42,7 @@ def run():
     if created:
         guest_user.set_password('guest123')
         guest_user.save()
-        print("✓ Created Demo Guest: guest@checkinn.local (pass: guest123)")
+        print("✓ Created Demo Guest: guest@localstay.local (pass: guest123)")
 
     # 3. Pine Hills Hotel
     pine_hills, _ = Hotel.objects.get_or_create(
@@ -328,7 +328,7 @@ def run():
             'room_type': rt_ph_deluxe,
             'guest': guest_user,
             'guest_name': 'Juan Dela Cruz',
-            'guest_email': 'guest@checkinn.local',
+            'guest_email': 'guest@localstay.local',
             'guest_phone': '+63 917 123 4567',
             'guest_count': 2,
             'check_in': today + timedelta(days=2),
@@ -353,7 +353,7 @@ def run():
             'room': room_201,
             'guest': guest_user,
             'guest_name': 'Juan Dela Cruz',
-            'guest_email': 'guest@checkinn.local',
+            'guest_email': 'guest@localstay.local',
             'guest_phone': '+63 917 123 4567',
             'guest_count': 2,
             'check_in': today,
@@ -411,7 +411,7 @@ def run():
             }
         )
 
-    print("🎉 Seeding complete! CheckInn backend is ready for Malaybalay City lodging.")
+    print("🎉 Seeding complete! LocalStay backend is ready for Malaybalay City lodging.")
 
 
 if __name__ == '__main__':

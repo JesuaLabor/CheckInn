@@ -35,7 +35,7 @@ export const PWAInstallPrompt: React.FC = () => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       // Don't show immediately if user recently dismissed
-      const dismissedUntil = localStorage.getItem('checkinn_pwa_dismissed');
+      const dismissedUntil = localStorage.getItem('localstay_pwa_dismissed') || localStorage.getItem('checkinn_pwa_dismissed');
       if (!dismissedUntil || Date.now() > parseInt(dismissedUntil, 10)) {
         setShowPrompt(true);
       }
@@ -82,7 +82,7 @@ export const PWAInstallPrompt: React.FC = () => {
     setShowPrompt(false);
     setShowIOSInstructions(false);
     // Dismiss for 24 hours
-    localStorage.setItem('checkinn_pwa_dismissed', (Date.now() + 24 * 60 * 60 * 1000).toString());
+    localStorage.setItem('localstay_pwa_dismissed', (Date.now() + 24 * 60 * 60 * 1000).toString());
   };
 
   return (
@@ -91,7 +91,7 @@ export const PWAInstallPrompt: React.FC = () => {
       {isOffline && (
         <div className="fixed top-0 inset-x-0 z-50 bg-amber-600 text-white text-xs font-semibold py-2 px-4 shadow-md flex items-center justify-center gap-2 transition-all duration-300">
           <WifiOff className="w-4 h-4 animate-pulse" />
-          <span>You are currently offline. CheckInn is serving cached Malaybalay listings and booking passes.</span>
+          <span>You are currently offline. LocalStay is serving cached Malaybalay listings and booking passes.</span>
         </div>
       )}
 
@@ -102,7 +102,7 @@ export const PWAInstallPrompt: React.FC = () => {
             <Check className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-xs font-bold">CheckInn App Installed!</p>
+            <p className="text-xs font-bold">LocalStay App Installed!</p>
             <p className="text-[11px] text-emerald-100">Access offline listings anytime directly from your home screen.</p>
           </div>
         </div>
@@ -115,7 +115,7 @@ export const PWAInstallPrompt: React.FC = () => {
             <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 shadow-lg flex-shrink-0 flex items-center justify-center">
               <img
                 src="/icons/pwa-192x192.png"
-                alt="CheckInn Icon"
+                alt="LocalStay Icon"
                 className="w-full h-full object-cover rounded-[10px]"
               />
             </div>
@@ -123,7 +123,7 @@ export const PWAInstallPrompt: React.FC = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
                 <h4 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-                  Install CheckInn App
+                  Install LocalStay App
                   <span className="text-[10px] font-medium bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
                     PWA
                   </span>

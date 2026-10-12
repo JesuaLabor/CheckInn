@@ -17,8 +17,8 @@ export default defineConfig({
         'icons/*.svg'
       ],
       manifest: {
-        name: 'CheckInn — Malaybalay City Hotels & Inns Booking',
-        short_name: 'CheckInn',
+        name: 'LocalStay — Malaybalay City Hotels & Inns Booking',
+        short_name: 'LocalStay',
         description: 'Marketplace-style digital booking and front-desk platform for hotels and inns in Malaybalay City, Bukidnon.',
         theme_color: '#059669',
         background_color: '#0f172a',

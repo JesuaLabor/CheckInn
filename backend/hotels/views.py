@@ -234,7 +234,7 @@ class PartnerRegisterView(APIView):
         refresh = RefreshToken.for_user(owner_user)
 
         return Response({
-            'message': 'Partnership application submitted successfully! Your property is in review by CheckInn Admin.',
+            'message': 'Partnership application submitted successfully! Your property is in review by LocalStay Admin.',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': UserSerializer(owner_user).data,

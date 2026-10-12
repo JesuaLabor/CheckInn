@@ -4,7 +4,7 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'checkinn-inns-secret-key-malaybalay-2026-supersecure')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'localstay-inns-secret-key-malaybalay-2026-supersecure')
 
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
@@ -71,7 +71,7 @@ DATABASES = {
 if os.environ.get('DB_NAME'):
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'checkinn_db'),
+        'NAME': os.environ.get('DB_NAME', 'localstay_db'),
         'USER': os.environ.get('DB_USER', 'postgres'),
         'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),

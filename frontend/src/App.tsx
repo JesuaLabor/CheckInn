@@ -119,7 +119,7 @@ export function App() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-8 px-4 sm:px-6 lg:px-8 mt-auto text-center text-xs text-slate-500 space-y-2">
         <div className="flex items-center justify-center gap-2 font-bold text-slate-700">
-          <span>CheckInn Malaybalay City</span>
+          <span>LocalStay Malaybalay City</span>
           <span>•</span>
           <span>Digital Lodging & Front Desk Marketplace</span>
         </div>

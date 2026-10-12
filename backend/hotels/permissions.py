@@ -3,7 +3,7 @@ from rest_framework import permissions
 
 class IsPlatformSuperAdmin(permissions.BasePermission):
     """
-    Allows access only to CheckInn platform superadmins.
+    Allows access only to LocalStay platform superadmins.
     """
     def has_permission(self, request, view):
         user = request.user

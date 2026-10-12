@@ -40,7 +40,7 @@ class CurrentUserView(generics.RetrieveAPIView):
 
 class GoogleAuthView(APIView):
     """
-    Exchange Google OAuth ID token for CheckInn SimpleJWT tokens.
+    Exchange Google OAuth ID token for LocalStay SimpleJWT tokens.
     Automatically provisions guest account if user does not exist yet.
     """
     permission_classes = [permissions.AllowAny]
@@ -59,7 +59,7 @@ class GoogleAuthView(APIView):
 
         # Support simulated demo Google tokens for local testing
         if token.startswith('demo_google_token') or token == 'demo':
-            email = request.data.get('email', 'guest.google@checkinn.local')
+            email = request.data.get('email', 'guest.google@localstay.local')
             first_name = request.data.get('first_name', 'Google')
             last_name = request.data.get('last_name', 'Traveler')
         else:

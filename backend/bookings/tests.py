@@ -9,7 +9,7 @@ from bookings.models import Booking
 User = get_user_model()
 
 
-class CheckInnCoreTests(TestCase):
+class LocalStayCoreTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 

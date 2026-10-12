@@ -59,7 +59,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
         hotel: hotel.id,
         room_type: roomType.id,
         guest_name: user.first_name ? `${user.first_name} ${user.last_name}` : user.username,
-        guest_email: user.email || `${user.username}@checkinn.local`,
+        guest_email: user.email || `${user.username}@localstay.local`,
         guest_phone: user.phone_number || '+63 917 123 4567',
         guest_count: draft.guestCount,
         check_in: draft.checkIn,

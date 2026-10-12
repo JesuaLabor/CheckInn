@@ -199,7 +199,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                 <span>Partner Onboarding</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                List Your Hotel or Inn on CheckInn
+                List Your Hotel or Inn on LocalStay
               </h1>
               <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
                 Empower your front desk with digital reservations, automated room hold protection, and instant QR check-ins across Malaybalay City & Bukidnon.
@@ -697,7 +697,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3 text-xs text-slate-400">
                 <Clock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <p>
-                  By submitting your application, your property will be placed in review by the CheckInn Platform Admin. You will be able to set up your rooms and staff members immediately while pending verification.
+                  By submitting your application, your property will be placed in review by the LocalStay Platform Admin. You will be able to set up your rooms and staff members immediately while pending verification.
                 </p>
               </div>
 

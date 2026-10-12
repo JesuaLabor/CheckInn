@@ -419,7 +419,7 @@ export const StaffDashboard: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-amber-800/90 mt-1 max-w-2xl leading-relaxed">
-                Your hotel profile is currently undergoing review by CheckInn Platform Admin. You can freely set up front desk staff accounts, configure room categories, and adjust nightly rates below. Once verified, your property will automatically become live on the public booking marketplace.
+                Your hotel profile is currently undergoing review by LocalStay Platform Admin. You can freely set up front desk staff accounts, configure room categories, and adjust nightly rates below. Once verified, your property will automatically become live on the public booking marketplace.
               </p>
             </div>
           </div>

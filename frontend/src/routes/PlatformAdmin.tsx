@@ -99,7 +99,7 @@ export const PlatformAdmin: React.FC = () => {
               <span>Platform Super Administrator</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              CheckInn SaaS Partner Management
+              LocalStay SaaS Partner Management
             </h1>
             <p className="text-slate-400 text-xs sm:text-sm">
               Review property applications, approve verified hotels, and oversee marketplace lodging.

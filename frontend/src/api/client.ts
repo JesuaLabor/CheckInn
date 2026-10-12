@@ -12,7 +12,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('checkinn_token');
+  const token = localStorage.getItem('localstay_token') || localStorage.getItem('checkinn_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

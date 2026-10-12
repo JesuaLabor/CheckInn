@@ -55,7 +55,7 @@
     <circle cx="272" cy="348" r="3" fill="#fbbf24" />
   </g>
 
-  <!-- Prominent "Check" Emblem Circle (CheckInn Signature Badge) -->
+  <!-- Prominent "Check" Emblem Circle (LocalStay Signature Badge) -->
   <g filter="url(#shadow)">
     <circle cx="340" cy="350" r="64" fill="#0f172a" stroke="#ffffff" stroke-width="6" />
     <circle cx="340" cy="350" r="54" fill="url(#checkGrad)" />

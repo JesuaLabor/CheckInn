@@ -8,10 +8,10 @@ import App from './App.tsx'
 registerSW({
   immediate: true,
   onNeedRefresh() {
-    console.log('[CheckInn PWA] New update available.')
+    console.log('[LocalStay PWA] New update available.')
   },
   onOfflineReady() {
-    console.log('[CheckInn PWA] Content cached for offline use.')
+    console.log('[LocalStay PWA] Content cached for offline use.')
   },
 })
 

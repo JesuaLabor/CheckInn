@@ -5,8 +5,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
 echo "========================================================="
-echo "   Starting CheckInn (LocalStay Management Platform)    "
-echo "   Malaybalay City Digital Lodging Marketplace          "
+echo "   Starting LocalStay (Malaybalay Lodging Marketplace)  "
+echo "   Malaybalay City Digital Lodging Platform             "
 echo "========================================================="
 
 # 1. Activate backend virtualenv and run migrations + seeds
@@ -31,7 +31,7 @@ cd ..
 
 echo ""
 echo "========================================================="
-echo "   CheckInn is LIVE!                                    "
+echo "   LocalStay is LIVE!                                   "
 echo "   - Marketplace & Guest Portal: http://localhost:5173   "
 echo "   - REST API & Django Admin:    http://localhost:8000   "
 echo "========================================================="

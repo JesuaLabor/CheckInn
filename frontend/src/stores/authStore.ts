@@ -16,14 +16,14 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: JSON.parse(localStorage.getItem('checkinn_user') || 'null'),
-  token: localStorage.getItem('checkinn_token') || null,
+  user: JSON.parse(localStorage.getItem('localstay_user') || localStorage.getItem('checkinn_user') || 'null'),
+  token: localStorage.getItem('localstay_token') || localStorage.getItem('checkinn_token') || null,
   isLoading: false,
   error: null,
 
   setSession: (token: string, user: User) => {
-    localStorage.setItem('checkinn_token', token);
-    localStorage.setItem('checkinn_user', JSON.stringify(user));
+    localStorage.setItem('localstay_token', token);
+    localStorage.setItem('localstay_user', JSON.stringify(user));
     set({ token, user, error: null });
   },
 
@@ -32,8 +32,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const res = await api.post('/auth/login/', { username, password });
       const { access, user } = res.data;
-      localStorage.setItem('checkinn_token', access);
-      localStorage.setItem('checkinn_user', JSON.stringify(user));
+      localStorage.setItem('localstay_token', access);
+      localStorage.setItem('localstay_user', JSON.stringify(user));
       set({ token: access, user, isLoading: false });
       return true;
     } catch (err: any) {
@@ -53,8 +53,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         last_name: profile?.last_name,
       });
       const { access, user } = res.data;
-      localStorage.setItem('checkinn_token', access);
-      localStorage.setItem('checkinn_user', JSON.stringify(user));
+      localStorage.setItem('localstay_token', access);
+      localStorage.setItem('localstay_user', JSON.stringify(user));
       set({ token: access, user, isLoading: false });
       return true;
     } catch (err: any) {
@@ -81,8 +81,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const res = await api.post('/auth/login/', { username: target.u, password: target.p });
       const { access, user } = res.data;
-      localStorage.setItem('checkinn_token', access);
-      localStorage.setItem('checkinn_user', JSON.stringify(user));
+      localStorage.setItem('localstay_token', access);
+      localStorage.setItem('localstay_user', JSON.stringify(user));
       set({ token: access, user, isLoading: false });
       return true;
     } catch (err: any) {
@@ -92,19 +92,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    localStorage.removeItem('localstay_token');
+    localStorage.removeItem('localstay_user');
     localStorage.removeItem('checkinn_token');
     localStorage.removeItem('checkinn_user');
     set({ token: null, user: null, error: null });
   },
 
   loadUser: async () => {
-    const token = localStorage.getItem('checkinn_token');
+    const token = localStorage.getItem('localstay_token') || localStorage.getItem('checkinn_token');
     if (!token) return;
     try {
       const res = await api.get('/auth/me/');
-      localStorage.setItem('checkinn_user', JSON.stringify(res.data));
+      localStorage.setItem('localstay_user', JSON.stringify(res.data));
       set({ user: res.data });
     } catch {
+      localStorage.removeItem('localstay_token');
+      localStorage.removeItem('localstay_user');
       localStorage.removeItem('checkinn_token');
       localStorage.removeItem('checkinn_user');
       set({ token: null, user: null });
