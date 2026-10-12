@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
-  currentTab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'admin_reports';
-  onNavigate: (tab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'admin_reports', hotelSlug?: string) => void;
+  currentTab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'partner_register' | 'platform_admin';
+  onNavigate: (tab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'partner_register' | 'platform_admin', hotelSlug?: string) => void;
   onOpenAuth: () => void;
 }
 
@@ -32,17 +32,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleRoleSwitch = async (key: 'guest' | 'pine_staff' | 'firstinn_staff' | 'pine_admin' | 'superadmin') => {
+  const handleRoleSwitch = async (key: 'guest' | 'pine_staff' | 'firstinn_staff' | 'pine_admin' | 'breeze_owner' | 'superadmin') => {
     await quickLogin(key);
     setShowDemoMenu(false);
     if (key === 'guest') {
       onNavigate('guest_bookings');
+    } else if (key === 'superadmin') {
+      onNavigate('platform_admin');
     } else {
       onNavigate('staff_dashboard');
     }
   };
 
   const isStaffOrAdmin = user && (user.role === 'staff' || user.role === 'admin' || user.role === 'superadmin');
+  const isSuperAdmin = user && user.role === 'superadmin';
 
   return (
     <>
@@ -104,6 +107,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                   Browse Inns
                 </button>
 
+                <button
+                  onClick={() => onNavigate('partner_register')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    currentTab === 'partner_register'
+                      ? 'text-white bg-white/10'
+                      : 'text-emerald-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  Partner With Us
+                </button>
+
                 {user && (
                   <button
                     onClick={() => onNavigate('guest_bookings')}
@@ -118,7 +132,23 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                   </button>
                 )}
 
-                {isStaffOrAdmin && (
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => onNavigate('platform_admin')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      currentTab === 'platform_admin'
+                        ? 'text-white bg-purple-600/30 border border-purple-500/40'
+                        : 'text-purple-300 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span>Platform SaaS</span>
+                    <span className="text-[9px] font-bold bg-purple-500/30 text-purple-200 px-1.5 py-0.2 rounded">
+                      Admin
+                    </span>
+                  </button>
+                )}
+
+                {isStaffOrAdmin && !isSuperAdmin && (
                   <button
                     onClick={() => onNavigate('staff_dashboard')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
@@ -127,7 +157,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                         : 'text-slate-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <span>Front Desk</span>
+                    <span>{user?.role === 'admin' ? 'Hotel Admin' : 'Front Desk'}</span>
                     {user?.hotel_name && (
                       <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.2 rounded">
                         {user.hotel_name.split(' ')[0]}
@@ -149,7 +179,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                   {showDemoMenu && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowDemoMenu(false)}></div>
-                      <div className="absolute left-0 mt-2 w-72 bg-slate-900 rounded-2xl shadow-2xl border border-white/15 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-white">
+                      <div className="absolute left-0 mt-2 w-80 bg-slate-900 rounded-2xl shadow-2xl border border-white/15 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-white">
                         <div className="px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-white/10 flex items-center justify-between">
                           <span>Switch Active Persona</span>
                           <span className="text-[9px] bg-white/10 text-slate-300 px-1.5 py-0.5 rounded font-bold">1-Click</span>
@@ -157,14 +187,36 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
 
                         <div className="space-y-1 mt-1">
                           <button
-                            onClick={() => handleRoleSwitch('guest')}
+                            onClick={() => handleRoleSwitch('superadmin')}
                             className="w-full text-left p-2.5 rounded-xl text-xs hover:bg-white/10 transition-colors flex items-center justify-between"
                           >
                             <div>
-                              <div className="font-bold text-white">Juan Dela Cruz</div>
-                              <div className="text-[10px] text-slate-400">Demo Guest • Marketplace flow</div>
+                              <div className="font-bold text-white">Platform Super Admin</div>
+                              <div className="text-[10px] text-slate-400">You • Review & approve hotel vendors</div>
                             </div>
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">Guest</span>
+                            <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold">Super Admin</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleRoleSwitch('breeze_owner')}
+                            className="w-full text-left p-2.5 rounded-xl text-xs hover:bg-white/10 transition-colors flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="font-bold text-white">Breeze Eco Lodge Owner</div>
+                              <div className="text-[10px] text-slate-400">Owner • Pending approval review flow</div>
+                            </div>
+                            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">Pending Owner</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleRoleSwitch('pine_admin')}
+                            className="w-full text-left p-2.5 rounded-xl text-xs hover:bg-white/10 transition-colors flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="font-bold text-white">Pine Hills Hotel Owner</div>
+                              <div className="text-[10px] text-slate-400">Approved Owner • Add staff & inventory</div>
+                            </div>
+                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">Approved Owner</span>
                           </button>
 
                           <button
@@ -173,31 +225,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onNavigate, onOpenAu
                           >
                             <div>
                               <div className="font-bold text-white">Pine Hills Front Desk</div>
-                              <div className="text-[10px] text-slate-400">Staff • Approvals & QR check-in</div>
+                              <div className="text-[10px] text-slate-400">Staff • Approvals, walk-ins, & QR</div>
                             </div>
                             <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">Staff</span>
                           </button>
 
                           <button
-                            onClick={() => handleRoleSwitch('firstinn_staff')}
+                            onClick={() => handleRoleSwitch('guest')}
                             className="w-full text-left p-2.5 rounded-xl text-xs hover:bg-white/10 transition-colors flex items-center justify-between"
                           >
                             <div>
-                              <div className="font-bold text-white">1st Inn Staff</div>
-                              <div className="text-[10px] text-slate-400">Staff • Tenant-isolated desk</div>
+                              <div className="font-bold text-white">Juan Dela Cruz</div>
+                              <div className="text-[10px] text-slate-400">Guest • Marketplace & QR bookings</div>
                             </div>
-                            <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">Staff</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleRoleSwitch('pine_admin')}
-                            className="w-full text-left p-2.5 rounded-xl text-xs hover:bg-white/10 transition-colors flex items-center justify-between"
-                          >
-                            <div>
-                              <div className="font-bold text-white">Pine Hills Admin</div>
-                              <div className="text-[10px] text-slate-400">Owner • Occupancy & Revenue</div>
-                            </div>
-                            <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold">Admin</span>
+                            <span className="text-[10px] bg-slate-500/20 text-slate-300 px-2 py-0.5 rounded-full font-bold">Guest</span>
                           </button>
                         </div>
                       </div>

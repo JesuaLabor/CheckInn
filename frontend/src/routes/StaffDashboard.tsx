@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { Booking, Room, GuestRequest } from '../types';
 import { useAuthStore } from '../stores/authStore';
 import { WalkInModal } from '../components/WalkInModal';
 import {
@@ -22,16 +21,72 @@ import {
   Check,
   ChevronRight,
   ShieldCheck,
+  Users,
+  Layers,
+  Settings,
+  Plus,
+  Trash2,
+  DollarSign,
+  FileText,
+  CreditCard,
 } from 'lucide-react';
+import { Booking, Room, GuestRequest, Hotel, StaffMember, RoomType } from '../types';
 
 export const StaffDashboard: React.FC = () => {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'pending' | 'rooms' | 'checkin' | 'requests' | 'reports'>('pending');
+  const isHotelAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
+
+  const [activeTab, setActiveTab] = useState<
+    'pending' | 'rooms' | 'checkin' | 'requests' | 'reports' | 'staff_manage' | 'inventory_manage' | 'hotel_settings'
+  >('pending');
 
   const [pendingRequests, setPendingRequests] = useState<Booking[]>([]);
   const [roomBoard, setRoomBoard] = useState<{ rooms: Room[]; summary: any } | null>(null);
   const [guestRequests, setGuestRequests] = useState<GuestRequest[]>([]);
   const [occupancyReport, setOccupancyReport] = useState<any>(null);
+
+  // Hotel Owner SaaS state
+  const [hotelProfile, setHotelProfile] = useState<Hotel | null>(null);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
+
+  // Owner Modals
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [newStaffData, setNewStaffData] = useState({
+    username: '',
+    password: '',
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+  });
+
+  const [isAddRoomTypeOpen, setIsAddRoomTypeOpen] = useState(false);
+  const [newRoomTypeData, setNewRoomTypeData] = useState({
+    name: '',
+    base_rate: '',
+    capacity: 2,
+    amenities: 'Wi-Fi, Air Conditioning, Hot Shower',
+    description: '',
+  });
+
+  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
+  const [newRoomData, setNewRoomData] = useState({
+    room_number: '',
+    floor: '1st Floor',
+    room_type_id: '',
+  });
+
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    tagline: '',
+    description: '',
+    contact_phone: '',
+    contact_email: '',
+    payout_method: 'GCash',
+    payout_account_name: '',
+    payout_account_number: '',
+  });
 
   const [loading, setLoading] = useState(false);
   const [actionSuccess, setActionSuccess] = useState('');
@@ -80,10 +135,112 @@ export const StaffDashboard: React.FC = () => {
       if (reportRes.status === 'fulfilled') {
         setOccupancyReport(reportRes.value.data);
       }
+
+      // Load Hotel Owner SaaS Data
+      if (isHotelAdmin) {
+        const [profileRes, staffRes, rtRes] = await Promise.allSettled([
+          api.get('/hotel-manage/profile/'),
+          api.get('/hotel-manage/staff/'),
+          api.get('/hotel-manage/room-types/'),
+        ]);
+
+        if (profileRes.status === 'fulfilled') {
+          setHotelProfile(profileRes.value.data);
+          setProfileForm({
+            tagline: profileRes.value.data.tagline || '',
+            description: profileRes.value.data.description || '',
+            contact_phone: profileRes.value.data.contact_phone || '',
+            contact_email: profileRes.value.data.contact_email || '',
+            payout_method: profileRes.value.data.payout_method || 'GCash',
+            payout_account_name: profileRes.value.data.payout_account_name || '',
+            payout_account_number: profileRes.value.data.payout_account_number || '',
+          });
+        }
+        if (staffRes.status === 'fulfilled') {
+          setStaffList(staffRes.value.data || []);
+        }
+        if (rtRes.status === 'fulfilled') {
+          setRoomTypes(rtRes.value.data || []);
+        }
+      }
     } catch {
       setActionError('Failed to load front desk data.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionError('');
+    try {
+      await api.post('/hotel-manage/staff/', newStaffData);
+      setActionSuccess(`Staff account "${newStaffData.username}" registered successfully!`);
+      setIsAddStaffOpen(false);
+      setNewStaffData({ username: '', password: '', first_name: '', last_name: '', email: '', phone_number: '' });
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed to create staff member.');
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: number) => {
+    if (!confirm('Are you sure you want to deactivate this staff account?')) return;
+    try {
+      await api.delete(`/hotel-manage/staff/${staffId}/`);
+      setActionSuccess('Staff member deactivated.');
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed to remove staff member.');
+    }
+  };
+
+  const handleAddRoomType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionError('');
+    try {
+      await api.post('/hotel-manage/room-types/', newRoomTypeData);
+      setActionSuccess(`Room category "${newRoomTypeData.name}" created!`);
+      setIsAddRoomTypeOpen(false);
+      setNewRoomTypeData({
+        name: '',
+        base_rate: '',
+        capacity: 2,
+        amenities: 'Wi-Fi, Air Conditioning, Hot Shower',
+        description: '',
+      });
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed to create room category.');
+    }
+  };
+
+  const handleAddRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionError('');
+    try {
+      await api.post('/hotel-manage/rooms/', newRoomData);
+      setActionSuccess(`Room "${newRoomData.room_number}" added to inventory!`);
+      setIsAddRoomOpen(false);
+      setNewRoomData({ room_number: '', floor: '1st Floor', room_type_id: '' });
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed to add physical room.');
+    }
+  };
+
+  const handleSaveHotelProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    setActionError('');
+    try {
+      await api.patch('/hotel-manage/profile/', profileForm);
+      setActionSuccess('Property profile and payout settings updated successfully!');
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed to save settings.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -247,6 +404,31 @@ export const StaffDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Pending Approval Notice Banner */}
+      {hotelProfile?.status === 'pending' && (
+        <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-amber-950">Property Application Under Review</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 uppercase tracking-wider">
+                  Pending Verification
+                </span>
+              </div>
+              <p className="text-xs text-amber-800/90 mt-1 max-w-2xl leading-relaxed">
+                Your hotel profile is currently undergoing review by CheckInn Platform Admin. You can freely set up front desk staff accounts, configure room categories, and adjust nightly rates below. Once verified, your property will automatically become live on the public booking marketplace.
+              </p>
+            </div>
+          </div>
+          <div className="text-right text-xs font-bold text-amber-900 shrink-0 bg-white/60 px-3 py-2 rounded-2xl border border-amber-200">
+            Permit No: {hotelProfile.business_permit_number || 'Under Review'}
+          </div>
+        </div>
+      )}
+
       {/* Notifications */}
       {actionSuccess && (
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between shadow-2xs animate-in slide-in-from-top-2">
@@ -348,6 +530,55 @@ export const StaffDashboard: React.FC = () => {
           <TrendingUp className="w-4 h-4" />
           <span>Occupancy Reports</span>
         </button>
+
+        {/* Hotel Owner Tabs */}
+        {isHotelAdmin && (
+          <>
+            <div className="h-6 w-px bg-slate-300 mx-1 shrink-0" />
+
+            <button
+              onClick={() => setActiveTab('staff_manage')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
+                activeTab === 'staff_manage'
+                  ? 'bg-purple-900 text-white shadow-md shadow-purple-900/20'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              }`}
+            >
+              <Users className="w-4 h-4 text-purple-400" />
+              <span>Staff Team</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-purple-100 text-purple-700 font-black">
+                {staffList.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('inventory_manage')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
+                activeTab === 'inventory_manage'
+                  ? 'bg-teal-900 text-white shadow-md shadow-teal-900/20'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-teal-400" />
+              <span>Rooms & Rates</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-teal-100 text-teal-700 font-black">
+                {roomTypes.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('hotel_settings')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
+                activeTab === 'hotel_settings'
+                  ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              }`}
+            >
+              <Settings className="w-4 h-4 text-slate-400" />
+              <span>Property & Payout</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Tab 1: Pending Requests Queue */}
@@ -729,6 +960,304 @@ export const StaffDashboard: React.FC = () => {
         </section>
       )}
 
+      {/* Tab 6: Hotel Owner - Staff Management */}
+      {isHotelAdmin && activeTab === 'staff_manage' && (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900">
+                Front Desk Staff & Receptionists
+              </h2>
+              <p className="text-xs text-slate-500">
+                Staff accounts can access front desk operations, walk-ins, and guest check-ins for this hotel only.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsAddStaffOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md shadow-purple-600/25 active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Front Desk Staff</span>
+            </button>
+          </div>
+
+          <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-2xs">
+            {staffList.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <span>No additional staff accounts created yet.</span>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {staffList.map((member) => (
+                  <div
+                    key={member.id}
+                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center font-bold text-purple-700 text-xs">
+                        {member.first_name ? member.first_name[0] : member.username[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-slate-900">{member.full_name}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase">
+                            {member.role}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                          <span>@{member.username}</span>
+                          {member.phone_number && (
+                            <>
+                              <span>•</span>
+                              <span>{member.phone_number}</span>
+                            </>
+                          )}
+                          {member.email && (
+                            <>
+                              <span>•</span>
+                              <span>{member.email}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {member.id !== user?.id && member.role === 'staff' && (
+                      <button
+                        onClick={() => handleDeleteStaff(member.id)}
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Deactivate staff member"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Tab 7: Hotel Owner - Room Inventory & Rates */}
+      {isHotelAdmin && activeTab === 'inventory_manage' && (
+        <section className="space-y-8">
+          {/* Room Categories */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900">
+                  Room Categories & Nightly Rates
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Define accommodation tiers, capacity, and rate per night in PHP.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsAddRoomTypeOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs shadow-md shadow-teal-600/25 active:scale-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Room Category</span>
+                </button>
+                <button
+                  onClick={() => setIsAddRoomOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-md active:scale-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Physical Room</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {roomTypes.map((rt) => (
+                <div
+                  key={rt.id}
+                  className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-2xs space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">{rt.name}</h3>
+                      <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{rt.description}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-sm font-black text-emerald-700">₱{Number(rt.base_rate).toLocaleString()}</span>
+                      <span className="text-[10px] text-slate-400 block">/ night</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Users className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Up to {rt.capacity} Guests</span>
+                    <span>•</span>
+                    <span>{rt.rooms?.length || 0} Physical Rooms</span>
+                  </div>
+
+                  {rt.amenities && rt.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {rt.amenities.slice(0, 3).map((amenity, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-600"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                      {rt.amenities.length > 3 && (
+                        <span className="text-[10px] text-slate-400 self-center">
+                          +{rt.amenities.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Physical Rooms Grid */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-black text-slate-900">Physical Rooms On Property</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {(roomBoard?.rooms || []).map((rm) => (
+                <div
+                  key={rm.id}
+                  className={`p-3 rounded-2xl border text-center space-y-1 ${
+                    rm.status === 'available'
+                      ? 'bg-emerald-50/40 border-emerald-200 text-emerald-950'
+                      : rm.status === 'occupied'
+                      ? 'bg-blue-50/40 border-blue-200 text-blue-950'
+                      : rm.status === 'cleaning'
+                      ? 'bg-amber-50/40 border-amber-200 text-amber-950'
+                      : 'bg-slate-100 border-slate-200 text-slate-700'
+                  }`}
+                >
+                  <div className="text-sm font-black">{rm.room_number}</div>
+                  <div className="text-[10px] font-bold text-slate-500 capitalize">{rm.status}</div>
+                  <div className="text-[9px] text-slate-400 truncate">{rm.room_type_name}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Tab 8: Hotel Owner - Property Profile & Payout Settings */}
+      {isHotelAdmin && activeTab === 'hotel_settings' && (
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900">
+                Property Profile & Payout Settings
+              </h2>
+              <p className="text-xs text-slate-500">
+                Update public listing information and disbursement accounts.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveHotelProfile} className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-2xs space-y-5 max-w-3xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Tagline</label>
+                <input
+                  type="text"
+                  value={profileForm.tagline}
+                  onChange={(e) => setProfileForm({ ...profileForm, tagline: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={profileForm.description}
+                  onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Front Desk Phone</label>
+                <input
+                  type="text"
+                  value={profileForm.contact_phone}
+                  onChange={(e) => setProfileForm({ ...profileForm, contact_phone: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Business Email</label>
+                <input
+                  type="email"
+                  value={profileForm.contact_email}
+                  onChange={(e) => setProfileForm({ ...profileForm, contact_email: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="sm:col-span-2 pt-3 border-t border-slate-100">
+                <h4 className="text-xs font-black text-slate-900 mb-3 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Disbursement & Payout Account</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1">Method</label>
+                    <select
+                      value={profileForm.payout_method}
+                      onChange={(e) => setProfileForm({ ...profileForm, payout_method: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="GCash">GCash</option>
+                      <option value="Maya">Maya</option>
+                      <option value="BDO">BDO Unibank</option>
+                      <option value="BPI">BPI</option>
+                      <option value="LandBank">LandBank</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1">Account Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.payout_account_name}
+                      onChange={(e) => setProfileForm({ ...profileForm, payout_account_name: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1">Account Number</label>
+                    <input
+                      type="text"
+                      value={profileForm.payout_account_number}
+                      onChange={(e) => setProfileForm({ ...profileForm, payout_account_number: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-md active:scale-95 transition-all disabled:opacity-50"
+              >
+                {profileSaving ? 'Saving Changes...' : 'Save Settings'}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
       {/* Rejection Reason Modal */}
       {rejectingBookingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
@@ -779,6 +1308,280 @@ export const StaffDashboard: React.FC = () => {
           fetchDashboardData();
         }}
       />
+
+      {/* Add Staff Modal */}
+      {isAddStaffOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Add Front Desk Staff</h3>
+                <p className="text-xs text-slate-400">Create employee credentials for your hotel.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddStaff} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Maria"
+                    value={newStaffData.first_name}
+                    onChange={(e) => setNewStaffData({ ...newStaffData, first_name: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Santos"
+                    value={newStaffData.last_name}
+                    onChange={(e) => setNewStaffData({ ...newStaffData, last_name: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Username *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. maria_frontdesk"
+                  value={newStaffData.username}
+                  onChange={(e) => setNewStaffData({ ...newStaffData, username: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Password *</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="At least 6 characters"
+                  value={newStaffData.password}
+                  onChange={(e) => setNewStaffData({ ...newStaffData, password: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="0917 000 0000"
+                    value={newStaffData.phone_number}
+                    onChange={(e) => setNewStaffData({ ...newStaffData, phone_number: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    placeholder="staff@hotel.ph"
+                    value={newStaffData.email}
+                    onChange={(e) => setNewStaffData({ ...newStaffData, email: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStaffOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-md active:scale-95 transition-all"
+                >
+                  Create Staff Account
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Room Type Modal */}
+      {isAddRoomTypeOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Add Room Category</h3>
+                <p className="text-xs text-slate-400">Configure accommodation tier and pricing.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddRoomType} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Category Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Deluxe Balcony Suite"
+                  value={newRoomTypeData.name}
+                  onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, name: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Rate (₱ / night) *</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="2500"
+                    value={newRoomTypeData.base_rate}
+                    onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, base_rate: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Max Guests *</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={newRoomTypeData.capacity}
+                    onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, capacity: parseInt(e.target.value) || 2 })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Amenities (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="1 Queen Bed, Hot Shower, High-Speed Wi-Fi"
+                  value={newRoomTypeData.amenities}
+                  onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, amenities: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Cozy room with mountain breeze and private bathroom."
+                  value={newRoomTypeData.description}
+                  onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, description: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddRoomTypeOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-md active:scale-95 transition-all"
+                >
+                  Create Category
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Room Modal */}
+      {isAddRoomOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center">
+                <Bed className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Add Physical Room</h3>
+                <p className="text-xs text-slate-400">Assign a room number and category.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddRoom} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Room Number *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 105 or Cottage 4"
+                  value={newRoomData.room_number}
+                  onChange={(e) => setNewRoomData({ ...newRoomData, room_number: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Floor</label>
+                <input
+                  type="text"
+                  placeholder="1st Floor, 2nd Floor, etc."
+                  value={newRoomData.floor}
+                  onChange={(e) => setNewRoomData({ ...newRoomData, floor: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Room Category *</label>
+                <select
+                  required
+                  value={newRoomData.room_type_id}
+                  onChange={(e) => setNewRoomData({ ...newRoomData, room_type_id: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                >
+                  <option value="">Select category...</option>
+                  {roomTypes.map((rt) => (
+                    <option key={rt.id} value={rt.id}>
+                      {rt.name} (₱{rt.base_rate})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddRoomOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md active:scale-95 transition-all"
+                >
+                  Add Room
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

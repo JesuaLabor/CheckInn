@@ -8,7 +8,8 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<boolean>;
-  quickLogin: (accountKey: 'guest' | 'pine_staff' | 'firstinn_staff' | 'pine_admin' | 'superadmin') => Promise<boolean>;
+  quickLogin: (accountKey: 'guest' | 'pine_staff' | 'firstinn_staff' | 'pine_admin' | 'breeze_owner' | 'superadmin') => Promise<boolean>;
+  setSession: (token: string, user: User) => void;
   logout: () => void;
   loadUser: () => Promise<void>;
 }
@@ -18,6 +19,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: localStorage.getItem('checkinn_token') || null,
   isLoading: false,
   error: null,
+
+  setSession: (token: string, user: User) => {
+    localStorage.setItem('checkinn_token', token);
+    localStorage.setItem('checkinn_user', JSON.stringify(user));
+    set({ token, user, error: null });
+  },
 
   login: async (username: string, password: string) => {
     set({ isLoading: true, error: null });
@@ -41,6 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       pine_staff: { u: 'pine_staff', p: 'staff123' },
       firstinn_staff: { u: 'firstinn_staff', p: 'staff123' },
       pine_admin: { u: 'pine_admin', p: 'admin123' },
+      breeze_owner: { u: 'breeze_owner', p: 'breeze123' },
       superadmin: { u: 'superadmin', p: 'admin123' },
     };
 

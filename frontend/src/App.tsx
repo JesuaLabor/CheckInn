@@ -9,12 +9,16 @@ import { Marketplace } from './routes/Marketplace';
 import { InnDetail } from './routes/InnDetail';
 import { GuestPortal } from './routes/GuestPortal';
 import { StaffDashboard } from './routes/StaffDashboard';
+import { PartnerRegister } from './routes/PartnerRegister';
+import { PlatformAdmin } from './routes/PlatformAdmin';
 
 export function App() {
   const { user, loadUser } = useAuthStore();
   const { draft, openBookingModal } = useBookingDraftStore();
 
-  const [currentTab, setCurrentTab] = useState<'marketplace' | 'inn_detail' | 'guest_bookings' | 'staff_dashboard'>('marketplace');
+  const [currentTab, setCurrentTab] = useState<
+    'marketplace' | 'inn_detail' | 'guest_bookings' | 'staff_dashboard' | 'partner_register' | 'platform_admin'
+  >('marketplace');
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
@@ -22,10 +26,23 @@ export function App() {
     loadUser();
   }, []);
 
-  const handleNavigate = (tab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'admin_reports') => {
+  const handleNavigate = (
+    tab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'partner_register' | 'platform_admin',
+    hotelSlug?: string
+  ) => {
     if (tab === 'marketplace') {
       setSelectedSlug(null);
       setCurrentTab('marketplace');
+    } else if (tab === 'partner_register') {
+      setCurrentTab('partner_register');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (tab === 'platform_admin') {
+      if (!user || user.role !== 'superadmin') {
+        setIsAuthOpen(true);
+      } else {
+        setCurrentTab('platform_admin');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } else if (tab === 'guest_bookings') {
       if (!user) {
         setIsAuthOpen(true);
@@ -56,7 +73,11 @@ export function App() {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
       {/* Navbar */}
       <Navbar
-        currentTab={currentTab === 'inn_detail' ? 'marketplace' : currentTab}
+        currentTab={
+          currentTab === 'inn_detail'
+            ? 'marketplace'
+            : currentTab
+        }
         onNavigate={handleNavigate}
         onOpenAuth={() => setIsAuthOpen(true)}
       />
@@ -66,6 +87,18 @@ export function App() {
         {currentTab === 'marketplace' && (
           <Marketplace onSelectHotel={handleSelectHotel} />
         )}
+
+        {currentTab === 'partner_register' && (
+          <PartnerRegister
+            onBack={() => setCurrentTab('marketplace')}
+            onSuccess={() => {
+              setCurrentTab('staff_dashboard');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {currentTab === 'platform_admin' && <PlatformAdmin />}
 
         {currentTab === 'inn_detail' && selectedSlug && (
           <InnDetail

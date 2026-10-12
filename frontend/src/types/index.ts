@@ -13,6 +13,8 @@ export interface User {
   phone_number?: string;
 }
 
+export type HotelStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+
 export interface Hotel {
   id: number;
   name: string;
@@ -32,6 +34,48 @@ export interface Hotel {
   room_types_count?: number;
   available_rooms_count?: number;
   room_types?: RoomType[];
+  status?: HotelStatus;
+  rejection_reason?: string;
+  business_permit_number?: string;
+  bir_tin?: string;
+  payout_method?: string;
+  payout_account_name?: string;
+  payout_account_number?: string;
+  commission_rate?: number | string;
+  owner_username?: string;
+  owner_email?: string;
+  owner_name?: string;
+  owner_phone?: string;
+  total_rooms?: number;
+  total_room_types?: number;
+  total_bookings?: number;
+  created_at?: string;
+}
+
+export interface PlatformStats {
+  total_hotels: number;
+  pending_hotels: number;
+  approved_hotels: number;
+  rejected_hotels: number;
+  suspended_hotels: number;
+  total_rooms: number;
+  total_bookings: number;
+  confirmed_bookings: number;
+  total_gmv: number;
+  estimated_commission: number;
+}
+
+export interface StaffMember {
+  id: number;
+  username: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  full_name: string;
+  role: 'staff' | 'admin';
+  phone_number?: string;
+  is_active: boolean;
+  date_joined: string;
 }
 
 export interface RoomType {
@@ -46,6 +90,7 @@ export interface RoomType {
   photos: string[];
   total_rooms?: number;
   available_count?: number;
+  rooms?: Room[];
 }
 
 export interface Room {
