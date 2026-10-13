@@ -89,12 +89,12 @@ export const PlatformAdmin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#212529] text-white pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-bold uppercase tracking-wider mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D49B41]/15 border border-[#D49B41]/30 text-[#D49B41] text-xs font-bold uppercase tracking-wider mb-2">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Platform Super Administrator</span>
             </div>
@@ -111,7 +111,7 @@ export const PlatformAdmin: React.FC = () => {
             disabled={loading}
             className="self-start md:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-300 transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#D49B41]' : ''}`} />
             <span>Refresh Data</span>
           </button>
         </div>
@@ -121,7 +121,7 @@ export const PlatformAdmin: React.FC = () => {
           <div
             className={`p-4 rounded-2xl flex items-center justify-between text-xs font-semibold ${
               feedbackMessage.type === 'success'
-                ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300'
+                ? 'bg-[#3B5E43]/20 border border-[#3B5E43]/40 text-emerald-300'
                 : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
             }`}
           >
@@ -144,7 +144,7 @@ export const PlatformAdmin: React.FC = () => {
 
         {/* Platform KPI Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-          <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-1">
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
             <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
               <span>Total Properties</span>
               <Building2 className="w-4 h-4 text-slate-400" />
@@ -155,18 +155,18 @@ export const PlatformAdmin: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1 relative overflow-hidden">
-            <div className="flex items-center justify-between text-amber-300 text-xs font-medium">
+          <div className="p-4 rounded-2xl bg-[#D49B41]/10 border border-[#D49B41]/30 space-y-1 relative overflow-hidden">
+            <div className="flex items-center justify-between text-[#D49B41] text-xs font-medium">
               <span>Pending Review</span>
-              <Clock className="w-4 h-4 text-amber-400" />
+              <Clock className="w-4 h-4 text-[#D49B41]" />
             </div>
-            <div className="text-2xl font-black text-amber-200">
+            <div className="text-2xl font-black text-[#D49B41]">
               {stats?.pending_hotels ?? 0}
             </div>
-            <div className="text-[11px] text-amber-400/80">Requires Verification</div>
+            <div className="text-[11px] text-[#D49B41]/80">Requires Verification</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-1">
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
             <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
               <span>Active Rooms</span>
               <Bed className="w-4 h-4 text-slate-400" />
@@ -175,7 +175,7 @@ export const PlatformAdmin: React.FC = () => {
             <div className="text-[11px] text-slate-400">Total Physical Rooms</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-1">
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
             <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
               <span>Reservations</span>
               <CalendarCheck className="w-4 h-4 text-slate-400" />
@@ -184,33 +184,33 @@ export const PlatformAdmin: React.FC = () => {
             <div className="text-[11px] text-slate-400">Platform Bookings</div>
           </div>
 
-          <div className="col-span-2 lg:col-span-1 p-4 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 space-y-1">
-            <div className="flex items-center justify-between text-emerald-400 text-xs font-medium">
+          <div className="col-span-2 lg:col-span-1 p-4 rounded-2xl bg-gradient-to-br from-[#1E3A2B] to-[#212529] border border-[#3B5E43]/40 space-y-1">
+            <div className="flex items-center justify-between text-[#D49B41] text-xs font-medium">
               <span>Commission Est.</span>
-              <DollarSign className="w-4 h-4 text-emerald-400" />
+              <DollarSign className="w-4 h-4 text-[#D49B41]" />
             </div>
-            <div className="text-2xl font-black text-emerald-300">
+            <div className="text-2xl font-black text-white">
               ₱{(stats?.estimated_commission ?? 0).toLocaleString()}
             </div>
-            <div className="text-[11px] text-emerald-400/70">10% SaaS Service Rate</div>
+            <div className="text-[11px] text-white/70">10% SaaS Service Rate</div>
           </div>
         </div>
 
         {/* Filter Controls & Search */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-2xl border border-white/10">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white/5 p-3 rounded-2xl border border-white/10">
           {/* Status Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
             <button
               onClick={() => setStatusFilter('pending')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                 statusFilter === 'pending'
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  ? 'bg-[#D49B41] text-[#212529] shadow-md shadow-[#D49B41]/20'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <span>Pending Approval</span>
               {(stats?.pending_hotels ?? 0) > 0 && (
-                <span className="w-4 h-4 rounded-full bg-slate-950 text-amber-400 text-[10px] flex items-center justify-center font-black">
+                <span className="w-4 h-4 rounded-full bg-[#212529] text-[#D49B41] text-[10px] flex items-center justify-center font-black">
                   {stats?.pending_hotels}
                 </span>
               )}
@@ -220,7 +220,7 @@ export const PlatformAdmin: React.FC = () => {
               onClick={() => setStatusFilter('approved')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                 statusFilter === 'approved'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20 border border-[#3B5E43]/40'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -264,7 +264,7 @@ export const PlatformAdmin: React.FC = () => {
               placeholder="Search property or permit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-950 border border-white/10 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 w-full sm:w-64"
+              className="bg-[#212529] border border-white/15 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#D49B41] w-full sm:w-64"
             />
           </form>
         </div>
@@ -273,14 +273,14 @@ export const PlatformAdmin: React.FC = () => {
         <div className="space-y-4">
           {loading ? (
             <div className="py-20 text-center text-slate-500 text-xs">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-purple-400" />
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[#D49B41]" />
               <span>Loading applications...</span>
             </div>
           ) : hotels.length === 0 ? (
-            <div className="py-16 text-center rounded-3xl bg-slate-900/40 border border-white/10 p-8">
-              <CheckCircle2 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-sm font-bold text-slate-300">No properties in this category</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <div className="py-16 text-center rounded-3xl bg-white/5 border border-white/10 p-8">
+              <CheckCircle2 className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-slate-200">No properties in this category</h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                 {statusFilter === 'pending'
                   ? 'Great job! There are no pending hotel applications waiting for review.'
                   : 'No properties matched your current filter.'}
@@ -291,7 +291,7 @@ export const PlatformAdmin: React.FC = () => {
               {hotels.map((hotel) => (
                 <div
                   key={hotel.id}
-                  className="rounded-3xl bg-slate-900/80 border border-white/10 p-5 sm:p-6 hover:border-white/20 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+                  className="rounded-3xl bg-white/5 border border-white/10 p-5 sm:p-6 hover:border-white/20 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
                 >
                   {/* Left: Hotel Summary & Thumbnail */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -309,12 +309,12 @@ export const PlatformAdmin: React.FC = () => {
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                             hotel.status === 'approved'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              ? 'bg-[#1E3A2B]/40 text-emerald-300 border border-[#3B5E43]/40'
                               : hotel.status === 'pending'
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
+                              ? 'bg-[#D49B41]/20 text-[#D49B41] border border-[#D49B41]/30 animate-pulse'
                               : hotel.status === 'rejected'
                               ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                              : 'bg-slate-700 text-slate-300'
+                              : 'bg-white/10 text-slate-300'
                           }`}
                         >
                           {hotel.status === 'approved'
@@ -334,7 +334,7 @@ export const PlatformAdmin: React.FC = () => {
 
                       {/* Permit & Owner Credentials */}
                       <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 pt-1">
-                        <span className="flex items-center gap-1 font-mono text-purple-300">
+                        <span className="flex items-center gap-1 font-mono text-[#D49B41]">
                           <FileText className="w-3 h-3" />
                           Permit: {hotel.business_permit_number || 'Under Review'}
                         </span>
@@ -344,8 +344,8 @@ export const PlatformAdmin: React.FC = () => {
                           Owner: <strong className="text-white">{hotel.owner_name}</strong> ({hotel.owner_username})
                         </span>
                         <span>•</span>
-                        <span className="flex items-center gap-1 text-emerald-400 font-mono">
-                          <CreditCard className="w-3 h-3" />
+                        <span className="flex items-center gap-1 text-white/80 font-mono">
+                          <CreditCard className="w-3 h-3 text-[#3B5E43]" />
                           {hotel.payout_method}: {hotel.payout_account_number || '—'}
                         </span>
                       </div>
@@ -365,9 +365,9 @@ export const PlatformAdmin: React.FC = () => {
                         <button
                           onClick={() => handleReviewAction(hotel.id, 'approve')}
                           disabled={actionLoading}
-                          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-1.5"
+                          className="px-4 py-2 rounded-xl bg-[#D49B41] hover:bg-[#BF8832] text-[#212529] font-black text-xs shadow-lg shadow-[#D49B41]/20 transition-all flex items-center gap-1.5 active:scale-95"
                         >
-                          <CheckCircle2 className="w-4 h-4" />
+                          <CheckCircle2 className="w-4 h-4 text-[#212529]" />
                           <span>Approve Property</span>
                         </button>
 
@@ -388,7 +388,7 @@ export const PlatformAdmin: React.FC = () => {
                       <button
                         onClick={() => handleReviewAction(hotel.id, 'suspend')}
                         disabled={actionLoading}
-                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors"
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 font-bold text-xs transition-colors"
                       >
                         Suspend Listing
                       </button>
@@ -398,9 +398,9 @@ export const PlatformAdmin: React.FC = () => {
                       <button
                         onClick={() => handleReviewAction(hotel.id, 'reactivate')}
                         disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition-colors flex items-center gap-1.5"
+                        className="px-4 py-2 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] border border-[#3B5E43]/40 text-white font-bold text-xs transition-colors flex items-center gap-1.5"
                       >
-                        <Sparkles className="w-3.5 h-3.5" />
+                        <Sparkles className="w-3.5 h-3.5 text-[#D49B41]" />
                         <span>Reactivate & Approve</span>
                       </button>
                     )}
@@ -413,8 +413,8 @@ export const PlatformAdmin: React.FC = () => {
 
         {/* Rejection Modal */}
         {isRejectOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/80 backdrop-blur-md">
+            <div className="bg-[#212529] border border-white/15 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
                   <XCircle className="w-5 h-5" />
@@ -435,7 +435,7 @@ export const PlatformAdmin: React.FC = () => {
                   rows={3}
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-rose-500"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl p-3 text-xs text-[#212529] focus:outline-none focus:border-rose-500"
                 />
               </div>
 

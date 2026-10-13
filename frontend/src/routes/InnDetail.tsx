@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Hotel, RoomType } from '../types';
 import { useBookingDraftStore } from '../stores/bookingDraftStore';
+import { useCurrencyStore } from '../stores/currencyStore';
 import {
   ArrowLeft,
   MapPin,
@@ -39,6 +40,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
   const [guests, setGuests] = useState(2);
 
   const { openBookingModal } = useBookingDraftStore();
+  const { formatPrice } = useCurrencyStore();
 
   useEffect(() => {
     fetchHotelDetail();
@@ -95,7 +97,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
         <h2 className="text-xl font-bold text-slate-800">{error || 'Lodging not found'}</h2>
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-md hover:bg-emerald-700 active:scale-95 transition-all"
+          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-xs font-bold shadow-md active:scale-95 transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Marketplace
@@ -111,35 +113,35 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-emerald-700 bg-white px-3.5 py-2 rounded-xl border border-slate-200/80 shadow-2xs transition-all active:scale-95"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-[#1E3A2B] bg-white px-3.5 py-2 rounded-xl border border-[#E8E2D8] shadow-2xs transition-all active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to All Lodgings</span>
         </button>
 
-        <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200/80">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A2B] bg-[#3B5E43]/15 px-3 py-1.5 rounded-full border border-[#3B5E43]/30">
+          <span className="w-2 h-2 rounded-full bg-[#3B5E43] animate-pulse"></span>
           <span>Live Front Desk Online</span>
         </div>
       </div>
 
       {/* Hero Showcase Card */}
-      <section className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-sm">
-        <div className="relative h-72 sm:h-[420px] w-full overflow-hidden bg-slate-950">
+      <section className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-sm">
+        <div className="relative h-72 sm:h-[420px] w-full overflow-hidden bg-[#212529]">
           <img
             src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'}
             alt={hotel.name}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#212529]/95 via-[#212529]/30 to-transparent"></div>
 
           <div className="absolute bottom-6 left-6 right-6 text-white space-y-2 sm:space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-emerald-600 font-extrabold text-[11px] uppercase tracking-wider shadow-sm">
+              <span className="px-3 py-1 rounded-full bg-[#1E3A2B] font-extrabold text-[11px] uppercase tracking-wider shadow-sm border border-[#3B5E43]/50">
                 {hotel.city}, {hotel.province}
               </span>
-              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-amber-300 text-xs font-bold border border-white/10">
-                <Star className="w-3.5 h-3.5 fill-amber-300" />
+              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#D49B41] text-xs font-bold border border-[#D49B41]/25">
+                <Star className="w-3.5 h-3.5 fill-[#D49B41] text-[#D49B41]" />
                 <span>{hotel.rating}</span>
                 <span className="text-slate-300 font-normal">({hotel.review_count} verified reviews)</span>
               </div>
@@ -156,27 +158,27 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
         </div>
 
         {/* Info Grid */}
-        <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 border-t border-slate-100">
+        <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 border-t border-[#E8E2D8]/80">
           
           {/* Description & Amenities */}
           <div className="md:col-span-2 space-y-6">
             <div>
-              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-base font-extrabold text-[#212529] tracking-tight">
                 About the Property
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-2 font-normal">
-                {hotel.description || 'Experience authentic Bukidnon highland hospitality in Malaybalay City.'}
+                {hotel.description || 'Experience authentic local hospitality, comfortable boutique rooms, and personalized service.'}
               </p>
             </div>
 
             <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+              <h3 className="text-xs font-bold text-[#212529] uppercase tracking-wider mb-3">
                 Property Amenities & Inclusions
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {(hotel.amenities || []).map((amenity, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs font-medium text-slate-700 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/60">
-                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <div key={idx} className="flex items-center gap-2 text-xs font-medium text-slate-700 bg-[#FAF8F5] px-3 py-2 rounded-xl border border-[#E8E2D8]">
+                    <Check className="w-3.5 h-3.5 text-[#3B5E43] shrink-0" />
                     <span>{amenity}</span>
                   </div>
                 ))}
@@ -185,34 +187,34 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
           </div>
 
           {/* Location & Contact Sidecard */}
-          <div className="bg-slate-50/80 p-5 sm:p-6 rounded-2xl border border-slate-200/80 space-y-4 flex flex-col justify-between">
+          <div className="bg-[#FAF8F5] p-5 sm:p-6 rounded-2xl border border-[#E8E2D8] space-y-4 flex flex-col justify-between">
             <div className="space-y-3.5">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-[#212529] uppercase tracking-wider">
                 Location & Contact Details
               </h3>
               <div className="space-y-2.5 text-xs text-slate-600">
                 <div className="flex items-start gap-2.5">
-                  <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-[#3B5E43] shrink-0 mt-0.5" />
                   <span className="font-medium text-slate-700">{hotel.address}</span>
                 </div>
                 {hotel.contact_phone && (
                   <div className="flex items-center gap-2.5">
-                    <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Phone className="w-4 h-4 text-[#3B5E43] shrink-0" />
                     <span className="font-medium text-slate-700">{hotel.contact_phone}</span>
                   </div>
                 )}
                 {hotel.contact_email && (
                   <div className="flex items-center gap-2.5">
-                    <Mail className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <Mail className="w-4 h-4 text-[#3B5E43] shrink-0" />
                     <span className="font-medium text-slate-700">{hotel.contact_email}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-200">
-              <div className="flex items-center gap-2.5 text-xs text-emerald-900 font-bold bg-emerald-100/70 p-3 rounded-xl border border-emerald-200">
-                <Clock className="w-4 h-4 text-emerald-700 shrink-0" />
+            <div className="pt-3 border-t border-[#E8E2D8]">
+              <div className="flex items-center gap-2.5 text-xs text-[#1E3A2B] font-bold bg-[#3B5E43]/15 p-3 rounded-xl border border-[#3B5E43]/30">
+                <Clock className="w-4 h-4 text-[#1E3A2B] shrink-0" />
                 <span>45-Min Soft Hold Guaranteed</span>
               </div>
             </div>
@@ -221,13 +223,13 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
       </section>
 
       {/* Travel Dates Selector Bar */}
-      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200 shadow-lg p-4 sm:p-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-xl rounded-2xl border border-[#E8E2D8] shadow-lg p-4 sm:p-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-            <Calendar className="w-5 h-5 text-emerald-600" />
+          <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] text-[#1E3A2B] border border-[#E8E2D8] flex items-center justify-center shrink-0">
+            <Calendar className="w-5 h-5 text-[#1E3A2B]" />
           </div>
           <div>
-            <h3 className="text-xs sm:text-sm font-extrabold text-slate-900">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#212529]">
               Configuring Stay Duration
             </h3>
             <p className="text-[11px] text-slate-500">
@@ -244,7 +246,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
               value={checkIn}
               min={today}
               onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 text-xs font-semibold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+              className="w-full sm:w-auto px-3 py-2 text-xs font-semibold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
             />
           </div>
 
@@ -255,7 +257,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
               value={checkOut}
               min={checkIn}
               onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 text-xs font-semibold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+              className="w-full sm:w-auto px-3 py-2 text-xs font-semibold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
             />
           </div>
 
@@ -264,7 +266,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
             <select
               value={guests}
               onChange={(e) => setGuests(Number(e.target.value))}
-              className="w-full sm:w-auto px-3 py-2 text-xs font-semibold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 cursor-pointer"
+              className="w-full sm:w-auto px-3 py-2 text-xs font-semibold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5] cursor-pointer"
             >
               <option value="1">1 Guest</option>
               <option value="2">2 Guests</option>
@@ -278,7 +280,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
       {/* Available Room Types */}
       <section className="space-y-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-black text-[#212529] tracking-tight">
             Available Room Types
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -292,10 +294,10 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
             return (
               <div
                 key={rt.id}
-                className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-xl hover:border-emerald-300 card-hover-lift transition-all duration-300 flex flex-col md:flex-row"
+                className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#3B5E43] card-hover-lift transition-all duration-300 flex flex-col md:flex-row"
               >
                 {/* Room Image */}
-                <div className="md:w-80 h-56 md:h-auto shrink-0 relative bg-slate-900 overflow-hidden">
+                <div className="md:w-80 h-56 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
                   <img
                     src={
                       rt.photos && rt.photos.length > 0
@@ -305,8 +307,8 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                     alt={rt.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1 border border-white/10">
-                    <Users className="w-3 h-3 text-emerald-400" />
+                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[11px] font-bold flex items-center gap-1 border border-white/10">
+                    <Users className="w-3 h-3 text-[#D49B41]" />
                     Up to {rt.capacity} guests
                   </div>
                 </div>
@@ -316,7 +318,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                   <div>
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                       <div>
-                        <h3 className="text-lg sm:text-xl font-extrabold text-slate-900">
+                        <h3 className="text-lg sm:text-xl font-extrabold text-[#212529]">
                           {rt.name}
                         </h3>
                         <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -325,13 +327,13 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                       </div>
 
                       <div className="text-left sm:text-right shrink-0">
-                        <div className="text-xl sm:text-2xl font-black text-slate-900">
-                          ₱{Number(rt.base_rate).toLocaleString()}
+                        <div className="text-xl sm:text-2xl font-black text-[#1E3A2B]">
+                          {formatPrice(Number(rt.base_rate))}
                           <span className="text-xs font-normal text-slate-500"> / night</span>
                         </div>
                         {nights > 1 && (
-                          <div className="text-[11px] font-bold text-emerald-700">
-                            Total: ₱{totalPrice.toLocaleString()} for {nights} nights
+                          <div className="text-[11px] font-bold text-[#D49B41]">
+                            Total: {formatPrice(totalPrice)} for {nights} nights
                           </div>
                         )}
                       </div>
@@ -342,7 +344,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                       {(rt.amenities || []).map((a, i) => (
                         <span
                           key={i}
-                          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 border border-slate-200/70"
+                          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#FAF8F5] text-[#212529] border border-[#E8E2D8]"
                         >
                           {a}
                         </span>
@@ -351,19 +353,19 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                   </div>
 
                   {/* Guarantee & Reserve Action */}
-                  <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-semibold">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div className="pt-4 border-t border-[#E8E2D8]/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5 text-xs text-[#1E3A2B] font-semibold">
+                      <ShieldCheck className="w-4 h-4 text-[#3B5E43] shrink-0" />
                       <span>Instant 45-min hold locks room inventory</span>
                     </div>
 
                     <button
                       onClick={() => handleReserve(rt)}
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/25 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Reserve This Room</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
                     </button>
                   </div>
                 </div>

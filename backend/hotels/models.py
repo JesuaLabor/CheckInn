@@ -10,6 +10,18 @@ class Hotel(models.Model):
     address = models.CharField(max_length=300)
     city = models.CharField(max_length=100, default='Malaybalay City')
     province = models.CharField(max_length=100, default='Bukidnon')
+    country = models.CharField(max_length=2, default='PH', help_text='ISO-3166-1 alpha-2 country code')
+    country_name = models.CharField(max_length=100, default='Philippines')
+    postal_code = models.CharField(max_length=20, blank=True, default='')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    currency = models.CharField(max_length=3, default='PHP', help_text='ISO-4217 currency code (PHP, USD, JPY, EUR, etc.)')
+    timezone = models.CharField(max_length=50, default='Asia/Manila', help_text='IANA timezone (e.g. Asia/Manila, Asia/Tokyo)')
+    category = models.CharField(
+        max_length=50,
+        default='mountain',
+        help_text='Travel style category (beach, mountain, heritage, city, eco)'
+    )
     contact_phone = models.CharField(max_length=50, blank=True, default='')
     contact_email = models.EmailField(blank=True, default='')
     image_url = models.URLField(max_length=600, blank=True, default='')
@@ -70,7 +82,8 @@ class RoomType(models.Model):
     hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name='room_types')
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True, default='')
-    base_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text='Rate per night in PHP')
+    base_rate = models.DecimalField(max_digits=10, decimal_places=2, help_text='Rate per night')
+    currency = models.CharField(max_length=3, default='PHP', help_text='ISO-4217 currency code')
     capacity = models.PositiveIntegerField(default=2, help_text='Maximum guests')
     amenities = models.JSONField(default=list, blank=True)
     photos = models.JSONField(default=list, blank=True)
@@ -80,7 +93,7 @@ class RoomType(models.Model):
         ordering = ['base_rate']
 
     def __str__(self):
-        return f"{self.name} - {self.hotel.name} (₱{self.base_rate}/night)"
+        return f"{self.name} - {self.hotel.name} ({self.currency} {self.base_rate}/night)"
 
 
 class Room(models.Model):

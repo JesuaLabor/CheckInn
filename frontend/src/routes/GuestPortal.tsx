@@ -95,28 +95,28 @@ export const GuestPortal: React.FC = () => {
     switch (b.status) {
       case 'pending_approval':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-900 border border-amber-300">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#D49B41]/15 text-[#8F611A] border border-[#D49B41]/35">
+            <span className="w-2 h-2 rounded-full bg-[#D49B41] animate-ping"></span>
             Awaiting Staff Review
           </span>
         );
       case 'confirmed':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-900 border border-emerald-300">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#3B5E43]/15 text-[#1E3A2B] border border-[#3B5E43]/30">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#3B5E43]" />
             Approved • Ready for QR Check-In
           </span>
         );
       case 'checked_in':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/15 text-blue-900 border border-blue-300">
-            <Building className="w-3.5 h-3.5 text-blue-600" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#1E3A2B]/10 text-[#1E3A2B] border border-[#1E3A2B]/20">
+            <Building className="w-3.5 h-3.5 text-[#1E3A2B]" />
             Checked In • Active Stay
           </span>
         );
       case 'checked_out':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#FAF8F5] text-slate-700 border border-[#E8E2D8]">
             Completed Stay
           </span>
         );
@@ -129,12 +129,12 @@ export const GuestPortal: React.FC = () => {
         );
       case 'expired':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#FAF8F5] text-slate-500 border border-[#E8E2D8]">
             Hold Expired
           </span>
         );
       default:
-        return <span className="text-xs px-2.5 py-1 rounded bg-slate-100 font-bold">{b.status_display}</span>;
+        return <span className="text-xs px-2.5 py-1 rounded bg-[#FAF8F5] border border-[#E8E2D8] font-bold">{b.status_display}</span>;
     }
   };
 
@@ -142,23 +142,23 @@ export const GuestPortal: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-28 md:pb-20 space-y-6">
       
       {/* Top Banner Card */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E2D8] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 text-emerald-700 text-xs font-extrabold uppercase tracking-wider mb-1">
-            <CalendarCheck className="w-4 h-4" />
+          <div className="inline-flex items-center gap-1.5 text-[#1E3A2B] text-xs font-extrabold uppercase tracking-wider mb-1">
+            <CalendarCheck className="w-4 h-4 text-[#3B5E43]" />
             <span>Digital Guest Pass & Reservations</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#212529] tracking-tight">
             My Stay Itinerary
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Hello, <span className="font-bold text-slate-800">{user?.first_name ? `${user.first_name} ${user.last_name}` : user?.username}</span> • Track approval status, retrieve QR passes, and request amenities.
+            Hello, <span className="font-bold text-[#212529]">{user?.first_name ? `${user.first_name} ${user.last_name}` : user?.username}</span> • Track approval status, retrieve QR passes, and request amenities.
           </p>
         </div>
 
         <button
           onClick={fetchMyBookings}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all shadow-2xs"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-[#FAF8F5] border border-[#E8E2D8] hover:bg-slate-100 active:scale-95 transition-all shadow-2xs"
         >
           <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
@@ -169,7 +169,7 @@ export const GuestPortal: React.FC = () => {
       {loading ? (
         <div className="space-y-4">
           {[1, 2].map((i) => (
-            <div key={i} className="h-56 bg-white rounded-3xl border border-slate-200/80 p-6 animate-pulse">
+            <div key={i} className="h-56 bg-white rounded-3xl border border-[#E8E2D8] p-6 animate-pulse">
               <div className="h-6 bg-slate-200 rounded w-1/3 mb-4 animate-shimmer"></div>
               <div className="h-4 bg-slate-200 rounded w-1/2 mb-2"></div>
               <div className="h-4 bg-slate-200 rounded w-1/4"></div>
@@ -177,13 +177,13 @@ export const GuestPortal: React.FC = () => {
           ))}
         </div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-slate-200/80 p-8 shadow-xs space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-            <Calendar className="w-8 h-8" />
+        <div className="text-center py-16 bg-white rounded-3xl border border-[#E8E2D8] p-8 shadow-xs space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-[#FAF8F5] text-[#1E3A2B] border border-[#E8E2D8] flex items-center justify-center mx-auto">
+            <Calendar className="w-8 h-8 text-[#1E3A2B]" />
           </div>
-          <h3 className="text-lg font-extrabold text-slate-900">No Reservations Found</h3>
+          <h3 className="text-lg font-extrabold text-[#212529]">No Reservations Found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-            You don't have any bookings in your itinerary yet. Explore our Malaybalay lodgings to create a reservation with an instant 45-minute hold.
+            You don't have any bookings in your itinerary yet. Explore our verified lodgings to create a reservation with an instant 45-minute hold.
           </p>
         </div>
       ) : (
@@ -194,12 +194,12 @@ export const GuestPortal: React.FC = () => {
             return (
               <div
                 key={booking.id}
-                className="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
+                className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-sm hover:shadow-md transition-all duration-300"
               >
                 {/* Boarding Pass Header */}
-                <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                <div className="bg-[#FAF8F5] px-6 py-4 border-b border-[#E8E2D8]/80 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                    <span className="font-mono bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-slate-800 font-extrabold shadow-2xs">
+                    <span className="font-mono bg-white px-2.5 py-1 rounded-lg border border-[#E8E2D8] text-[#212529] font-extrabold shadow-2xs">
                       {booking.booking_reference}
                     </span>
                     <span className="text-slate-300">•</span>
@@ -215,38 +215,38 @@ export const GuestPortal: React.FC = () => {
                     
                     {/* Hotel & Room Details */}
                     <div className="md:col-span-2 space-y-2">
-                      <h3 className="text-xl font-black text-slate-900 leading-tight">
+                      <h3 className="text-xl font-black text-[#212529] leading-tight">
                         {booking.hotel_name}
                       </h3>
                       
-                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
-                        <Bed className="w-4 h-4 text-emerald-600" />
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A2B]">
+                        <Bed className="w-4 h-4 text-[#3B5E43]" />
                         <span>{booking.room_type_name}</span>
                         {booking.room_number && (
-                          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md text-[11px] font-extrabold">
+                          <span className="bg-[#3B5E43]/15 text-[#1E3A2B] px-2 py-0.5 rounded-md text-[11px] font-extrabold border border-[#3B5E43]/30">
                             Room {booking.room_number}
                           </span>
                         )}
                       </div>
 
                       <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-[#3B5E43] shrink-0" />
                         <span>{booking.hotel_address}</span>
                       </div>
 
                       {/* Date & Guest Info Grid */}
-                      <div className="pt-3 grid grid-cols-3 gap-2 p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-center">
+                      <div className="pt-3 grid grid-cols-3 gap-2 p-3 bg-[#FAF8F5] rounded-2xl border border-[#E8E2D8] text-center">
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase block">Check-in</span>
-                          <span className="text-xs font-black text-slate-900">{booking.check_in}</span>
+                          <span className="text-xs font-black text-[#212529]">{booking.check_in}</span>
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase block">Check-out</span>
-                          <span className="text-xs font-black text-slate-900">{booking.check_out}</span>
+                          <span className="text-xs font-black text-[#212529]">{booking.check_out}</span>
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase block">Guests</span>
-                          <span className="text-xs font-black text-slate-900">{booking.guest_count}</span>
+                          <span className="text-xs font-black text-[#212529]">{booking.guest_count}</span>
                         </div>
                       </div>
                     </div>
@@ -257,7 +257,7 @@ export const GuestPortal: React.FC = () => {
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
                           Total Booking Amount
                         </span>
-                        <div className="text-2xl font-black text-slate-900">
+                        <div className="text-2xl font-black text-[#1E3A2B]">
                           ₱{Number(booking.total_amount).toLocaleString()}
                         </div>
                         <span className="text-xs text-slate-500 font-medium capitalize">
@@ -269,12 +269,12 @@ export const GuestPortal: React.FC = () => {
                       {/* Status-specific action buttons */}
                       <div className="w-full sm:w-auto">
                         {booking.status === 'pending_approval' && (
-                          <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-left md:text-right space-y-1">
-                            <div className="text-xs text-amber-900 font-extrabold flex items-center md:justify-end gap-1.5">
-                              <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                          <div className="bg-[#D49B41]/10 p-3.5 rounded-2xl border border-[#D49B41]/35 text-left md:text-right space-y-1">
+                            <div className="text-xs text-[#8F611A] font-extrabold flex items-center md:justify-end gap-1.5">
+                              <Clock className="w-4 h-4 text-[#D49B41] animate-spin" />
                               <span>Soft Hold: {holdCountdown}</span>
                             </div>
-                            <p className="text-[11px] text-amber-700 leading-tight">
+                            <p className="text-[11px] text-[#8F611A] leading-tight">
                               Room inventory is held for you while front desk confirms.
                             </p>
                           </div>
@@ -283,9 +283,9 @@ export const GuestPortal: React.FC = () => {
                         {(booking.status === 'confirmed' || booking.status === 'checked_in') && (
                           <button
                             onClick={() => setSelectedBookingForQR(booking)}
-                            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-950 hover:bg-emerald-600 text-white font-extrabold text-xs shadow-md shadow-slate-950/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                           >
-                            <QrCode className="w-4 h-4 text-emerald-400" />
+                            <QrCode className="w-4 h-4 text-[#D49B41]" />
                             <span>Digital QR Pass</span>
                           </button>
                         )}
@@ -295,14 +295,14 @@ export const GuestPortal: React.FC = () => {
 
                   {/* In-Stay Service Request Banner if Checked-In */}
                   {booking.status === 'checked_in' && (
-                    <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-teal-50/60 p-4 rounded-2xl border border-teal-100">
-                      <div className="flex items-center gap-2.5 text-xs text-teal-900 font-semibold">
-                        <BellRing className="w-4 h-4 text-teal-600 shrink-0" />
+                    <div className="pt-4 border-t border-[#E8E2D8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#FAF8F5] p-4 rounded-2xl border border-[#E8E2D8]">
+                      <div className="flex items-center gap-2.5 text-xs text-[#1E3A2B] font-semibold">
+                        <BellRing className="w-4 h-4 text-[#3B5E43] shrink-0" />
                         <span>Need extra towels, housekeeping, or room refreshments?</span>
                       </div>
                       <button
                         onClick={() => setServiceModalBooking(booking)}
-                        className="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1.5"
+                        className="px-3.5 py-2 rounded-xl bg-[#3B5E43] hover:bg-[#2F4D36] text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1.5"
                       >
                         <MessageSquarePlus className="w-3.5 h-3.5" />
                         <span>Request Service</span>
@@ -346,21 +346,21 @@ export const GuestPortal: React.FC = () => {
 
       {/* Guest Service Request Modal */}
       {serviceModalBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-[#E8E2D8] p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-200">
             <div>
-              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-[#1E3A2B] uppercase tracking-wider">
                 Direct to Front Desk
               </span>
-              <h3 className="text-lg font-black text-slate-900">Request Guest Service</h3>
+              <h3 className="text-lg font-black text-[#212529]">Request Guest Service</h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 Room {serviceModalBooking.room_number || 'Assigned'} • {serviceModalBooking.hotel_name}
               </p>
             </div>
 
             {serviceSuccessMsg ? (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl text-center space-y-1">
-                <Check className="w-5 h-5 text-emerald-600 mx-auto" />
+              <div className="p-4 bg-[#3B5E43]/15 border border-[#3B5E43]/30 text-[#1E3A2B] text-xs font-bold rounded-2xl text-center space-y-1">
+                <Check className="w-5 h-5 text-[#3B5E43] mx-auto" />
                 <p>{serviceSuccessMsg}</p>
               </div>
             ) : (
@@ -370,7 +370,7 @@ export const GuestPortal: React.FC = () => {
                   <select
                     value={requestType}
                     onChange={(e) => setRequestType(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 cursor-pointer"
+                    className="w-full px-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5] cursor-pointer"
                   >
                     <option value="towels">Extra Towels & Linens</option>
                     <option value="housekeeping">Room Housekeeping / Cleaning</option>
@@ -389,7 +389,7 @@ export const GuestPortal: React.FC = () => {
                     placeholder="e.g. Please send 2 fresh bath towels and bottled water."
                     value={requestMessage}
                     onChange={(e) => setRequestMessage(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                    className="w-full px-3.5 py-2.5 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                   />
                 </div>
 
@@ -404,7 +404,7 @@ export const GuestPortal: React.FC = () => {
                   <button
                     type="submit"
                     disabled={submittingService}
-                    className="flex-1 py-2.5 text-xs font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md active:scale-95 transition-all"
+                    className="flex-1 py-2.5 text-xs font-extrabold text-white bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] rounded-xl shadow-md active:scale-95 transition-all"
                   >
                     {submittingService ? 'Sending...' : 'Send to Front Desk'}
                   </button>

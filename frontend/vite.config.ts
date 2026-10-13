@@ -17,11 +17,11 @@ export default defineConfig({
         'icons/*.svg'
       ],
       manifest: {
-        name: 'LocalStay — Malaybalay City Hotels & Inns Booking',
+        name: 'LocalStay — Boutique Hotels & Inns Booking',
         short_name: 'LocalStay',
-        description: 'Marketplace-style digital booking and front-desk platform for hotels and inns in Malaybalay City, Bukidnon.',
-        theme_color: '#059669',
-        background_color: '#0f172a',
+        description: 'Marketplace-style digital booking and front-desk platform for boutique hotels, independent inns, and heritage lodgings.',
+        theme_color: '#1E3A2B',
+        background_color: '#FAF8F5',
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/',
@@ -53,7 +53,7 @@ export default defineConfig({
           {
             name: 'Browse Inns',
             short_name: 'Marketplace',
-            description: 'Explore available rooms in Malaybalay City',
+            description: 'Explore available rooms across the Philippines and abroad',
             url: '/',
             icons: [{ src: '/icons/pwa-192x192.png', sizes: '192x192' }]
           },

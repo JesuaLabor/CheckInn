@@ -47,8 +47,12 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
     tagline: '',
     description: '',
     address: '',
-    city: 'Malaybalay City',
-    province: 'Bukidnon',
+    city: '',
+    province: '',
+    country: 'PH',
+    country_name: 'Philippines',
+    category: 'mountain',
+    currency: 'PHP',
     contact_phone: '',
     contact_email: '',
     image_url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
@@ -177,7 +181,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#212529] text-slate-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Back navigation */}
         <button
@@ -189,12 +193,12 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
         </button>
 
         {/* Hero Banner */}
-        <div className="relative rounded-3xl bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-950 border border-emerald-500/20 p-6 sm:p-8 mb-8 overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+        <div className="relative rounded-3xl bg-gradient-to-br from-[#1E3A2B]/40 via-[#212529] to-[#15181B] border border-[#3B5E43]/30 p-6 sm:p-8 mb-8 overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#D49B41]/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
 
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3B5E43]/20 border border-[#D49B41]/35 text-[#E2AE55] text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Partner Onboarding</span>
               </div>
@@ -202,7 +206,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                 List Your Hotel or Inn on LocalStay
               </h1>
               <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
-                Empower your front desk with digital reservations, automated room hold protection, and instant QR check-ins across Malaybalay City & Bukidnon.
+                Empower your front desk with digital reservations, automated room hold protection, and instant QR check-ins across the Philippines & abroad.
               </p>
             </div>
 
@@ -213,7 +217,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                 <div className="text-slate-400 text-[11px]">Upfront Setup Fee</div>
               </div>
               <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                <div className="font-bold text-emerald-400 text-base">24/7</div>
+                <div className="font-bold text-[#D49B41] text-base">24/7</div>
                 <div className="text-slate-400 text-[11px]">Front Desk Matrix</div>
               </div>
             </div>
@@ -225,14 +229,14 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
               onClick={() => step > 1 && setStep(1)}
               className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all text-left ${
                 step === 1
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                  ? 'bg-[#1E3A2B] text-white border border-[#D49B41]/50 shadow-lg shadow-[#1E3A2B]/40'
                   : step > 1
-                  ? 'bg-emerald-500/20 text-emerald-300'
+                  ? 'bg-[#3B5E43]/30 text-emerald-200 border border-[#3B5E43]/40'
                   : 'bg-white/5 text-slate-500'
               }`}
             >
               <div className="w-5 h-5 rounded-full bg-black/20 flex items-center justify-center text-[10px]">
-                {step > 1 ? <Check className="w-3 h-3" /> : '1'}
+                {step > 1 ? <Check className="w-3 h-3 text-[#D49B41]" /> : '1'}
               </div>
               <span className="hidden sm:inline">Property Info</span>
             </button>
@@ -241,14 +245,14 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
               onClick={() => step > 2 && setStep(2)}
               className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all text-left ${
                 step === 2
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                  ? 'bg-[#1E3A2B] text-white border border-[#D49B41]/50 shadow-lg shadow-[#1E3A2B]/40'
                   : step > 2
-                  ? 'bg-emerald-500/20 text-emerald-300'
+                  ? 'bg-[#3B5E43]/30 text-emerald-200 border border-[#3B5E43]/40'
                   : 'bg-white/5 text-slate-500'
               }`}
             >
               <div className="w-5 h-5 rounded-full bg-black/20 flex items-center justify-center text-[10px]">
-                {step > 2 ? <Check className="w-3 h-3" /> : '2'}
+                {step > 2 ? <Check className="w-3 h-3 text-[#D49B41]" /> : '2'}
               </div>
               <span className="hidden sm:inline">Permit & Payout</span>
             </button>
@@ -256,7 +260,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
             <button
               className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all text-left ${
                 step === 3
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                  ? 'bg-[#1E3A2B] text-white border border-[#D49B41]/50 shadow-lg shadow-[#1E3A2B]/40'
                   : 'bg-white/5 text-slate-500'
               }`}
             >
@@ -280,8 +284,8 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
         )}
 
         {successMessage && (
-          <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3 text-emerald-300 text-sm">
-            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-400 mt-0.5" />
+          <div className="mb-6 p-4 rounded-2xl bg-[#3B5E43]/20 border border-[#3B5E43]/40 flex items-start gap-3 text-emerald-300 text-sm">
+            <CheckCircle2 className="w-5 h-5 shrink-0 text-[#3B5E43] mt-0.5" />
             <div>
               <p className="font-bold">Application Received!</p>
               <p className="text-xs text-emerald-400">{successMessage}</p>
@@ -293,12 +297,12 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
         )}
 
         {/* Form Container */}
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div className="bg-[#181B1E]/95 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl">
           {/* STEP 1: PROPERTY DETAILS */}
           {step === 1 && (
             <form onSubmit={handleNext} className="space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <div className="w-9 h-9 rounded-xl bg-[#3B5E43]/20 border border-[#3B5E43]/40 flex items-center justify-center text-[#E2AE55]">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -318,7 +322,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="e.g. Bukidnon Highland Pine Inn"
                     value={formData.hotel_name}
                     onChange={(e) => setFormData({ ...formData, hotel_name: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -331,8 +335,55 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="e.g. Peaceful mountain lodge near the city center"
                     value={formData.tagline}
                     onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">Country *</label>
+                  <select
+                    value={formData.country}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      const names: Record<string, string> = {
+                        PH: 'Philippines',
+                        JP: 'Japan',
+                        ID: 'Indonesia',
+                        TH: 'Thailand',
+                        US: 'United States',
+                        XX: 'International',
+                      };
+                      setFormData({
+                        ...formData,
+                        country: code,
+                        country_name: names[code] || 'International',
+                        currency: code === 'JP' ? 'JPY' : code === 'US' ? 'USD' : 'PHP',
+                      });
+                    }}
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
+                  >
+                    <option value="PH">🇵🇭 Philippines</option>
+                    <option value="JP">🇯🇵 Japan</option>
+                    <option value="ID">🇮🇩 Indonesia</option>
+                    <option value="TH">🇹🇭 Thailand</option>
+                    <option value="US">🇺🇸 United States</option>
+                    <option value="XX">🌏 Other International</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">Travel Style / Category</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
+                  >
+                    <option value="mountain">🌲 Highland & Mountain</option>
+                    <option value="beach">🏝️ Beach & Island</option>
+                    <option value="heritage">🏛️ Heritage & Cultural</option>
+                    <option value="city">🏙️ Urban & City</option>
+                    <option value="eco">🌿 Eco & Nature</option>
+                  </select>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -342,30 +393,33 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Sayre Highway, Barangay Casisang, Malaybalay City"
+                    placeholder="e.g. Station 1 White Beach / Fortich St / Shibuya 2-Chome"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">City</label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">City / Municipality *</label>
                   <input
                     type="text"
+                    required
+                    placeholder="e.g. Boracay Island, Baguio, Cebu, Tokyo"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-300 mb-1.5">Province</label>
+                  <label className="block text-xs font-bold text-slate-300 mb-1.5">Province / State / Region</label>
                   <input
                     type="text"
+                    placeholder="e.g. Aklan, Benguet, Cebu, Kanto"
                     value={formData.province}
                     onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -378,7 +432,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="+63 917 000 0000"
                     value={formData.contact_phone}
                     onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -391,7 +445,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="reservations@yourhotel.ph"
                     value={formData.contact_email}
                     onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -404,7 +458,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="https://images.unsplash.com/photo-..."
                     value={formData.image_url}
                     onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                   <p className="text-[11px] text-slate-500 mt-1">
                     Direct link to a high-resolution photo of your property.
@@ -425,11 +479,11 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                           onClick={() => toggleAmenity(amenity)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
                             selected
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
-                              : 'bg-slate-950 text-slate-400 border border-white/10 hover:border-white/20'
+                              ? 'bg-[#1E3A2B] text-white border border-[#D49B41]/50 shadow-sm'
+                              : 'bg-[#121417] text-slate-400 border border-white/10 hover:border-white/20'
                           }`}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                          <span className={`w-1.5 h-1.5 rounded-full ${selected ? 'bg-[#D49B41]' : 'bg-slate-600'}`}></span>
                           <span>{amenity}</span>
                         </button>
                       );
@@ -441,10 +495,10 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
               <div className="pt-4 flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02]"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#D49B41] hover:bg-[#BF8832] text-[#212529] font-black text-xs shadow-lg shadow-[#D49B41]/25 transition-all hover:scale-[1.02]"
                 >
                   <span>Continue to Permit & Payout</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </form>
@@ -454,7 +508,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
           {step === 2 && (
             <form onSubmit={handleNext} className="space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                <div className="w-9 h-9 rounded-xl bg-[#3B5E43]/20 border border-[#3B5E43]/40 flex items-center justify-center text-[#E2AE55]">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
@@ -478,7 +532,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     onChange={(e) =>
                       setFormData({ ...formData, business_permit_number: e.target.value })
                     }
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                   <p className="text-[11px] text-slate-500 mt-1">
                     Your local LGU or DTI registration reference.
@@ -494,14 +548,14 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="e.g. 123-456-789-000"
                     value={formData.bir_tin}
                     onChange={(e) => setFormData({ ...formData, bir_tin: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
                 <div className="sm:col-span-2 pt-2">
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-white">
-                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                      <CreditCard className="w-4 h-4 text-[#D49B41]" />
                       <span>Payout Account Details</span>
                     </div>
 
@@ -515,13 +569,22 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                           onChange={(e) =>
                             setFormData({ ...formData, payout_method: e.target.value })
                           }
-                          className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          className="w-full bg-[#121417] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D49B41]"
                         >
-                          <option value="GCash">GCash</option>
-                          <option value="Maya">Maya</option>
-                          <option value="BDO">BDO Unibank</option>
-                          <option value="BPI">Bank of the Philippine Islands (BPI)</option>
-                          <option value="LandBank">Land Bank of the Philippines</option>
+                          <optgroup label="Philippines Local">
+                            <option value="GCash">GCash</option>
+                            <option value="Maya">Maya</option>
+                            <option value="BDO">BDO Unibank</option>
+                            <option value="BPI">Bank of the Philippine Islands (BPI)</option>
+                            <option value="UnionBank">UnionBank of the Philippines</option>
+                            <option value="Metrobank">Metrobank</option>
+                          </optgroup>
+                          <optgroup label="International & Global">
+                            <option value="Stripe">Stripe Connect</option>
+                            <option value="Wise">Wise Business / Multi-Currency</option>
+                            <option value="Wire">International Bank Wire (SWIFT)</option>
+                            <option value="PayPal">PayPal Business</option>
+                          </optgroup>
                         </select>
                       </div>
 
@@ -536,7 +599,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                           onChange={(e) =>
                             setFormData({ ...formData, payout_account_name: e.target.value })
                           }
-                          className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          className="w-full bg-[#121417] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D49B41]"
                         />
                       </div>
 
@@ -552,7 +615,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                           onChange={(e) =>
                             setFormData({ ...formData, payout_account_number: e.target.value })
                           }
-                          className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                          className="w-full bg-[#121417] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D49B41]"
                         />
                       </div>
                     </div>
@@ -570,10 +633,10 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02]"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#D49B41] hover:bg-[#BF8832] text-[#212529] font-black text-xs shadow-lg shadow-[#D49B41]/25 transition-all hover:scale-[1.02]"
                 >
                   <span>Continue to Owner Account</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </button>
               </div>
             </form>
@@ -583,7 +646,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
           {step === 3 && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                <div className="w-9 h-9 rounded-xl bg-[#1E3A2B]/40 border border-[#3B5E43]/40 flex items-center justify-center text-[#E2AE55]">
                   <User className="w-5 h-5" />
                 </div>
                 <div>
@@ -604,7 +667,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="e.g. Juan"
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -617,7 +680,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="e.g. Dela Cruz"
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -630,7 +693,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="+63 917 123 4567"
                     value={formData.phone_number}
                     onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -644,7 +707,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="owner@yourhotel.ph"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -658,7 +721,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="e.g. juan_hoteladmin"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -672,7 +735,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     placeholder="At least 6 characters"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
 
@@ -688,14 +751,14 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                     onChange={(e) =>
                       setFormData({ ...formData, confirm_password: e.target.value })
                     }
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                    className="w-full bg-[#121417] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#D49B41] transition-colors"
                   />
                 </div>
               </div>
 
               {/* Policy note */}
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-3 text-xs text-slate-400">
-                <Clock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <Clock className="w-4 h-4 text-[#D49B41] shrink-0 mt-0.5" />
                 <p>
                   By submitting your application, your property will be placed in review by the LocalStay Platform Admin. You will be able to set up your rooms and staff members immediately while pending verification.
                 </p>
@@ -712,7 +775,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-xl shadow-emerald-500/25 transition-all hover:scale-[1.02] disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-[#D49B41] to-[#BF8832] hover:brightness-105 text-[#212529] font-black text-xs shadow-xl shadow-[#D49B41]/25 transition-all hover:scale-[1.02] disabled:opacity-50"
                 >
                   {loading ? (
                     <span>Submitting Application...</span>

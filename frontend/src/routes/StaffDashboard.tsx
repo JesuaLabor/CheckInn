@@ -367,16 +367,16 @@ export const StaffDashboard: React.FC = () => {
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200/80">
-              <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-              {user?.hotel_name || 'Malaybalay Lodging'}
+            <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#1E3A2B] bg-[#1E3A2B]/10 px-3 py-1 rounded-full border border-[#1E3A2B]/20">
+              <Building2 className="w-3.5 h-3.5 text-[#1E3A2B]" />
+              {user?.hotel_name || 'Hotel Front Desk'}
             </span>
-            <span className="text-xs font-bold text-slate-500 capitalize px-2 py-0.5 rounded-md bg-slate-100">
+            <span className="text-xs font-bold text-slate-500 capitalize px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-slate-200/60">
               {user?.role} Portal
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#212529] tracking-tight">
             Front Desk Operations Center
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -388,42 +388,42 @@ export const StaffDashboard: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setIsWalkInOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all flex items-center gap-2"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162B20] hover:to-[#2F4C35] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center gap-2"
           >
-            <UserPlus className="w-4 h-4" />
+            <UserPlus className="w-4 h-4 text-[#D49B41]" />
             <span>Direct Walk-in Check-in</span>
           </button>
 
           <button
             onClick={fetchDashboardData}
-            className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-95 transition-all shadow-2xs"
+            className="p-2.5 rounded-xl bg-[#FAF8F5] border border-slate-200 text-slate-700 hover:bg-slate-100 active:scale-95 transition-all shadow-2xs"
             title="Refresh dashboard metrics"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#1E3A2B]' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Pending Approval Notice Banner */}
       {hotelProfile?.status === 'pending' && (
-        <div className="p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div className="p-5 rounded-3xl bg-[#D49B41]/10 border border-[#D49B41]/30 text-[#212529] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
+            <div className="w-9 h-9 rounded-2xl bg-[#D49B41]/20 flex items-center justify-center text-[#D49B41] shrink-0 mt-0.5">
               <Clock className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-black text-amber-950">Property Application Under Review</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 uppercase tracking-wider">
+                <span className="text-sm font-black text-[#212529]">Property Application Under Review</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#D49B41]/20 text-[#212529] border border-[#D49B41]/30 uppercase tracking-wider">
                   Pending Verification
                 </span>
               </div>
-              <p className="text-xs text-amber-800/90 mt-1 max-w-2xl leading-relaxed">
+              <p className="text-xs text-[#212529]/80 mt-1 max-w-2xl leading-relaxed">
                 Your hotel profile is currently undergoing review by LocalStay Platform Admin. You can freely set up front desk staff accounts, configure room categories, and adjust nightly rates below. Once verified, your property will automatically become live on the public booking marketplace.
               </p>
             </div>
           </div>
-          <div className="text-right text-xs font-bold text-amber-900 shrink-0 bg-white/60 px-3 py-2 rounded-2xl border border-amber-200">
+          <div className="text-right text-xs font-bold text-[#212529] shrink-0 bg-white/70 px-3 py-2 rounded-2xl border border-[#D49B41]/30">
             Permit No: {hotelProfile.business_permit_number || 'Under Review'}
           </div>
         </div>
@@ -431,12 +431,12 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Notifications */}
       {actionSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between shadow-2xs animate-in slide-in-from-top-2">
+        <div className="p-4 rounded-2xl bg-[#3B5E43]/10 border border-[#3B5E43]/30 text-[#1E3A2B] text-xs font-bold flex items-center justify-between shadow-2xs animate-in slide-in-from-top-2">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#3B5E43] shrink-0" />
             <span>{actionSuccess}</span>
           </div>
-          <button onClick={() => setActionSuccess('')} className="text-emerald-700 hover:text-emerald-950 font-black">
+          <button onClick={() => setActionSuccess('')} className="text-[#1E3A2B] hover:text-[#212529] font-black">
             ✕
           </button>
         </div>
@@ -460,14 +460,14 @@ export const StaffDashboard: React.FC = () => {
           onClick={() => setActiveTab('pending')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
             activeTab === 'pending'
-              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20'
+              : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
           }`}
         >
           <Clock className="w-4 h-4" />
           <span>Pending Requests</span>
           {pendingRequests.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-400 text-slate-950 font-black">
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#D49B41] text-[#212529] font-black">
               {pendingRequests.length}
             </span>
           )}
@@ -477,8 +477,8 @@ export const StaffDashboard: React.FC = () => {
           onClick={() => setActiveTab('checkin')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
             activeTab === 'checkin'
-              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20'
+              : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
           }`}
         >
           <QrCode className="w-4 h-4" />
@@ -489,8 +489,8 @@ export const StaffDashboard: React.FC = () => {
           onClick={() => setActiveTab('rooms')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
             activeTab === 'rooms'
-              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20'
+              : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
           }`}
         >
           <Bed className="w-4 h-4" />
@@ -506,14 +506,14 @@ export const StaffDashboard: React.FC = () => {
           onClick={() => setActiveTab('requests')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
             activeTab === 'requests'
-              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20'
+              : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
           }`}
         >
           <BellRing className="w-4 h-4" />
           <span>Guest Requests</span>
           {guestRequests.filter((r) => r.status === 'pending').length > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-teal-400 text-slate-950 font-black">
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#D49B41] text-[#212529] font-black">
               {guestRequests.filter((r) => r.status === 'pending').length}
             </span>
           )}
@@ -523,8 +523,8 @@ export const StaffDashboard: React.FC = () => {
           onClick={() => setActiveTab('reports')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
             activeTab === 'reports'
-              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+              ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20'
+              : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
           }`}
         >
           <TrendingUp className="w-4 h-4" />
@@ -540,13 +540,13 @@ export const StaffDashboard: React.FC = () => {
               onClick={() => setActiveTab('staff_manage')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
                 activeTab === 'staff_manage'
-                  ? 'bg-purple-900 text-white shadow-md shadow-purple-900/20'
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+                  ? 'bg-[#212529] text-white shadow-md shadow-[#212529]/20'
+                  : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
               }`}
             >
-              <Users className="w-4 h-4 text-purple-400" />
+              <Users className="w-4 h-4 text-[#D49B41]" />
               <span>Staff Team</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-purple-100 text-purple-700 font-black">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#FAF8F5] text-[#212529] border border-slate-200 font-black">
                 {staffList.length}
               </span>
             </button>
@@ -555,13 +555,13 @@ export const StaffDashboard: React.FC = () => {
               onClick={() => setActiveTab('inventory_manage')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
                 activeTab === 'inventory_manage'
-                  ? 'bg-teal-900 text-white shadow-md shadow-teal-900/20'
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+                  ? 'bg-[#3B5E43] text-white shadow-md shadow-[#3B5E43]/20'
+                  : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
               }`}
             >
-              <Layers className="w-4 h-4 text-teal-400" />
+              <Layers className="w-4 h-4 text-[#D49B41]" />
               <span>Rooms & Rates</span>
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-teal-100 text-teal-700 font-black">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#FAF8F5] text-[#3B5E43] border border-slate-200 font-black">
                 {roomTypes.length}
               </span>
             </button>
@@ -570,8 +570,8 @@ export const StaffDashboard: React.FC = () => {
               onClick={() => setActiveTab('hotel_settings')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
                 activeTab === 'hotel_settings'
-                  ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80'
+                  ? 'bg-[#212529] text-white shadow-md shadow-[#212529]/20'
+                  : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
               }`}
             >
               <Settings className="w-4 h-4 text-slate-400" />
@@ -585,7 +585,7 @@ export const StaffDashboard: React.FC = () => {
       {activeTab === 'pending' && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-extrabold text-slate-900">
+            <h2 className="text-base font-extrabold text-[#212529]">
               Incoming Marketplace Requests
             </h2>
             <span className="text-xs text-slate-500 font-medium">
@@ -595,10 +595,10 @@ export const StaffDashboard: React.FC = () => {
 
           {pendingRequests.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-3xl border border-slate-200/80 p-8 space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-7 h-7" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900">All Requests Cleared</h3>
+              <h3 className="text-base font-extrabold text-[#212529]">All Requests Cleared</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 There are no pending booking requests awaiting review right now. New requests will appear here with live countdowns.
               </p>
@@ -615,34 +615,34 @@ export const StaffDashboard: React.FC = () => {
                 return (
                   <div
                     key={b.id}
-                    className="bg-white rounded-3xl border border-amber-200/90 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-5"
+                    className="bg-white rounded-3xl border border-[#D49B41]/40 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-5"
                   >
                     <div className="space-y-2 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200">
+                        <span className="text-xs font-mono font-bold bg-[#FAF8F5] text-[#212529] px-2 py-0.5 rounded-lg border border-slate-200">
                           {b.booking_reference}
                         </span>
-                        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1 rounded-full bg-amber-500/15 text-amber-900 border border-amber-300">
-                          <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1 rounded-full bg-[#D49B41]/15 text-[#212529] border border-[#D49B41]/40">
+                          <Clock className="w-3.5 h-3.5 text-[#D49B41] animate-spin" />
                           <span>Soft Hold Active: {holdCountdown}</span>
                         </span>
                       </div>
 
-                      <h3 className="text-lg font-black text-slate-900">{b.guest_name}</h3>
-                      <p className="text-xs font-bold text-emerald-800">
+                      <h3 className="text-lg font-black text-[#212529]">{b.guest_name}</h3>
+                      <p className="text-xs font-bold text-[#1E3A2B]">
                         {b.room_type_name} • {b.guest_count} {b.guest_count === 1 ? 'Guest' : 'Guests'}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 pt-1">
-                        <span>Check-in: <strong className="text-slate-900">{b.check_in}</strong></span>
-                        <span>Check-out: <strong className="text-slate-900">{b.check_out}</strong></span>
-                        <span>Total: <strong className="text-emerald-700">₱{Number(b.total_amount).toLocaleString()}</strong></span>
-                        <span>Contact: <strong className="text-slate-900">{b.guest_phone || b.guest_email}</strong></span>
+                        <span>Check-in: <strong className="text-[#212529]">{b.check_in}</strong></span>
+                        <span>Check-out: <strong className="text-[#212529]">{b.check_out}</strong></span>
+                        <span>Total: <strong className="text-[#1E3A2B]">₱{Number(b.total_amount).toLocaleString()}</strong></span>
+                        <span>Contact: <strong className="text-[#212529]">{b.guest_phone || b.guest_email}</strong></span>
                       </div>
 
                       {b.special_requests && (
-                        <div className="mt-2 text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
-                          <span className="font-bold text-slate-900">Guest Note:</span> "{b.special_requests}"
+                        <div className="mt-2 text-xs text-slate-700 bg-[#FAF8F5] p-2.5 rounded-xl border border-slate-200/70">
+                          <span className="font-bold text-[#212529]">Guest Note:</span> "{b.special_requests}"
                         </div>
                       )}
                     </div>
@@ -658,7 +658,7 @@ export const StaffDashboard: React.FC = () => {
                               [b.id]: Number(e.target.value),
                             })
                           }
-                          className="w-full sm:w-48 px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 cursor-pointer"
+                          className="w-full sm:w-48 px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5] cursor-pointer"
                         >
                           <option value="">Auto-Assign Room</option>
                           {matchingRooms.map((r) => (
@@ -672,9 +672,9 @@ export const StaffDashboard: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleApprove(b.id)}
-                          className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                          className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
                         >
-                          <CheckCircle2 className="w-4 h-4" />
+                          <CheckCircle2 className="w-4 h-4 text-[#D49B41]" />
                           <span>Approve & Issue QR</span>
                         </button>
 
@@ -700,10 +700,10 @@ export const StaffDashboard: React.FC = () => {
         <section className="space-y-6">
           <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-sm max-w-xl space-y-4">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-2">
-                <QrCode className="w-5 h-5 text-emerald-600" />
+              <div className="w-10 h-10 rounded-xl bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center mb-2">
+                <QrCode className="w-5 h-5 text-[#1E3A2B]" />
               </div>
-              <h3 className="text-base font-black text-slate-900">
+              <h3 className="text-base font-black text-[#212529]">
                 Front Desk QR Check-in Terminal
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -720,7 +720,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="Scan or paste reference / token..."
                   value={qrInput}
                   onChange={(e) => setQrInput(e.target.value)}
-                  className="w-full pl-11 pr-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                  className="w-full pl-11 pr-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
                 />
               </div>
 
@@ -728,9 +728,9 @@ export const StaffDashboard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={verifyingQr}
-                  className="flex-1 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="flex-1 px-5 py-3 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4 text-[#D49B41]" />
                   <span>{verifyingQr ? 'Validating Token...' : 'Verify Pass & Check In'}</span>
                 </button>
 
@@ -755,30 +755,30 @@ export const StaffDashboard: React.FC = () => {
             <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400 block">Total Rooms</span>
-                <span className="text-lg font-black text-slate-900">{roomBoard.summary?.total}</span>
+                <span className="text-lg font-black text-[#212529]">{roomBoard.summary?.total}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase text-emerald-600 block">Available</span>
-                <span className="text-lg font-black text-emerald-700">{roomBoard.summary?.available}</span>
+                <span className="text-[10px] font-bold uppercase text-[#1E3A2B] block">Available</span>
+                <span className="text-lg font-black text-[#1E3A2B]">{roomBoard.summary?.available}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase text-blue-600 block">Occupied</span>
-                <span className="text-lg font-black text-blue-700">{roomBoard.summary?.occupied}</span>
+                <span className="text-[10px] font-bold uppercase text-[#D49B41] block">Occupied</span>
+                <span className="text-lg font-black text-[#D49B41]">{roomBoard.summary?.occupied}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase text-amber-600 block">Cleaning</span>
-                <span className="text-lg font-black text-amber-700">{roomBoard.summary?.cleaning}</span>
+                <span className="text-[10px] font-bold uppercase text-[#3B5E43] block">Cleaning</span>
+                <span className="text-lg font-black text-[#3B5E43]">{roomBoard.summary?.cleaning}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-500 block">Occupancy Rate</span>
-                <span className="text-lg font-black text-slate-900">{roomBoard.summary?.occupancy_rate}%</span>
+                <span className="text-lg font-black text-[#212529]">{roomBoard.summary?.occupancy_rate}%</span>
               </div>
             </div>
           )}
 
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-extrabold text-slate-900">
+              <h2 className="text-base font-extrabold text-[#212529]">
                 Physical Room Status & Housekeeping Board
               </h2>
               <p className="text-xs text-slate-500">
@@ -798,23 +798,23 @@ export const StaffDashboard: React.FC = () => {
                   key={r.id}
                   className={`rounded-2xl p-4 border transition-all ${
                     isOccupied
-                      ? 'bg-blue-50/60 border-blue-200 shadow-2xs'
+                      ? 'bg-[#FAF8F5] border-[#D49B41]/40 shadow-2xs'
                       : isAvailable
-                      ? 'bg-emerald-50/60 border-emerald-200 shadow-2xs'
-                      : 'bg-amber-50/60 border-amber-200 shadow-2xs'
+                      ? 'bg-white border-[#3B5E43]/30 shadow-2xs'
+                      : 'bg-[#FAF8F5] border-slate-200 shadow-2xs'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-lg font-black text-slate-900">
+                    <span className="text-lg font-black text-[#212529]">
                       Room {r.room_number}
                     </span>
                     <span
                       className={`text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full ${
                         isOccupied
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[#D49B41] text-[#212529]'
                           : isAvailable
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-amber-500 text-white'
+                          ? 'bg-[#1E3A2B] text-white'
+                          : 'bg-[#3B5E43] text-white'
                       }`}
                     >
                       {r.status}
@@ -825,16 +825,16 @@ export const StaffDashboard: React.FC = () => {
                   <p className="text-[11px] text-slate-500">{r.floor}</p>
 
                   {r.occupant ? (
-                    <div className="mt-3 pt-2.5 border-t border-blue-200/70 text-xs space-y-1">
-                      <div className="font-extrabold text-slate-900">{r.occupant.guest_name}</div>
+                    <div className="mt-3 pt-2.5 border-t border-[#D49B41]/30 text-xs space-y-1">
+                      <div className="font-extrabold text-[#212529]">{r.occupant.guest_name}</div>
                       <div className="text-[11px] text-slate-600 font-medium">{r.occupant.guest_phone || 'No phone'}</div>
-                      <div className="text-[10px] text-blue-900 font-bold">
+                      <div className="text-[10px] text-[#1E3A2B] font-bold">
                         Checkout: {r.occupant.check_out}
                       </div>
 
                       <button
                         onClick={() => handleCheckOut(r.occupant!.booking_id)}
-                        className="mt-2.5 w-full py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
+                        className="mt-2.5 w-full py-1.5 rounded-xl bg-[#212529] hover:bg-[#1E3A2B] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
                       >
                         <LogOut className="w-3.5 h-3.5" />
                         <span>Check Out Guest</span>
@@ -844,7 +844,7 @@ export const StaffDashboard: React.FC = () => {
                     <div className="mt-3 pt-2.5 border-t border-slate-200/70">
                       <button
                         onClick={() => handleToggleRoomStatus(r.id, r.status)}
-                        className="w-full py-1.5 rounded-xl text-[11px] font-bold text-slate-700 hover:bg-white border border-slate-200/90 transition-all active:scale-95 shadow-2xs"
+                        className="w-full py-1.5 rounded-xl text-[11px] font-bold text-slate-700 hover:bg-[#FAF8F5] border border-slate-200/90 transition-all active:scale-95 shadow-2xs"
                       >
                         {isCleaning ? 'Mark Clean & Available' : 'Mark for Cleaning'}
                       </button>
@@ -860,13 +860,13 @@ export const StaffDashboard: React.FC = () => {
       {/* Tab 4: In-House Guest Requests */}
       {activeTab === 'requests' && (
         <section className="space-y-4">
-          <h2 className="text-base font-extrabold text-slate-900">
+          <h2 className="text-base font-extrabold text-[#212529]">
             Guest In-Stay Service Requests
           </h2>
 
           {guestRequests.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-3xl border border-slate-200/80 p-8 space-y-2">
-              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+              <CheckCircle2 className="w-10 h-10 text-[#3B5E43] mx-auto" />
               <h3 className="text-sm font-bold text-slate-800">No Pending Requests</h3>
               <p className="text-xs text-slate-500">In-house guests currently have no pending service requests.</p>
             </div>
@@ -879,10 +879,10 @@ export const StaffDashboard: React.FC = () => {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-900 font-black text-xs">
+                      <span className="px-2.5 py-0.5 rounded-lg bg-[#FAF8F5] text-[#212529] font-black text-xs border border-slate-200/60">
                         Room {req.room_number || 'N/A'}
                       </span>
-                      <span className="font-extrabold text-xs text-emerald-800">{req.request_type_display}</span>
+                      <span className="font-extrabold text-xs text-[#1E3A2B]">{req.request_type_display}</span>
                       <span className="text-[10px] text-slate-400 font-medium">
                         {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
@@ -894,7 +894,7 @@ export const StaffDashboard: React.FC = () => {
                     {req.status === 'pending' && (
                       <button
                         onClick={() => handleServiceRequestStatus(req.id, 'in_progress')}
-                        className="px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold hover:bg-amber-100 active:scale-95 transition-all"
+                        className="px-3.5 py-1.5 rounded-xl bg-[#D49B41]/15 text-[#212529] border border-[#D49B41]/40 text-xs font-bold hover:bg-[#D49B41]/25 active:scale-95 transition-all"
                       >
                         In Progress
                       </button>
@@ -902,14 +902,14 @@ export const StaffDashboard: React.FC = () => {
                     {req.status !== 'resolved' && (
                       <button
                         onClick={() => handleServiceRequestStatus(req.id, 'resolved')}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1 shadow-xs"
+                        className="px-3.5 py-1.5 rounded-xl bg-[#1E3A2B] text-white text-xs font-bold hover:bg-[#3B5E43] active:scale-95 transition-all flex items-center gap-1 shadow-xs"
                       >
-                        <Check className="w-3.5 h-3.5" />
+                        <Check className="w-3.5 h-3.5 text-[#D49B41]" />
                         <span>Mark Resolved</span>
                       </button>
                     )}
                     {req.status === 'resolved' && (
-                      <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold">
+                      <span className="px-3 py-1.5 rounded-xl bg-[#FAF8F5] text-slate-600 text-xs font-bold border border-slate-200">
                         Resolved
                       </span>
                     )}
@@ -924,14 +924,14 @@ export const StaffDashboard: React.FC = () => {
       {/* Tab 5: Occupancy Reports */}
       {activeTab === 'reports' && (
         <section className="space-y-6">
-          <h2 className="text-base font-extrabold text-slate-900">
+          <h2 className="text-base font-extrabold text-[#212529]">
             Property Performance & Analytics
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-2xs space-y-2">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Booked Stay Revenue</span>
-              <div className="text-3xl font-black text-emerald-700">
+              <div className="text-3xl font-black text-[#1E3A2B]">
                 ₱{Number(occupancyReport?.total_revenue || 0).toLocaleString()}
               </div>
               <p className="text-[11px] text-slate-500 font-medium">From confirmed & checked-in marketplace stays</p>
@@ -939,7 +939,7 @@ export const StaffDashboard: React.FC = () => {
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-2xs space-y-2">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Stays Handled</span>
-              <div className="text-3xl font-black text-slate-900">
+              <div className="text-3xl font-black text-[#212529]">
                 {occupancyReport?.stats?.total_bookings || 0}
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
@@ -949,7 +949,7 @@ export const StaffDashboard: React.FC = () => {
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-2xs space-y-2">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Occupancy Rate</span>
-              <div className="text-3xl font-black text-blue-700">
+              <div className="text-3xl font-black text-[#D49B41]">
                 {occupancyReport?.occupancy_rate || 0}%
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
@@ -965,7 +965,7 @@ export const StaffDashboard: React.FC = () => {
         <section className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-extrabold text-slate-900">
+              <h2 className="text-base font-extrabold text-[#212529]">
                 Front Desk Staff & Receptionists
               </h2>
               <p className="text-xs text-slate-500">
@@ -975,9 +975,9 @@ export const StaffDashboard: React.FC = () => {
 
             <button
               onClick={() => setIsAddStaffOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-md shadow-purple-600/25 active:scale-95 transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-[#D49B41]" />
               <span>Add Front Desk Staff</span>
             </button>
           </div>
@@ -993,16 +993,16 @@ export const StaffDashboard: React.FC = () => {
                 {staffList.map((member) => (
                   <div
                     key={member.id}
-                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#FAF8F5] transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center font-bold text-purple-700 text-xs">
+                      <div className="w-10 h-10 rounded-2xl bg-[#1E3A2B]/10 border border-[#1E3A2B]/20 flex items-center justify-center font-bold text-[#1E3A2B] text-xs">
                         {member.first_name ? member.first_name[0] : member.username[0].toUpperCase()}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-slate-900">{member.full_name}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 uppercase">
+                          <span className="text-xs font-black text-[#212529]">{member.full_name}</span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF8F5] text-slate-600 border border-slate-200 uppercase">
                             {member.role}
                           </span>
                         </div>
@@ -1048,7 +1048,7 @@ export const StaffDashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-extrabold text-slate-900">
+                <h2 className="text-base font-extrabold text-[#212529]">
                   Room Categories & Nightly Rates
                 </h2>
                 <p className="text-xs text-slate-500">
@@ -1059,16 +1059,16 @@ export const StaffDashboard: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIsAddRoomTypeOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs shadow-md shadow-teal-600/25 active:scale-95 transition-all"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 text-[#D49B41]" />
                   <span>Add Room Category</span>
                 </button>
                 <button
                   onClick={() => setIsAddRoomOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-md active:scale-95 transition-all"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#212529] hover:bg-[#1E3A2B] text-white font-extrabold text-xs shadow-md active:scale-95 transition-all"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 text-[#D49B41]" />
                   <span>Add Physical Room</span>
                 </button>
               </div>
@@ -1082,11 +1082,11 @@ export const StaffDashboard: React.FC = () => {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-black text-slate-900">{rt.name}</h3>
+                      <h3 className="text-sm font-black text-[#212529]">{rt.name}</h3>
                       <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{rt.description}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-sm font-black text-emerald-700">₱{Number(rt.base_rate).toLocaleString()}</span>
+                      <span className="text-sm font-black text-[#1E3A2B]">₱{Number(rt.base_rate).toLocaleString()}</span>
                       <span className="text-[10px] text-slate-400 block">/ night</span>
                     </div>
                   </div>
@@ -1103,7 +1103,7 @@ export const StaffDashboard: React.FC = () => {
                       {rt.amenities.slice(0, 3).map((amenity, i) => (
                         <span
                           key={i}
-                          className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-600"
+                          className="px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[10px] font-bold text-slate-700 border border-slate-200/60"
                         >
                           {amenity}
                         </span>
@@ -1122,18 +1122,18 @@ export const StaffDashboard: React.FC = () => {
 
           {/* Physical Rooms Grid */}
           <div className="space-y-4">
-            <h3 className="text-sm font-black text-slate-900">Physical Rooms On Property</h3>
+            <h3 className="text-sm font-black text-[#212529]">Physical Rooms On Property</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {(roomBoard?.rooms || []).map((rm) => (
                 <div
                   key={rm.id}
                   className={`p-3 rounded-2xl border text-center space-y-1 ${
                     rm.status === 'available'
-                      ? 'bg-emerald-50/40 border-emerald-200 text-emerald-950'
+                      ? 'bg-white border-[#3B5E43]/30 text-[#1E3A2B]'
                       : rm.status === 'occupied'
-                      ? 'bg-blue-50/40 border-blue-200 text-blue-950'
+                      ? 'bg-[#FAF8F5] border-[#D49B41]/40 text-[#212529]'
                       : rm.status === 'cleaning'
-                      ? 'bg-amber-50/40 border-amber-200 text-amber-950'
+                      ? 'bg-[#FAF8F5] border-slate-200 text-[#3B5E43]'
                       : 'bg-slate-100 border-slate-200 text-slate-700'
                   }`}
                 >
@@ -1152,7 +1152,7 @@ export const StaffDashboard: React.FC = () => {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-extrabold text-slate-900">
+              <h2 className="text-base font-extrabold text-[#212529]">
                 Property Profile & Payout Settings
               </h2>
               <p className="text-xs text-slate-500">
@@ -1169,7 +1169,7 @@ export const StaffDashboard: React.FC = () => {
                   type="text"
                   value={profileForm.tagline}
                   onChange={(e) => setProfileForm({ ...profileForm, tagline: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1179,7 +1179,7 @@ export const StaffDashboard: React.FC = () => {
                   rows={3}
                   value={profileForm.description}
                   onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1189,7 +1189,7 @@ export const StaffDashboard: React.FC = () => {
                   type="text"
                   value={profileForm.contact_phone}
                   onChange={(e) => setProfileForm({ ...profileForm, contact_phone: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1199,13 +1199,13 @@ export const StaffDashboard: React.FC = () => {
                   type="email"
                   value={profileForm.contact_email}
                   onChange={(e) => setProfileForm({ ...profileForm, contact_email: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
               <div className="sm:col-span-2 pt-3 border-t border-slate-100">
-                <h4 className="text-xs font-black text-slate-900 mb-3 flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                <h4 className="text-xs font-black text-[#212529] mb-3 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-[#1E3A2B]" />
                   <span>Disbursement & Payout Account</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1214,7 +1214,7 @@ export const StaffDashboard: React.FC = () => {
                     <select
                       value={profileForm.payout_method}
                       onChange={(e) => setProfileForm({ ...profileForm, payout_method: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                     >
                       <option value="GCash">GCash</option>
                       <option value="Maya">Maya</option>
@@ -1229,7 +1229,7 @@ export const StaffDashboard: React.FC = () => {
                       type="text"
                       value={profileForm.payout_account_name}
                       onChange={(e) => setProfileForm({ ...profileForm, payout_account_name: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                     />
                   </div>
                   <div>
@@ -1238,7 +1238,7 @@ export const StaffDashboard: React.FC = () => {
                       type="text"
                       value={profileForm.payout_account_number}
                       onChange={(e) => setProfileForm({ ...profileForm, payout_account_number: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                     />
                   </div>
                 </div>
@@ -1249,7 +1249,7 @@ export const StaffDashboard: React.FC = () => {
               <button
                 type="submit"
                 disabled={profileSaving}
-                className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs shadow-md active:scale-95 transition-all disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md active:scale-95 transition-all disabled:opacity-50"
               >
                 {profileSaving ? 'Saving Changes...' : 'Save Settings'}
               </button>
@@ -1260,9 +1260,9 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Rejection Reason Modal */}
       {rejectingBookingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
-            <h3 className="text-base font-extrabold text-slate-900">Decline Reservation Request</h3>
+            <h3 className="text-base font-extrabold text-[#212529]">Decline Reservation Request</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               The 45-minute soft hold will be immediately released, freeing room availability on the marketplace.
             </p>
@@ -1275,7 +1275,7 @@ export const StaffDashboard: React.FC = () => {
                   required
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none bg-slate-50"
+                  className="w-full px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none bg-[#FAF8F5]"
                 />
               </div>
 
@@ -1311,14 +1311,14 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Add Staff Modal */}
       {isAddStaffOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center">
                 <UserPlus className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">Add Front Desk Staff</h3>
+                <h3 className="text-base font-extrabold text-[#212529]">Add Front Desk Staff</h3>
                 <p className="text-xs text-slate-400">Create employee credentials for your hotel.</p>
               </div>
             </div>
@@ -1332,7 +1332,7 @@ export const StaffDashboard: React.FC = () => {
                     placeholder="e.g. Maria"
                     value={newStaffData.first_name}
                     onChange={(e) => setNewStaffData({ ...newStaffData, first_name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                   />
                 </div>
                 <div>
@@ -1342,7 +1342,7 @@ export const StaffDashboard: React.FC = () => {
                     placeholder="e.g. Santos"
                     value={newStaffData.last_name}
                     onChange={(e) => setNewStaffData({ ...newStaffData, last_name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                   />
                 </div>
               </div>
@@ -1355,7 +1355,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="e.g. maria_frontdesk"
                   value={newStaffData.username}
                   onChange={(e) => setNewStaffData({ ...newStaffData, username: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1367,7 +1367,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="At least 6 characters"
                   value={newStaffData.password}
                   onChange={(e) => setNewStaffData({ ...newStaffData, password: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1379,7 +1379,7 @@ export const StaffDashboard: React.FC = () => {
                     placeholder="0917 000 0000"
                     value={newStaffData.phone_number}
                     onChange={(e) => setNewStaffData({ ...newStaffData, phone_number: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                   />
                 </div>
                 <div>
@@ -1389,7 +1389,7 @@ export const StaffDashboard: React.FC = () => {
                     placeholder="staff@hotel.ph"
                     value={newStaffData.email}
                     onChange={(e) => setNewStaffData({ ...newStaffData, email: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                   />
                 </div>
               </div>
@@ -1404,7 +1404,7 @@ export const StaffDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-md active:scale-95 transition-all"
+                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-[#1E3A2B] hover:bg-[#3B5E43] rounded-xl shadow-md active:scale-95 transition-all"
                 >
                   Create Staff Account
                 </button>
@@ -1416,14 +1416,14 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Add Room Type Modal */}
       {isAddRoomTypeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center">
                 <Layers className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">Add Room Category</h3>
+                <h3 className="text-base font-extrabold text-[#212529]">Add Room Category</h3>
                 <p className="text-xs text-slate-400">Configure accommodation tier and pricing.</p>
               </div>
             </div>
@@ -1437,7 +1437,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="e.g. Deluxe Balcony Suite"
                   value={newRoomTypeData.name}
                   onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, name: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1450,7 +1450,7 @@ export const StaffDashboard: React.FC = () => {
                     placeholder="2500"
                     value={newRoomTypeData.base_rate}
                     onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, base_rate: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                   />
                 </div>
                 <div>
@@ -1461,7 +1461,7 @@ export const StaffDashboard: React.FC = () => {
                     min={1}
                     value={newRoomTypeData.capacity}
                     onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, capacity: parseInt(e.target.value) || 2 })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                   />
                 </div>
               </div>
@@ -1473,7 +1473,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="1 Queen Bed, Hot Shower, High-Speed Wi-Fi"
                   value={newRoomTypeData.amenities}
                   onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, amenities: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1484,7 +1484,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="Cozy room with mountain breeze and private bathroom."
                   value={newRoomTypeData.description}
                   onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, description: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-teal-600"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1498,7 +1498,7 @@ export const StaffDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-md active:scale-95 transition-all"
+                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-[#1E3A2B] hover:bg-[#3B5E43] rounded-xl shadow-md active:scale-95 transition-all"
                 >
                   Create Category
                 </button>
@@ -1510,14 +1510,14 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Add Room Modal */}
       {isAddRoomOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl bg-[#FAF8F5] text-[#212529] border border-slate-200 flex items-center justify-center">
                 <Bed className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">Add Physical Room</h3>
+                <h3 className="text-base font-extrabold text-[#212529]">Add Physical Room</h3>
                 <p className="text-xs text-slate-400">Assign a room number and category.</p>
               </div>
             </div>
@@ -1531,7 +1531,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="e.g. 105 or Cottage 4"
                   value={newRoomData.room_number}
                   onChange={(e) => setNewRoomData({ ...newRoomData, room_number: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1542,7 +1542,7 @@ export const StaffDashboard: React.FC = () => {
                   placeholder="1st Floor, 2nd Floor, etc."
                   value={newRoomData.floor}
                   onChange={(e) => setNewRoomData({ ...newRoomData, floor: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
@@ -1552,7 +1552,7 @@ export const StaffDashboard: React.FC = () => {
                   required
                   value={newRoomData.room_type_id}
                   onChange={(e) => setNewRoomData({ ...newRoomData, room_type_id: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 >
                   <option value="">Select category...</option>
                   {roomTypes.map((rt) => (
@@ -1573,7 +1573,7 @@ export const StaffDashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md active:scale-95 transition-all"
+                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-[#212529] hover:bg-[#1E3A2B] rounded-xl shadow-md active:scale-95 transition-all"
                 >
                   Add Room
                 </button>

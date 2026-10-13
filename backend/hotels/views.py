@@ -30,13 +30,18 @@ class HotelListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        # Public marketplace only exposes approved, active properties
+        # Public marketplace exposes approved, active properties
         queryset = Hotel.objects.filter(is_active=True, status='approved').prefetch_related('room_types', 'rooms')
+        
         q = self.request.query_params.get('q')
         if q:
             queryset = queryset.filter(
                 Q(name__icontains=q) |
                 Q(address__icontains=q) |
+                Q(city__icontains=q) |
+                Q(province__icontains=q) |
+                Q(country_name__icontains=q) |
+                Q(country__iexact=q) |
                 Q(description__icontains=q) |
                 Q(tagline__icontains=q)
             )
@@ -44,6 +49,18 @@ class HotelListView(generics.ListAPIView):
         city = self.request.query_params.get('city')
         if city:
             queryset = queryset.filter(city__icontains=city)
+
+        province = self.request.query_params.get('province')
+        if province:
+            queryset = queryset.filter(province__icontains=province)
+
+        country = self.request.query_params.get('country')
+        if country:
+            queryset = queryset.filter(Q(country__iexact=country) | Q(country_name__icontains=country))
+
+        category = self.request.query_params.get('category')
+        if category and category.lower() != 'all':
+            queryset = queryset.filter(category__iexact=category)
 
         min_price = self.request.query_params.get('min_price')
         if min_price:
@@ -58,6 +75,61 @@ class HotelListView(generics.ListAPIView):
             queryset = queryset.filter(room_types__capacity__gte=guests)
 
         return queryset.distinct()
+
+
+class DestinationListView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """Returns popular destinations across Philippines and internationally with active lodging counts."""
+        hotels = Hotel.objects.filter(is_active=True, status='approved')
+        destinations = []
+        seen = set()
+        for h in hotels:
+            key = (h.city, h.country)
+            if key not in seen:
+                seen.add(key)
+                count = hotels.filter(city=h.city, country=h.country).count()
+                destinations.append({
+                    'city': h.city,
+                    'province': h.province,
+                    'country': h.country,
+                    'country_name': h.country_name,
+                    'category': h.category,
+                    'count': count,
+                    'image_url': h.image_url,
+                })
+        return Response(destinations)
+
+
+class ExchangeRatesView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        """Returns live multi-currency exchange rates relative to PHP."""
+        rates = {
+            'PHP': 1.0,
+            'USD': 0.0175,
+            'EUR': 0.0162,
+            'JPY': 2.65,
+            'SGD': 0.0234,
+            'AUD': 0.0268,
+            'GBP': 0.0138,
+        }
+        symbols = {
+            'PHP': '₱',
+            'USD': '$',
+            'EUR': '€',
+            'JPY': '¥',
+            'SGD': 'S$',
+            'AUD': 'A$',
+            'GBP': '£',
+        }
+        return Response({
+            'base': 'PHP',
+            'rates': rates,
+            'symbols': symbols,
+        })
 
 
 class HotelDetailView(generics.RetrieveAPIView):
@@ -184,8 +256,14 @@ class PartnerRegisterView(APIView):
         # 2. Validate required hotel fields
         hotel_name = data.get('hotel_name', '').strip()
         address = data.get('address', '').strip()
-        city = data.get('city', 'Malaybalay City').strip()
-        province = data.get('province', 'Bukidnon').strip()
+        city = data.get('city', '').strip() or 'Malaybalay City'
+        province = data.get('province', '').strip() or 'Bukidnon'
+        country = data.get('country', 'PH').strip().upper()
+        country_name = data.get('country_name', 'Philippines').strip()
+        postal_code = data.get('postal_code', '').strip()
+        currency = data.get('currency', 'PHP').strip().upper()
+        timezone_val = data.get('timezone', 'Asia/Manila').strip()
+        category = data.get('category', 'mountain').strip().lower()
 
         if not hotel_name or not address:
             return Response(
@@ -212,6 +290,12 @@ class PartnerRegisterView(APIView):
             address=address,
             city=city,
             province=province,
+            country=country,
+            country_name=country_name,
+            postal_code=postal_code,
+            currency=currency,
+            timezone=timezone_val,
+            category=category,
             contact_phone=data.get('contact_phone', phone_number),
             contact_email=data.get('contact_email', email),
             image_url=data.get('image_url', '').strip() or 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',

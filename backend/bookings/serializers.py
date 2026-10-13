@@ -46,7 +46,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'booking_reference', 'hotel', 'hotel_name', 'hotel_slug', 'hotel_address',
             'room_type', 'room_type_name', 'room', 'room_number',
             'guest', 'guest_name', 'guest_email', 'guest_phone', 'guest_count',
-            'check_in', 'check_out', 'total_amount', 'status', 'status_display',
+            'check_in', 'check_out', 'total_amount', 'currency', 'status', 'status_display',
             'source', 'source_display', 'hold_expires_at', 'is_hold_active',
             'qr_token', 'special_requests', 'rejection_reason',
             'reviewed_by', 'reviewed_at', 'checked_in_at', 'checked_out_at',

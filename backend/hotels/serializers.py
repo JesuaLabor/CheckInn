@@ -19,7 +19,7 @@ class RoomTypeSerializer(serializers.ModelSerializer):
         model = RoomType
         fields = [
             'id', 'hotel', 'hotel_name', 'name', 'description',
-            'base_rate', 'capacity', 'amenities', 'photos', 'rooms', 'available_count'
+            'base_rate', 'currency', 'capacity', 'amenities', 'photos', 'rooms', 'available_count'
         ]
 
     def get_available_count(self, obj):
@@ -35,7 +35,9 @@ class HotelListSerializer(serializers.ModelSerializer):
         model = Hotel
         fields = [
             'id', 'name', 'slug', 'tagline', 'description', 'address',
-            'city', 'province', 'contact_phone', 'contact_email', 'image_url',
+            'city', 'province', 'country', 'country_name', 'postal_code',
+            'latitude', 'longitude', 'currency', 'timezone', 'category',
+            'contact_phone', 'contact_email', 'image_url',
             'amenities', 'rating', 'review_count', 'min_rate',
             'room_types_count', 'available_rooms_count', 'status'
         ]
@@ -59,7 +61,9 @@ class HotelDetailSerializer(serializers.ModelSerializer):
         model = Hotel
         fields = [
             'id', 'name', 'slug', 'tagline', 'description', 'address',
-            'city', 'province', 'contact_phone', 'contact_email', 'image_url',
+            'city', 'province', 'country', 'country_name', 'postal_code',
+            'latitude', 'longitude', 'currency', 'timezone', 'category',
+            'contact_phone', 'contact_email', 'image_url',
             'amenities', 'rating', 'review_count', 'room_types', 'min_rate',
             'status', 'rejection_reason'
         ]
@@ -82,7 +86,9 @@ class PlatformHotelSerializer(serializers.ModelSerializer):
         model = Hotel
         fields = [
             'id', 'name', 'slug', 'tagline', 'description', 'address',
-            'city', 'province', 'contact_phone', 'contact_email', 'image_url',
+            'city', 'province', 'country', 'country_name', 'postal_code',
+            'latitude', 'longitude', 'currency', 'timezone', 'category',
+            'contact_phone', 'contact_email', 'image_url',
             'amenities', 'status', 'rejection_reason', 'business_permit_number',
             'bir_tin', 'payout_method', 'payout_account_name', 'payout_account_number',
             'commission_rate', 'is_active', 'created_at', 'owner', 'owner_username',
@@ -111,7 +117,9 @@ class HotelManageSerializer(serializers.ModelSerializer):
         model = Hotel
         fields = [
             'id', 'name', 'slug', 'tagline', 'description', 'address',
-            'city', 'province', 'contact_phone', 'contact_email', 'image_url',
+            'city', 'province', 'country', 'country_name', 'postal_code',
+            'latitude', 'longitude', 'currency', 'timezone', 'category',
+            'contact_phone', 'contact_email', 'image_url',
             'amenities', 'status', 'rejection_reason', 'business_permit_number',
             'bir_tin', 'payout_method', 'payout_account_name', 'payout_account_number',
             'commission_rate'

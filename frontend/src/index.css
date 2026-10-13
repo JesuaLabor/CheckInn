@@ -1,4 +1,30 @@
 @import "tailwindcss";
+ 
+@theme {
+  --color-forest: #1E3A2B;
+  --color-forest-hover: #162C20;
+  --color-forest-dark: #12241A;
+  --color-forest-light: #2A4E3B;
+  
+  --color-pine: #3B5E43;
+  --color-pine-hover: #2F4D36;
+  --color-pine-dark: #27402D;
+  --color-pine-light: #4A7354;
+  
+  --color-ochre: #D49B41;
+  --color-ochre-hover: #BF8832;
+  --color-ochre-dark: #A67324;
+  --color-ochre-light: #E2AE55;
+  
+  --color-charcoal: #212529;
+  --color-charcoal-dark: #15181B;
+  --color-charcoal-light: #2C3238;
+  --color-charcoal-surface: #1A1D20;
+  
+  --color-cream: #FAF8F5;
+  --color-cream-subtle: #F4EFEA;
+  --color-cream-border: #E8E2D8;
+}
 
 @layer base {
   :root {
@@ -6,7 +32,7 @@
   }
 
   * {
-    border-color: #e2e8f0;
+    border-color: #E8E2D8;
   }
 
   html {
@@ -16,8 +42,8 @@
 
   body {
     font-family: var(--font-sans);
-    color: #0f172a;
-    background-color: #f8fafc;
+    color: #212529;
+    background-color: #FAF8F5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -33,19 +59,19 @@
 }
 
 .glass-dark {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(33, 37, 41, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .card-hover-lift {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
 }
 
 .card-hover-lift:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.1), 0 8px 16px -6px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 20px 35px -10px rgba(30, 58, 43, 0.12), 0 8px 16px -6px rgba(33, 37, 41, 0.06);
 }
 
 /* Shimmer Loading Animation */

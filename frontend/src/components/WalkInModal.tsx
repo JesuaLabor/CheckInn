@@ -82,11 +82,11 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 my-8 animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white p-6 relative">
+        <div className="bg-gradient-to-br from-[#212529] via-[#1E3A2B] to-[#3B5E43] text-white p-6 relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
@@ -95,13 +95,13 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
             <X className="w-5 h-5" />
           </button>
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 mb-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#D49B41]/20 text-[#D49B41] text-[10px] font-bold border border-[#D49B41]/30 mb-2">
             <Building2 className="w-3 h-3" />
             <span>Front Desk Direct Check-In</span>
           </div>
 
           <h3 className="text-xl font-black text-white">Manual Walk-in Registration</h3>
-          <p className="text-xs text-slate-300 mt-0.5 font-medium">
+          <p className="text-xs text-white/80 mt-0.5 font-medium">
             Immediate check-in for arriving walk-in guests • Skips marketplace approval
           </p>
         </div>
@@ -120,7 +120,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
             {loadingRooms ? (
               <div className="text-xs text-slate-400 py-2">Loading available rooms...</div>
             ) : rooms.length === 0 ? (
-              <div className="p-3 bg-amber-50 text-amber-800 text-xs font-bold rounded-xl border border-amber-200">
+              <div className="p-3 bg-[#FAF8F5] text-amber-800 text-xs font-bold rounded-xl border border-amber-200">
                 No rooms currently marked "Available". Check Room Status Board.
               </div>
             ) : (
@@ -128,7 +128,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
                 required
                 value={formData.room_id}
                 onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
-                className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 cursor-pointer"
+                className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5] cursor-pointer"
               >
                 {rooms.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -149,7 +149,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
                 placeholder="e.g. Roberto Santos"
                 value={formData.guest_name}
                 onChange={(e) => setFormData({ ...formData, guest_name: e.target.value })}
-                className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
               />
             </div>
             <div>
@@ -160,7 +160,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
                 placeholder="0917 123 4567"
                 value={formData.guest_phone}
                 onChange={(e) => setFormData({ ...formData, guest_phone: e.target.value })}
-                className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
               />
             </div>
           </div>
@@ -174,7 +174,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
               placeholder="guest@example.com"
               value={formData.guest_email}
               onChange={(e) => setFormData({ ...formData, guest_email: e.target.value })}
-              className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+              className="w-full px-3.5 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
             />
           </div>
 
@@ -187,7 +187,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
                 required
                 value={formData.check_in}
                 onChange={(e) => setFormData({ ...formData, check_in: e.target.value })}
-                className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
               />
             </div>
             <div>
@@ -198,7 +198,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
                 min={formData.check_in}
                 value={formData.check_out}
                 onChange={(e) => setFormData({ ...formData, check_out: e.target.value })}
-                className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                className="w-full px-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
               />
             </div>
           </div>
@@ -210,8 +210,8 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
               <label
                 className={`p-2.5 rounded-xl border text-center text-xs cursor-pointer font-bold transition-all ${
                   formData.payment_method === 'cash'
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-2xs'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'border-[#1E3A2B] bg-[#1E3A2B]/10 text-[#1E3A2B] shadow-2xs'
+                    : 'border-slate-200 text-slate-600 hover:bg-[#FAF8F5]'
                 }`}
               >
                 <input
@@ -227,8 +227,8 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
               <label
                 className={`p-2.5 rounded-xl border text-center text-xs cursor-pointer font-bold transition-all ${
                   formData.payment_method === 'gcash'
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-2xs'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'border-[#1E3A2B] bg-[#1E3A2B]/10 text-[#1E3A2B] shadow-2xs'
+                    : 'border-slate-200 text-slate-600 hover:bg-[#FAF8F5]'
                 }`}
               >
                 <input
@@ -244,8 +244,8 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
               <label
                 className={`p-2.5 rounded-xl border text-center text-xs cursor-pointer font-bold transition-all ${
                   formData.payment_method === 'card'
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-2xs'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'border-[#1E3A2B] bg-[#1E3A2B]/10 text-[#1E3A2B] shadow-2xs'
+                    : 'border-slate-200 text-slate-600 hover:bg-[#FAF8F5]'
                 }`}
               >
                 <input
@@ -265,9 +265,9 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
             <button
               type="submit"
               disabled={submitting || rooms.length === 0}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/25 active:scale-95 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162B20] hover:to-[#2F4C35] text-white font-black text-xs sm:text-sm shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
-              <Check className="w-4 h-4" />
+              <Check className="w-4 h-4 text-[#D49B41]" />
               <span>{submitting ? 'Registering Guest...' : 'Complete Walk-in Check-in'}</span>
             </button>
           </div>

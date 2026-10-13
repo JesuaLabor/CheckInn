@@ -182,22 +182,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-[#E8E2D8] animate-in zoom-in-95 duration-200 my-8">
         
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-slate-100">
+        <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-[#E8E2D8]/80">
           <div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-xl font-black text-[#212529] tracking-tight">
               {tab === 'login' ? 'Sign In to LocalStay' : 'Register Guest Account'}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Malaybalay City Lodging Platform • Instant Soft-Hold Passes
+              Verified Boutique Hotels & Inns • Instant Soft-Hold Passes
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-[#FAF8F5] transition-all"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -205,12 +205,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         </div>
 
         {/* Tab Switcher Pills */}
-        <div className="p-2 bg-slate-50 border-b border-slate-100 flex gap-1">
+        <div className="p-2 bg-[#FAF8F5] border-b border-[#E8E2D8]/80 flex gap-1">
           <button
             onClick={() => setTab('login')}
             className={`flex-1 py-2 rounded-xl text-xs font-extrabold text-center transition-all ${
               tab === 'login'
-                ? 'bg-white text-slate-900 shadow-sm shadow-slate-200/50'
+                ? 'bg-white text-[#1E3A2B] shadow-sm shadow-[#1E3A2B]/10 border border-[#E8E2D8]'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -220,7 +220,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             onClick={() => setTab('register')}
             className={`flex-1 py-2 rounded-xl text-xs font-extrabold text-center transition-all ${
               tab === 'register'
-                ? 'bg-white text-slate-900 shadow-sm shadow-slate-200/50'
+                ? 'bg-white text-[#1E3A2B] shadow-sm shadow-[#1E3A2B]/10 border border-[#E8E2D8]'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -250,7 +250,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     type="button"
                     onClick={handleGoogleClick}
                     disabled={googleLoading || isLoading}
-                    className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] group hover:border-slate-300"
+                    className="w-full py-2.5 px-4 rounded-xl border border-[#E8E2D8] bg-white hover:bg-[#FAF8F5] text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] group hover:border-[#3B5E43]/40"
                   >
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -266,7 +266,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   <button
                     type="button"
                     onClick={() => setShowGoogleSimulator(true)}
-                    className="text-[10px] font-semibold text-slate-400 hover:text-emerald-600 transition-colors"
+                    className="text-[10px] font-semibold text-slate-400 hover:text-[#1E3A2B] transition-colors"
                   >
                     Test with simulated Google account
                   </button>
@@ -275,7 +275,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
+                  <div className="w-full border-t border-[#E8E2D8]"></div>
                 </div>
                 <div className="relative flex justify-center text-[10px] uppercase font-bold">
                   <span className="bg-white px-3 text-slate-400">or sign in with password</span>
@@ -294,7 +294,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       placeholder="e.g. juandelacruz"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                     />
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                     />
                   </div>
                 </div>
@@ -317,16 +317,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all mt-2"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all mt-2"
                 >
                   {isLoading ? 'Signing In...' : 'Sign In'}
                 </button>
               </form>
 
               {/* 1-Click Quick Demo Personas */}
-              <div className="mt-6 pt-5 border-t border-slate-100">
+              <div className="mt-6 pt-5 border-t border-[#E8E2D8]">
                 <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500/30" />
+                  <Sparkles className="w-3.5 h-3.5 text-[#D49B41] fill-[#D49B41]/30" />
                   <span>Instant Quick Demo Access</span>
                 </div>
 
@@ -334,19 +334,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   <button
                     type="button"
                     onClick={() => handleQuickDemo('guest')}
-                    className="p-3 text-left rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-emerald-50 hover:border-emerald-300 transition-all text-xs active:scale-95"
+                    className="p-3 text-left rounded-2xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-[#3B5E43]/10 hover:border-[#3B5E43] transition-all text-xs active:scale-95"
                   >
-                    <div className="font-bold text-slate-900">Juan Dela Cruz</div>
+                    <div className="font-bold text-[#212529]">Juan Dela Cruz</div>
                     <div className="text-[10px] text-slate-500 font-medium">Demo Guest (juandelacruz)</div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleQuickDemo('pine_staff')}
-                    className="p-3 text-left rounded-2xl border border-slate-200 bg-slate-50/60 hover:bg-blue-50 hover:border-blue-300 transition-all text-xs active:scale-95"
+                    className="p-3 text-left rounded-2xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-[#D49B41]/10 hover:border-[#D49B41] transition-all text-xs active:scale-95"
                   >
-                    <div className="font-bold text-slate-900">Pine Hills Front Desk</div>
-                    <div className="text-[10px] text-blue-600 font-bold">Staff Operations</div>
+                    <div className="font-bold text-[#212529]">Pine Hills Front Desk</div>
+                    <div className="text-[10px] text-[#8F611A] font-bold">Staff Operations</div>
                   </button>
                 </div>
               </div>
@@ -360,8 +360,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               )}
 
               {regSuccess && (
-                <div className="mb-4 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div className="mb-4 p-3.5 rounded-2xl bg-[#3B5E43]/15 border border-[#3B5E43]/30 text-[#1E3A2B] text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#3B5E43] shrink-0" />
                   <span>Account registered! Logging you in automatically...</span>
                 </div>
               )}
@@ -371,7 +371,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 type="button"
                 onClick={handleGoogleClick}
                 disabled={googleLoading || isLoading}
-                className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] mb-4 group hover:border-slate-300"
+                className="w-full py-2.5 px-4 rounded-xl border border-[#E8E2D8] bg-white hover:bg-[#FAF8F5] text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] mb-4 group hover:border-[#3B5E43]/40"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -384,7 +384,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
+                  <div className="w-full border-t border-[#E8E2D8]"></div>
                 </div>
                 <div className="relative flex justify-center text-[10px] uppercase font-bold">
                   <span className="bg-white px-3 text-slate-400">or register with form</span>
@@ -401,7 +401,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       placeholder="Juan"
                       value={regData.first_name}
                       onChange={(e) => setRegData({ ...regData, first_name: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                      className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                     />
                   </div>
                   <div>
@@ -412,7 +412,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       placeholder="Dela Cruz"
                       value={regData.last_name}
                       onChange={(e) => setRegData({ ...regData, last_name: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                      className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                     />
                   </div>
                 </div>
@@ -425,7 +425,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     placeholder="juan@example.com"
                     value={regData.email}
                     onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                   />
                 </div>
 
@@ -436,7 +436,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     placeholder="0917 123 4567"
                     value={regData.phone_number}
                     onChange={(e) => setRegData({ ...regData, phone_number: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                   />
                 </div>
 
@@ -448,7 +448,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     placeholder="juandelacruz2026"
                     value={regData.username}
                     onChange={(e) => setRegData({ ...regData, username: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                   />
                 </div>
 
@@ -460,14 +460,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     placeholder="At least 6 characters"
                     value={regData.password}
                     onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50"
+                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all mt-4"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all mt-4"
                 >
                   Create Guest Account
                 </button>

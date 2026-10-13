@@ -51,6 +51,7 @@ class Booking(models.Model):
     check_in = models.DateField()
     check_out = models.DateField()
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='PHP', help_text='ISO-4217 currency code')
 
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending_approval')
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='marketplace')

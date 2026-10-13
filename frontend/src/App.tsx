@@ -70,7 +70,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#212529] selection:bg-[#1E3A2B] selection:text-white">
       {/* Navbar */}
       <Navbar
         currentTab={
@@ -117,15 +117,23 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-8 px-4 sm:px-6 lg:px-8 mt-auto text-center text-xs text-slate-500 space-y-2">
-        <div className="flex items-center justify-center gap-2 font-bold text-slate-700">
-          <span>LocalStay Malaybalay City</span>
-          <span>•</span>
+      <footer className="bg-[#212529] border-t border-white/10 py-10 px-4 sm:px-6 lg:px-8 mt-auto text-center text-xs text-slate-400 space-y-3">
+        <div className="flex items-center justify-center gap-2 font-black text-white text-sm">
+          <span className="text-[#D49B41]">LocalStay</span>
+          <span className="text-white/30">•</span>
           <span>Digital Lodging & Front Desk Marketplace</span>
         </div>
-        <p className="max-w-md mx-auto text-[11px] text-slate-400">
-          Serving Pine Hills Hotel, 1st Inn Malaybalay, Bukidnon Mountain View Inn, and local hospitality partners.
+        <p className="max-w-md mx-auto text-[11px] text-slate-400 leading-relaxed">
+          Serving verified independent hotels, heritage lodges, and boutique retreats across the Philippines and international destinations.
         </p>
+        <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400 font-semibold pt-1">
+          <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D49B41]"></span>
+            Philippines & Global Network
+          </span>
+          <span className="text-white/20">•</span>
+          <span>45-Min Soft Hold Protection</span>
+        </div>
       </footer>
 
       {/* Global Modals */}

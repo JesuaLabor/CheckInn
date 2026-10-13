@@ -24,6 +24,14 @@ export interface Hotel {
   address: string;
   city: string;
   province: string;
+  country?: string;
+  country_name?: string;
+  postal_code?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  currency?: string;
+  timezone?: string;
+  category?: string;
   contact_phone: string;
   contact_email: string;
   image_url: string;
@@ -85,6 +93,7 @@ export interface RoomType {
   name: string;
   description: string;
   base_rate: number | string;
+  currency?: string;
   capacity: number;
   amenities: string[];
   photos: string[];
@@ -163,6 +172,7 @@ export interface Booking {
   check_in: string;
   check_out: string;
   total_amount: number | string;
+  currency?: string;
   status: BookingStatus;
   status_display: string;
   source: 'marketplace' | 'walk_in';
