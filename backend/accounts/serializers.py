@@ -52,6 +52,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        # Allow users to log in with either their username OR their email address
+        username_or_email = attrs.get('username', '')
+        if '@' in username_or_email:
+            matched_user = User.objects.filter(email__iexact=username_or_email.strip()).first()
+            if matched_user:
+                attrs['username'] = matched_user.username
+
         data = super().validate(attrs)
         data['user'] = UserSerializer(self.user).data
         return data

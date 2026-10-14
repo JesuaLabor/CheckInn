@@ -63,24 +63,42 @@ class GoogleAuthView(APIView):
             first_name = request.data.get('first_name', 'Google')
             last_name = request.data.get('last_name', 'Traveler')
         else:
+            # First, check if this is an OAuth2 access_token via Google's userinfo endpoint
+            import requests
             try:
-                from google.oauth2 import id_token
-                from google.auth.transport import requests as google_requests
+                userinfo_resp = requests.get(
+                    'https://www.googleapis.com/oauth2/v3/userinfo',
+                    headers={'Authorization': f'Bearer {token}'},
+                    timeout=5
+                )
+                if userinfo_resp.status_code == 200:
+                    info = userinfo_resp.json()
+                    email = info.get('email')
+                    first_name = info.get('given_name', '')
+                    last_name = info.get('family_name', '')
+            except Exception:
+                pass
 
-                client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
-                id_info = id_token.verify_oauth2_token(
-                    token,
-                    google_requests.Request(),
-                    client_id
-                )
-                email = id_info.get('email')
-                first_name = id_info.get('given_name', '')
-                last_name = id_info.get('family_name', '')
-            except Exception as e:
-                return Response(
-                    {'error': f'Failed to verify Google token: {str(e)}'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # If not an access_token, verify as JWT id_token
+            if not email:
+                try:
+                    from google.oauth2 import id_token
+                    from google.auth.transport import requests as google_requests
+
+                    client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None)
+                    id_info = id_token.verify_oauth2_token(
+                        token,
+                        google_requests.Request(),
+                        client_id
+                    )
+                    email = id_info.get('email')
+                    first_name = id_info.get('given_name', '')
+                    last_name = id_info.get('family_name', '')
+                except Exception as e:
+                    return Response(
+                        {'error': f'Failed to verify Google token: {str(e)}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
         if not email:
             return Response(
