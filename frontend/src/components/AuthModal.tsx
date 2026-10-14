@@ -1,7 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { api } from '../api/client';
-import { X, Lock, Mail, User, Phone, Sparkles, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
+import {
+  X,
+  Lock,
+  Mail,
+  User,
+  Phone,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  LogIn,
+  UserPlus,
+  Shield,
+  Building2,
+  Compass,
+} from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -16,6 +32,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   // Login form state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Register form state
   const [regData, setRegData] = useState({
@@ -26,6 +43,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     last_name: '',
     phone_number: '',
   });
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [regSuccess, setRegSuccess] = useState(false);
   const [regError, setRegError] = useState('');
 
@@ -108,7 +126,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     try {
       await api.post('/auth/register/', regData);
       setRegSuccess(true);
-      // Auto login after register
       setTimeout(async () => {
         const ok = await login(regData.username, regData.password);
         if (ok) {
@@ -127,7 +144,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     }
   };
 
-  const handleQuickDemo = async (key: 'guest' | 'pine_staff' | 'firstinn_staff' | 'pine_admin') => {
+  const handleQuickDemo = async (key: 'guest' | 'pine_staff' | 'pine_admin' | 'superadmin') => {
     const ok = await quickLogin(key);
     if (ok) {
       onClose();
@@ -162,7 +179,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       }
     }
 
-    // If Google Client ID is not configured yet or in local demo mode:
     setShowGoogleSimulator(true);
   };
 
@@ -182,64 +198,81 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-[#E8E2D8] animate-in zoom-in-95 duration-200 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      {/* Modal Container: Height-constrained to 90vh with flex column layout to prevent any viewport clipping */}
+      <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[min(90vh,760px)] flex flex-col border border-[#E8E2D8] overflow-hidden animate-in zoom-in-95 duration-200">
         
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-[#E8E2D8]/80">
-          <div>
-            <h2 className="text-xl font-black text-[#212529] tracking-tight">
-              {tab === 'login' ? 'Sign In to LocalStay' : 'Register Guest Account'}
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Verified Boutique Hotels & Inns • Instant Soft-Hold Passes
-            </p>
+        {/* Header - Fixed & Pinned */}
+        <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#E8E2D8]/70 shrink-0 bg-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#1E3A2B] to-[#3B5E43] flex items-center justify-center shadow-md shadow-[#1E3A2B]/20 text-[#D49B41]">
+              <Compass className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-[#212529] tracking-tight leading-tight">
+                {tab === 'login' ? 'Sign In to LocalStay' : 'Create Guest Account'}
+              </h2>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Verified Boutique Hotels & Digital Passes
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-[#FAF8F5] transition-all"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all active:scale-95"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Tab Switcher Pills */}
-        <div className="p-2 bg-[#FAF8F5] border-b border-[#E8E2D8]/80 flex gap-1">
-          <button
-            onClick={() => setTab('login')}
-            className={`flex-1 py-2 rounded-xl text-xs font-extrabold text-center transition-all ${
-              tab === 'login'
-                ? 'bg-white text-[#1E3A2B] shadow-sm shadow-[#1E3A2B]/10 border border-[#E8E2D8]'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => setTab('register')}
-            className={`flex-1 py-2 rounded-xl text-xs font-extrabold text-center transition-all ${
-              tab === 'register'
-                ? 'bg-white text-[#1E3A2B] shadow-sm shadow-[#1E3A2B]/10 border border-[#E8E2D8]'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            New Guest Registration
-          </button>
+        {/* Tab Switcher - Pinned Segmented Control */}
+        <div className="px-6 pt-3 pb-2 bg-white shrink-0">
+          <div className="p-1 bg-[#F4EFEA] rounded-2xl flex gap-1 border border-[#E8E2D8]/60">
+            <button
+              onClick={() => {
+                setTab('login');
+                setRegError('');
+              }}
+              className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+                tab === 'login'
+                  ? 'bg-white text-[#1E3A2B] shadow-sm shadow-black/5 border border-[#E8E2D8]/80'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+            <button
+              onClick={() => {
+                setTab('register');
+                setRegError('');
+              }}
+              className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
+                tab === 'register'
+                  ? 'bg-white text-[#1E3A2B] shadow-sm shadow-black/5 border border-[#E8E2D8]/80'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>New Registration</span>
+            </button>
+          </div>
         </div>
 
-        {/* Form Body */}
-        <div className="p-6">
+        {/* Form Body - Scrollable content area with smooth scrollbar */}
+        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-4 overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
           {tab === 'login' ? (
             <div>
               {error && (
-                <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-shake">
-                  {error}
+                <div className="mb-3.5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span>{error}</span>
                 </div>
               )}
 
-              {/* 1. Official Google One-Click Sign-In */}
-              <div className="mb-4">
+              {/* Google Sign-In Card */}
+              <div className="mb-3.5">
                 <div
                   ref={googleBtnRef}
                   className={`w-full flex justify-center [&>div]:w-full ${!isGoogleReady ? 'hidden' : ''}`}
@@ -250,7 +283,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                     type="button"
                     onClick={handleGoogleClick}
                     disabled={googleLoading || isLoading}
-                    className="w-full py-2.5 px-4 rounded-xl border border-[#E8E2D8] bg-white hover:bg-[#FAF8F5] text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] group hover:border-[#3B5E43]/40"
+                    className="w-full py-2.5 px-4 rounded-2xl border border-[#E8E2D8] bg-white hover:bg-[#FAF8F5] text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] group hover:border-[#3B5E43]/40"
                   >
                     <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -266,26 +299,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   <button
                     type="button"
                     onClick={() => setShowGoogleSimulator(true)}
-                    className="text-[10px] font-semibold text-slate-400 hover:text-[#1E3A2B] transition-colors"
+                    className="text-[10px] font-semibold text-slate-400 hover:text-[#1E3A2B] transition-colors inline-flex items-center gap-1"
                   >
-                    Test with simulated Google account
+                    <Sparkles className="w-2.5 h-2.5 text-[#D49B41]" />
+                    <span>Or test with simulated Google account</span>
                   </button>
                 </div>
               </div>
 
-              <div className="relative my-4">
+              {/* Divider */}
+              <div className="relative my-3">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-[#E8E2D8]"></div>
                 </div>
-                <div className="relative flex justify-center text-[10px] uppercase font-bold">
+                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
                   <span className="bg-white px-3 text-slate-400">or sign in with password</span>
                 </div>
               </div>
 
-              {/* 2. Password Login Form */}
-              <form onSubmit={handleLoginSubmit} className="space-y-4">
+              {/* Credentials Form */}
+              <form onSubmit={handleLoginSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Username</label>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Username / Email
+                  </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
@@ -294,59 +331,104 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                       placeholder="e.g. juandelacruz"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] focus:border-[#3B5E43] outline-none bg-[#FAF8F5] transition-all"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Password
+                  </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       required
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                      className="w-full pl-10 pr-10 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] focus:border-[#3B5E43] outline-none bg-[#FAF8F5] transition-all"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition-colors"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all mt-2"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-black text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-[0.98] transition-all mt-1"
                 >
-                  {isLoading ? 'Signing In...' : 'Sign In'}
+                  {isLoading ? 'Signing In...' : 'Sign In to Account'}
                 </button>
               </form>
 
               {/* 1-Click Quick Demo Personas */}
-              <div className="mt-6 pt-5 border-t border-[#E8E2D8]">
-                <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#D49B41] fill-[#D49B41]/30" />
-                  <span>Instant Quick Demo Access</span>
+              <div className="mt-5 pt-4 border-t border-[#E8E2D8]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    <Sparkles className="w-3 h-3 text-[#D49B41]" />
+                    <span>Instant Demo Accounts</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#D49B41] bg-[#D49B41]/10 px-2 py-0.5 rounded-full">
+                    1-Click Test
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleQuickDemo('guest')}
-                    className="p-3 text-left rounded-2xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-[#3B5E43]/10 hover:border-[#3B5E43] transition-all text-xs active:scale-95"
+                    className="p-2.5 text-left rounded-xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-[#3B5E43]/10 hover:border-[#3B5E43] transition-all text-xs active:scale-95 group"
                   >
-                    <div className="font-bold text-[#212529]">Juan Dela Cruz</div>
-                    <div className="text-[10px] text-slate-500 font-medium">Demo Guest (juandelacruz)</div>
+                    <div className="flex items-center gap-1.5 font-bold text-[#212529] text-[11px] group-hover:text-[#1E3A2B]">
+                      <User className="w-3 h-3 text-[#3B5E43]" />
+                      <span>Juan Dela Cruz</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-medium">Guest Traveler</div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleQuickDemo('pine_staff')}
-                    className="p-3 text-left rounded-2xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-[#D49B41]/10 hover:border-[#D49B41] transition-all text-xs active:scale-95"
+                    className="p-2.5 text-left rounded-xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-[#D49B41]/10 hover:border-[#D49B41] transition-all text-xs active:scale-95 group"
                   >
-                    <div className="font-bold text-[#212529]">Pine Hills Front Desk</div>
-                    <div className="text-[10px] text-[#8F611A] font-bold">Staff Operations</div>
+                    <div className="flex items-center gap-1.5 font-bold text-[#212529] text-[11px] group-hover:text-[#8F611A]">
+                      <Compass className="w-3 h-3 text-[#D49B41]" />
+                      <span>Pine Hills Staff</span>
+                    </div>
+                    <div className="text-[10px] text-[#8F611A] font-bold">Front Desk Ops</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemo('pine_admin')}
+                    className="p-2.5 text-left rounded-xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-emerald-50 hover:border-emerald-300 transition-all text-xs active:scale-95 group"
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-[#212529] text-[11px] group-hover:text-emerald-700">
+                      <Building2 className="w-3 h-3 text-emerald-600" />
+                      <span>Hotel Admin</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-medium">Inn Owner Portal</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickDemo('superadmin')}
+                    className="p-2.5 text-left rounded-xl border border-[#E8E2D8] bg-[#FAF8F5] hover:bg-purple-50 hover:border-purple-300 transition-all text-xs active:scale-95 group"
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-[#212529] text-[11px] group-hover:text-purple-700">
+                      <Shield className="w-3 h-3 text-purple-600" />
+                      <span>Platform Admin</span>
+                    </div>
+                    <div className="text-[10px] text-purple-600 font-bold">Marketplace Ops</div>
                   </button>
                 </div>
               </div>
@@ -354,24 +436,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           ) : (
             <div>
               {regError && (
-                <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-shake">
-                  {regError}
+                <div className="mb-3.5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                  <span>{regError}</span>
                 </div>
               )}
 
               {regSuccess && (
-                <div className="mb-4 p-3.5 rounded-2xl bg-[#3B5E43]/15 border border-[#3B5E43]/30 text-[#1E3A2B] text-xs font-bold flex items-center gap-2">
+                <div className="mb-3.5 p-3 rounded-2xl bg-[#3B5E43]/15 border border-[#3B5E43]/30 text-[#1E3A2B] text-xs font-bold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#3B5E43] shrink-0" />
                   <span>Account registered! Logging you in automatically...</span>
                 </div>
               )}
 
-              {/* Google Sign-up Shortcut */}
+              {/* Google Fast Sign-Up */}
               <button
                 type="button"
                 onClick={handleGoogleClick}
                 disabled={googleLoading || isLoading}
-                className="w-full py-2.5 px-4 rounded-xl border border-[#E8E2D8] bg-white hover:bg-[#FAF8F5] text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] mb-4 group hover:border-[#3B5E43]/40"
+                className="w-full py-2.5 px-4 rounded-2xl border border-[#E8E2D8] bg-white hover:bg-[#FAF8F5] text-slate-800 font-bold text-xs shadow-2xs flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] group hover:border-[#3B5E43]/40"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -382,92 +465,116 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 <span>Instant Sign Up with Google</span>
               </button>
 
-              <div className="relative my-4">
+              <div className="relative my-3">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-[#E8E2D8]"></div>
                 </div>
-                <div className="relative flex justify-center text-[10px] uppercase font-bold">
+                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
                   <span className="bg-white px-3 text-slate-400">or register with form</span>
                 </div>
               </div>
 
-              <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-                <div className="grid grid-cols-2 gap-2.5">
+              <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">First Name</label>
+                    <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                      First Name
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="Juan"
                       value={regData.first_name}
                       onChange={(e) => setRegData({ ...regData, first_name: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                      className="w-full px-3 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Last Name</label>
+                    <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                      Last Name
+                    </label>
                     <input
                       type="text"
                       required
                       placeholder="Dela Cruz"
                       value={regData.last_name}
                       onChange={(e) => setRegData({ ...regData, last_name: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                      className="w-full px-3 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="juan@example.ph"
+                      value={regData.email}
+                      onChange={(e) => setRegData({ ...regData, email: e.target.value })}
+                      className="w-full px-3 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                      Mobile Phone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="0917 123 4567"
+                      value={regData.phone_number}
+                      onChange={(e) => setRegData({ ...regData, phone_number: e.target.value })}
+                      className="w-full px-3 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="juan@example.com"
-                    value={regData.email}
-                    onChange={(e) => setRegData({ ...regData, email: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Phone</label>
-                  <input
-                    type="tel"
-                    placeholder="0917 123 4567"
-                    value={regData.phone_number}
-                    onChange={(e) => setRegData({ ...regData, phone_number: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Username</label>
+                  <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Username
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="juandelacruz2026"
                     value={regData.username}
                     onChange={(e) => setRegData({ ...regData, username: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                    className="w-full px-3 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="At least 6 characters"
-                    value={regData.password}
-                    onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
-                  />
+                  <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider mb-1">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showRegPassword ? 'text' : 'password'}
+                      required
+                      placeholder="At least 6 characters"
+                      value={regData.password}
+                      onChange={(e) => setRegData({ ...regData, password: e.target.value })}
+                      className="w-full pl-3 pr-10 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword(!showRegPassword)}
+                      className="absolute right-3 top-2 text-slate-400 hover:text-slate-600 transition-colors"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all mt-4"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-black text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-[0.98] transition-all mt-2"
                 >
                   Create Guest Account
                 </button>
@@ -477,7 +584,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         </div>
       </div>
 
-      {/* Google Sign-In Quick Simulator Dialog (Active when Google Client ID is pending setup) */}
+      {/* Google Sign-In Quick Simulator Dialog */}
       {showGoogleSimulator && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-150 border border-slate-200">
@@ -522,7 +629,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               </button>
             </div>
 
-            {/* Custom Google Email input */}
             <div className="pt-2 border-t border-slate-100 space-y-2">
               <label className="block text-[11px] font-bold text-slate-600">Or test with your own Google email:</label>
               <div className="flex gap-2">
