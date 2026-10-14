@@ -15,3 +15,4 @@ psycopg2-binary>=2.9.9
 django-mongodb-backend>=6.1.0
 pymongo>=4.7.0
 dnspython>=2.6.0
+certifi>=2024.2.2

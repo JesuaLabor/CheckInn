@@ -77,11 +77,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database Configuration: MongoDB Atlas / Render Postgres / Local SQLite
 if os.environ.get('MONGODB_URI'):
+    import certifi
     DATABASES = {
         'default': {
             'ENGINE': 'django_mongodb_backend',
             'NAME': os.environ.get('MONGODB_DATABASE', 'localstay_db'),
             'HOST': os.environ.get('MONGODB_URI'),
+            'OPTIONS': {
+                'tlsCAFile': certifi.where(),
+            },
         }
     }
     DEFAULT_AUTO_FIELD = 'django_mongodb_backend.fields.ObjectIdAutoField'
