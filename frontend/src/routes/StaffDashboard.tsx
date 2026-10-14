@@ -29,6 +29,8 @@ import {
   DollarSign,
   FileText,
   CreditCard,
+  Copy,
+  Building,
 } from 'lucide-react';
 import { Booking, Room, GuestRequest, Hotel, StaffMember, RoomType } from '../types';
 
@@ -638,6 +640,46 @@ export const StaffDashboard: React.FC = () => {
                         <span>Check-out: <strong className="text-[#212529]">{b.check_out}</strong></span>
                         <span>Total: <strong className="text-[#1E3A2B]">₱{Number(b.total_amount).toLocaleString()}</strong></span>
                         <span>Contact: <strong className="text-[#212529]">{b.guest_phone || b.guest_email}</strong></span>
+                      </div>
+
+                      {/* Payment Verification Info */}
+                      <div className="pt-2">
+                        {b.payment?.method === 'gcash' ? (
+                          <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-950 text-xs">
+                            <CreditCard className="w-4 h-4 text-emerald-700 shrink-0" />
+                            <span className="font-bold">GCash / E-Wallet:</span>
+                            {b.payment.reference_number ? (
+                              <div className="inline-flex items-center gap-1.5 bg-white px-2.5 py-0.5 rounded-lg border border-emerald-300 font-mono font-black text-emerald-900 shadow-2xs">
+                                <span>Ref: #{b.payment.reference_number}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(b.payment?.reference_number || '');
+                                    setActionSuccess(`Copied GCash Ref #${b.payment?.reference_number}`);
+                                  }}
+                                  className="text-emerald-700 hover:text-emerald-950 p-0.5 rounded hover:bg-emerald-100 transition-colors"
+                                  title="Copy Reference Number"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-amber-700 font-medium italic">No Ref # Provided</span>
+                            )}
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${
+                              b.payment.status === 'paid'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {b.payment.status === 'paid' ? 'Verified / Settled' : 'Verify in GCash SMS/App'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">
+                            <Building className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Payment Option: Pay at Front Desk ({b.payment?.status || 'unpaid'})</span>
+                          </div>
+                        )}
                       </div>
 
                       {b.special_requests && (

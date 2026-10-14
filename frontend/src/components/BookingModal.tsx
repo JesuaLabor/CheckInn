@@ -15,6 +15,10 @@ import {
   Sparkles,
   ChevronRight,
   Receipt,
+  Copy,
+  Check,
+  Smartphone,
+  Info,
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -29,6 +33,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [copiedNumber, setCopiedNumber] = useState(false);
 
   if (!isModalOpen || !draft || !draft.hotel || !draft.roomType) return null;
 
@@ -46,10 +51,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
   const baseRate = Number(roomType.base_rate);
   const totalAmount = nights * baseRate;
 
+  const payoutMethod = hotel.payout_method || 'GCash';
+  const payoutName = hotel.payout_account_name || hotel.name;
+  const payoutNumber = hotel.payout_account_number || '0917 555 8899';
+
+  const handleCopyNumber = () => {
+    navigator.clipboard.writeText(payoutNumber.replace(/\s+/g, ''));
+    setCopiedNumber(true);
+    setTimeout(() => setCopiedNumber(false), 2000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       onOpenAuth();
+      return;
+    }
+
+    if (draft.paymentMethod === 'gcash' && !draft.paymentReference?.trim()) {
+      setErrorMsg('Please enter your GCash / Bank Transfer transaction reference number to proceed.');
       return;
     }
 
@@ -68,6 +88,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
         check_out: draft.checkOut,
         special_requests: draft.specialRequests,
         payment_method: draft.paymentMethod,
+        payment_reference: draft.paymentReference?.trim() || '',
         currency: currency,
       };
 
@@ -193,10 +214,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
 
           {/* Payment Method Radio Pills */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Payment Preference</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700">Payment Option</label>
+              <span className="text-[10px] text-slate-400 font-medium">Boutique lodging payment workflow</span>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <label
-                className={`flex items-center gap-2 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
                   draft.paymentMethod === 'pay_at_hotel'
                     ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs'
                     : 'border-[#E8E2D8] text-slate-700 hover:bg-[#FAF8F5] font-medium'
@@ -209,14 +233,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                   onChange={() => setDraft({ paymentMethod: 'pay_at_hotel' })}
                   className="hidden"
                 />
-                <Building className="w-4 h-4 text-[#1E3A2B] shrink-0" />
-                <span>Pay at Hotel Desk</span>
+                <Building className="w-4 h-4 text-[#1E3A2B] shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-extrabold text-[#212529]">Pay at Front Desk</div>
+                  <div className="text-[10px] text-slate-500 font-normal mt-0.5">Cash or card upon physical check-in</div>
+                </div>
               </label>
 
               <label
-                className={`flex items-center gap-2 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
                   draft.paymentMethod === 'gcash'
-                    ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs'
+                    ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs ring-1 ring-[#1E3A2B]/20'
                     : 'border-[#E8E2D8] text-slate-700 hover:bg-[#FAF8F5] font-medium'
                 }`}
               >
@@ -227,10 +254,85 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                   onChange={() => setDraft({ paymentMethod: 'gcash' })}
                   className="hidden"
                 />
-                <CreditCard className="w-4 h-4 text-[#3B5E43] shrink-0" />
-                <span>GCash (QR at Arrival)</span>
+                <CreditCard className="w-4 h-4 text-[#3B5E43] shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-extrabold text-[#212529] flex items-center gap-1">
+                    <span>{payoutMethod} / E-Wallet</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#3B5E43]/15 text-[#1E3A2B] font-bold">Fast</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-normal mt-0.5">Send via App & paste Ref No.</div>
+                </div>
               </label>
             </div>
+
+            {/* GCash / Transfer Instructions Card */}
+            {draft.paymentMethod === 'gcash' && (
+              <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-[#1E3A2B]/5 via-[#FAF8F5] to-[#FAF8F5] border border-[#1E3A2B]/20 space-y-3 animate-in fade-in zoom-in-98 duration-200">
+                <div className="flex items-center justify-between pb-2 border-b border-[#E8E2D8]/80">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#1E3A2B] text-white flex items-center justify-center font-black text-xs shadow-2xs">
+                      G
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-[#212529]">{hotel.name}</div>
+                      <div className="text-[10px] text-[#3B5E43] font-bold">{payoutMethod} Official Account</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Due</span>
+                    <span className="text-xs font-black text-[#1E3A2B]">{formatPrice(totalAmount)}</span>
+                  </div>
+                </div>
+
+                {/* Account Details Box with Copy */}
+                <div className="bg-white p-3 rounded-xl border border-[#E8E2D8] flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="text-[10px] font-bold uppercase text-slate-400">Account Name & Number</div>
+                    <div className="text-xs font-black text-[#212529]">{payoutName}</div>
+                    <div className="text-sm font-mono font-bold text-[#1E3A2B] tracking-wide">{payoutNumber}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyNumber}
+                    className="px-3 py-2 rounded-lg bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] border border-[#E8E2D8] text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shrink-0"
+                  >
+                    {copiedNumber ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-[#3B5E43]" />
+                        <span className="text-[#3B5E43]">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Reference Number Input */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-[#212529]">
+                      Enter {payoutMethod} Reference Number <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">From your receipt / SMS</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 1002 9845 1204"
+                    value={draft.paymentReference || ''}
+                    onChange={(e) => setDraft({ paymentReference: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs font-mono font-bold border border-[#1E3A2B]/30 rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-white placeholder:text-slate-400 shadow-2xs"
+                  />
+                  <div className="flex items-start gap-1.5 pt-1 text-[10px] text-slate-500 leading-tight">
+                    <Info className="w-3 h-3 text-[#3B5E43] shrink-0 mt-0.5" />
+                    <span>Hotel front desk will verify this reference in their merchant app upon reviewing your stay to immediately confirm your reservation and issue your QR pass.</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Special Requests */}

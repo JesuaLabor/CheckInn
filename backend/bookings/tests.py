@@ -457,3 +457,39 @@ class LocalStayCoreTests(TestCase):
         self.assertEqual(rep_resp.data['occupancy_rate'], 100.0)
         self.assertEqual(float(rep_resp.data['total_revenue']), 1200.00)
         self.assertEqual(rep_resp.data['stats']['confirmed_bookings'], 1)
+
+    def test_gcash_booking_with_reference_number_and_staff_verification(self):
+        """Guest reserves with GCash and inputs reference number; staff approval confirms booking and marks payment paid."""
+        today = date.today()
+        d1 = today + timedelta(days=1)
+        d2 = today + timedelta(days=2)
+
+        self.client.force_authenticate(user=self.guest)
+        res = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'GCash Guest',
+            'guest_email': 'gcash@test.com',
+            'guest_phone': '09171234567',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'payment_method': 'gcash',
+            'payment_reference': '100298451204',
+        })
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        b_id = res.data['booking']['id']
+        b = Booking.objects.get(id=b_id)
+        self.assertEqual(b.payment.method, 'gcash')
+        self.assertEqual(b.payment.reference_number, '100298451204')
+        self.assertEqual(b.payment.status, 'unpaid')
+
+        # Staff approves booking -> payment is automatically verified and marked paid
+        self.client.force_authenticate(user=self.staff_a)
+        app_res = self.client.post(f'/api/v1/staff/requests/{b.id}/approve/')
+        self.assertEqual(app_res.status_code, status.HTTP_200_OK)
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'confirmed')
+        b.payment.refresh_from_db()
+        self.assertEqual(b.payment.status, 'paid')
+        self.assertIsNotNone(b.payment.paid_at)

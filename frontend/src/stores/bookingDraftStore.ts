@@ -12,6 +12,7 @@ export interface BookingDraft {
   guestPhone: string;
   specialRequests: string;
   paymentMethod: 'pay_at_hotel' | 'gcash' | 'cash' | 'card';
+  paymentReference?: string;
 }
 
 interface BookingDraftState {
@@ -51,6 +52,7 @@ export const useBookingDraftStore = create<BookingDraftState>((set) => ({
         guestPhone: '',
         specialRequests: '',
         paymentMethod: 'pay_at_hotel',
+        paymentReference: '',
       },
     });
   },

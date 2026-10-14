@@ -65,12 +65,20 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         default='pay_at_hotel',
         write_only=True
     )
+    payment_reference = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        write_only=True,
+        help_text='GCash or Bank transfer transaction reference number'
+    )
 
     class Meta:
         model = Booking
         fields = [
             'id', 'hotel', 'room_type', 'guest_name', 'guest_email', 'guest_phone',
-            'guest_count', 'check_in', 'check_out', 'special_requests', 'payment_method',
+            'guest_count', 'check_in', 'check_out', 'special_requests',
+            'payment_method', 'payment_reference',
             'booking_reference', 'total_amount', 'status', 'hold_expires_at'
         ]
         read_only_fields = ['id', 'booking_reference', 'total_amount', 'status', 'hold_expires_at']
@@ -111,6 +119,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         payment_method = validated_data.pop('payment_method', 'pay_at_hotel')
+        payment_reference = validated_data.pop('payment_reference', '').strip()
         check_in = validated_data['check_in']
         check_out = validated_data['check_out']
         room_type = validated_data['room_type']
@@ -138,7 +147,8 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             booking=booking,
             amount=total_amount,
             method=payment_method,
-            status='unpaid'
+            status='unpaid',
+            reference_number=payment_reference
         )
 
         return booking

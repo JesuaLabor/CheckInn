@@ -261,9 +261,14 @@ export const GuestPortal: React.FC = () => {
                           ₱{Number(booking.total_amount).toLocaleString()}
                         </div>
                         <span className="text-xs text-slate-500 font-medium capitalize">
-                          {booking.payment?.method === 'pay_at_hotel' ? 'Pay at Front Desk' : booking.payment?.method} (
-                          {booking.payment?.status})
+                          {booking.payment?.method === 'pay_at_hotel' ? 'Pay at Front Desk' : 'GCash / E-Wallet'} (
+                          {booking.payment?.status === 'paid' ? 'Paid & Verified' : 'Awaiting Review'})
                         </span>
+                        {booking.payment?.reference_number && (
+                          <div className="mt-1 text-[11px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md inline-block font-bold border border-emerald-200">
+                            GCash Ref: #{booking.payment.reference_number}
+                          </div>
+                        )}
                       </div>
 
                       {/* Status-specific action buttons */}

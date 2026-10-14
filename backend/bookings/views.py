@@ -170,6 +170,17 @@ class StaffApproveRequestView(APIView):
             booking.generate_qr_token()
             booking.save()
 
+            # If payment is via GCash with reference number or staff marks paid, update payment record
+            if hasattr(booking, 'payment') and booking.payment:
+                mark_paid = request.data.get(
+                    'mark_paid',
+                    True if (booking.payment.method == 'gcash' and booking.payment.reference_number) else False
+                )
+                if mark_paid:
+                    booking.payment.status = 'paid'
+                    booking.payment.paid_at = now
+                    booking.payment.save()
+
             serializer = BookingSerializer(booking)
             return Response({
                 'message': f'Booking {booking.booking_reference} confirmed successfully! QR check-in token generated.',

@@ -39,7 +39,8 @@ class HotelListSerializer(serializers.ModelSerializer):
             'latitude', 'longitude', 'currency', 'timezone', 'category',
             'contact_phone', 'contact_email', 'image_url',
             'amenities', 'rating', 'review_count', 'min_rate',
-            'room_types_count', 'available_rooms_count', 'status'
+            'room_types_count', 'available_rooms_count', 'status',
+            'payout_method', 'payout_account_name', 'payout_account_number'
         ]
 
     def get_min_rate(self, obj):
@@ -65,7 +66,8 @@ class HotelDetailSerializer(serializers.ModelSerializer):
             'latitude', 'longitude', 'currency', 'timezone', 'category',
             'contact_phone', 'contact_email', 'image_url',
             'amenities', 'rating', 'review_count', 'room_types', 'min_rate',
-            'status', 'rejection_reason'
+            'status', 'rejection_reason',
+            'payout_method', 'payout_account_name', 'payout_account_number'
         ]
 
     def get_min_rate(self, obj):
