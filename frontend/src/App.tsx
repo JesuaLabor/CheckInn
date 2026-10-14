@@ -3,6 +3,7 @@ import { useAuthStore } from './stores/authStore';
 import { useBookingDraftStore } from './stores/bookingDraftStore';
 import { Navbar } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';
+import { SupportModal } from './components/SupportModal';
 import { BookingModal } from './components/BookingModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Marketplace } from './routes/Marketplace';
@@ -21,6 +22,7 @@ export function App() {
   >('marketplace');
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -80,6 +82,7 @@ export function App() {
         }
         onNavigate={handleNavigate}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenSupport={() => setIsSupportOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -149,6 +152,15 @@ export function App() {
               guests: draft.guestCount,
             });
           }
+        }}
+      />
+
+      <SupportModal
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+        onListProperty={() => {
+          setIsSupportOpen(false);
+          handleNavigate('partner_register');
         }}
       />
 

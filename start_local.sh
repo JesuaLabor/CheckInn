@@ -18,8 +18,9 @@ python seed_data.py
 cd ..
 
 # 2. Launch Django Backend
-echo "2. Launching Django REST API on http://localhost:8000..."
-backend/venv/bin/python backend/manage.py runserver 0.0.0.0:8000 &
+BACKEND_PORT="${BACKEND_PORT:-8008}"
+echo "2. Launching Django REST API on http://localhost:${BACKEND_PORT}..."
+backend/venv/bin/python backend/manage.py runserver 0.0.0.0:${BACKEND_PORT} &
 BACKEND_PID=$!
 
 # 3. Launch Frontend Vite Server
@@ -33,9 +34,9 @@ echo ""
 echo "========================================================="
 echo "   LocalStay is LIVE!                                   "
 echo "   - Marketplace & Guest Portal: http://localhost:5173   "
-echo "   - REST API & Django Admin:    http://localhost:8000   "
+echo "   - REST API & Django Admin:    http://localhost:${BACKEND_PORT} "
 echo "========================================================="
 echo "Press Ctrl+C to stop all servers."
 
-trap "kill $BACKEND_PID $FRONTEND_PID; exit" INT TERM
+trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true; exit" INT TERM
 wait

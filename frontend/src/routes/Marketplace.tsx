@@ -23,16 +23,28 @@ import {
   Mountain,
   Landmark,
   Trees,
+  Compass,
+  Map as MapIcon,
+  LayoutGrid,
+  Columns2,
 } from 'lucide-react';
+import heroBgImage from '../assets/hero_bg.jpg';
+import { HotelMap } from '../components/HotelMap';
+import { calculateDistanceKm, formatDistance, getCurrentCoordinates, Coordinates } from '../utils/geo';
+
+interface HotelWithDistance extends Hotel {
+  distance_km?: number | null;
+}
 
 interface MarketplaceProps {
   onSelectHotel: (slug: string) => void;
 }
 
 type TravelCategory = 'all' | 'beach' | 'mountain' | 'heritage' | 'city' | 'eco';
+type ViewMode = 'grid' | 'map' | 'split';
 
 export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
-  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [hotels, setHotels] = useState<HotelWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [guestFilter, setGuestFilter] = useState('');
@@ -40,6 +52,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
   const [activeCategory, setActiveCategory] = useState<TravelCategory>('all');
   const [selectedDestination, setSelectedDestination] = useState<string>('');
   const [locating, setLocating] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  const [nearestHotelId, setNearestHotelId] = useState<number | null>(null);
+  const [hoveredHotelId, setHoveredHotelId] = useState<number | null>(null);
 
   const { formatPrice, currency } = useCurrencyStore();
 
@@ -64,7 +80,35 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
       }
 
       const res = await api.get('/inns/', { params });
-      setHotels(res.data.results || res.data || []);
+      let results: HotelWithDistance[] = res.data.results || res.data || [];
+
+      // If user location is known, attach distances and sort by proximity
+      if (userLocation) {
+        results = results.map((h) => {
+          if (h.latitude !== null && h.latitude !== undefined && h.longitude !== null && h.longitude !== undefined) {
+            const dist = calculateDistanceKm(
+              userLocation.lat,
+              userLocation.lng,
+              Number(h.latitude),
+              Number(h.longitude)
+            );
+            return { ...h, distance_km: dist };
+          }
+          return { ...h, distance_km: null };
+        });
+
+        results.sort((a, b) => {
+          if (a.distance_km === null) return 1;
+          if (b.distance_km === null) return -1;
+          return (a.distance_km || 0) - (b.distance_km || 0);
+        });
+
+        if (results.length > 0 && results[0].distance_km !== null) {
+          setNearestHotelId(results[0].id);
+        }
+      }
+
+      setHotels(results);
     } catch {
       console.error('Failed to load hotels');
     } finally {
@@ -83,38 +127,59 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
     setMaxPrice('');
     setActiveCategory('all');
     setSelectedDestination('');
+    setUserLocation(null);
+    setNearestHotelId(null);
     fetchHotels();
   };
 
-  const handleNearMe = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
-      return;
-    }
+  const handleNearMe = async () => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocating(false);
-        // Search lodgings closest to latitude/longitude
-        api
-          .get('/inns/', {
-            params: {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-            },
-          })
-          .then((res) => {
-            setHotels(res.data.results || res.data || []);
-          })
-          .catch(() => {
-            fetchHotels();
-          });
-      },
-      () => {
-        setLocating(false);
-        alert('Could not determine your current location. Please select a destination.');
+    try {
+      const coords = await getCurrentCoordinates();
+      setUserLocation(coords);
+
+      // Attach distance to current hotel list
+      const withDistances = hotels.map((h) => {
+        if (h.latitude !== null && h.latitude !== undefined && h.longitude !== null && h.longitude !== undefined) {
+          const dist = calculateDistanceKm(
+            coords.lat,
+            coords.lng,
+            Number(h.latitude),
+            Number(h.longitude)
+          );
+          return { ...h, distance_km: dist };
+        }
+        return { ...h, distance_km: null };
+      });
+
+      withDistances.sort((a, b) => {
+        if (a.distance_km === null) return 1;
+        if (b.distance_km === null) return -1;
+        return (a.distance_km || 0) - (b.distance_km || 0);
+      });
+
+      setHotels(withDistances);
+      if (withDistances.length > 0 && withDistances[0].distance_km !== null) {
+        setNearestHotelId(withDistances[0].id);
       }
-    );
+
+      // If on desktop screen, default to Split view to show both card & map
+      if (window.innerWidth >= 1024) {
+        setViewMode('split');
+      } else {
+        setViewMode('map');
+      }
+
+      // Smooth scroll to listings section
+      const section = document.getElementById('listings-section');
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+      }
+    } catch {
+      alert('Could not determine your location. Please ensure location permissions are granted in your browser.');
+    } finally {
+      setLocating(false);
+    }
   };
 
   const getAmenityIcon = (name: string) => {
@@ -162,12 +227,24 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
 
   return (
     <div className="min-h-screen pb-28 md:pb-20">
-      {/* Hero Section with Scalable Atmosphere */}
-      <section className="relative bg-gradient-to-br from-[#212529] via-[#1E3A2B] to-[#141A16] text-white pt-24 pb-24 sm:pt-32 sm:pb-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Subtle decorative glow & grid pattern */}
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#D49B41_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-[#D49B41]/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-[#3B5E43]/20 rounded-full blur-3xl pointer-events-none"></div>
+      {/* Hero Section with Scenic Landscape Background Image */}
+      <section className="relative text-white pt-24 pb-24 sm:pt-32 sm:pb-36 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[580px] sm:min-h-[620px] flex items-center justify-center">
+        {/* Background Image with Cinematic Dark Gradient Overlays */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={heroBgImage}
+            alt="Scenic Mountain Highlands"
+            className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
+          />
+          {/* Deep Forest Green & Charcoal Gradient Overlay for Flawless Text Legibility */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#212529]/80 via-[#1E3A2B]/75 to-[#151916]/95"></div>
+          {/* Subtle Radial Vignette for Content Focus */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#212529]/30 to-[#121614]/90"></div>
+          {/* Subtle Golden Hour Ambient Sun Glow */}
+          <div className="absolute -top-32 right-1/4 w-[450px] h-[450px] bg-[#D49B41]/15 rounded-full blur-3xl pointer-events-none"></div>
+          {/* Micro Grid Texture */}
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#D49B41_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
+        </div>
 
         <div className="relative max-w-4xl mx-auto text-center space-y-4 sm:space-y-6">
           {/* Universal Scope Tagline Badge */}
@@ -185,7 +262,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
           </p>
 
           {/* Floating Search Container */}
-          <div className="pt-4 max-w-3xl mx-auto">
+          <div className="pt-4 max-w-4xl mx-auto">
             <form
               onSubmit={handleSearchSubmit}
               className="bg-white/95 backdrop-blur-xl text-slate-800 rounded-3xl sm:rounded-full shadow-[0_20px_60px_rgba(0,0,0,0.35)] p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-stretch border border-white/60"
@@ -247,32 +324,65 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               </button>
             </form>
 
-            {/* Popular Destinations Quick Chips */}
-            <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 mt-4 text-xs">
-              <span className="text-[11px] font-bold text-slate-400 mr-1 flex items-center gap-1">
-                <Globe className="w-3 h-3 text-[#D49B41]" /> Top Hubs:
+            {/* Curated Experience / Travel Style Segmented Glass Dock */}
+            <div className="pt-3.5 flex justify-center px-2">
+              <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-[#14241B]/80 backdrop-blur-xl border border-white/20 shadow-[0_12px_36px_rgba(0,0,0,0.35)] max-w-full overflow-x-auto no-scrollbar">
+                {[
+                  { key: 'all', label: 'All Stays', icon: Compass },
+                  { key: 'beach', label: 'Beach & Island', icon: Palmtree },
+                  { key: 'mountain', label: 'Highlands & Peaks', icon: Mountain },
+                  { key: 'heritage', label: 'Heritage & Culture', icon: Landmark },
+                  { key: 'city', label: 'Urban & City', icon: Building },
+                  { key: 'eco', label: 'Eco & Nature', icon: Trees },
+                ].map((cat) => {
+                  const Icon = cat.icon;
+                  const isActive = activeCategory === cat.key;
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setActiveCategory(cat.key as TravelCategory)}
+                      className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                        isActive
+                          ? 'bg-[#FAF8F5] text-[#1E3A2B] shadow-md shadow-black/20 font-black'
+                          : 'text-white/80 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D49B41]' : 'text-white/60'}`} />
+                      <span>{cat.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Streamlined Trending Destinations Helper Row */}
+            <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 pt-2.5 text-xs px-2">
+              <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider flex items-center gap-1 mr-0.5">
+                <Globe className="w-3 h-3 text-[#D49B41]" /> Trending:
               </span>
               {[
-                { label: 'All Destinations', value: '' },
-                { label: '🇵🇭 Boracay', value: 'Boracay' },
-                { label: '🇵🇭 Siargao', value: 'Siargao' },
-                { label: '🇵🇭 Baguio', value: 'Baguio' },
-                { label: '🇵🇭 Cebu', value: 'Cebu' },
-                { label: '🇵🇭 Manila', value: 'Manila' },
-                { label: '🇵🇭 Malaybalay', value: 'Malaybalay' },
-                { label: '🇯🇵 Tokyo', value: 'Tokyo' },
-                { label: '🇮🇩 Bali', value: 'Bali' },
+                { label: 'All', value: '' },
+                { label: 'Boracay', value: 'Boracay' },
+                { label: 'Siargao', value: 'Siargao' },
+                { label: 'Baguio', value: 'Baguio' },
+                { label: 'Cebu', value: 'Cebu' },
+                { label: 'Manila', value: 'Manila' },
+                { label: 'Malaybalay', value: 'Malaybalay' },
+                { label: 'Tokyo', value: 'Tokyo' },
+                { label: 'Bali', value: 'Bali' },
               ].map((dest) => (
                 <button
                   key={dest.value}
+                  type="button"
                   onClick={() => {
                     setSelectedDestination(dest.value);
                     setSearchQuery(dest.value);
                   }}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all backdrop-blur-sm active:scale-95 ${
                     selectedDestination === dest.value
-                      ? 'bg-[#D49B41] text-[#212529] shadow-sm'
-                      : 'bg-white/10 text-slate-300 hover:bg-white/20'
+                      ? 'bg-[#D49B41] text-[#212529] font-bold shadow-sm'
+                      : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/15'
                   }`}
                 >
                   {dest.label}
@@ -280,45 +390,22 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               ))}
 
               <button
+                type="button"
                 onClick={handleNearMe}
                 disabled={locating}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-700/60 hover:bg-emerald-600 text-emerald-100 text-[11px] font-bold border border-emerald-500/40 transition-all"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/80 hover:bg-emerald-500 text-white text-[11px] font-bold border border-emerald-400/40 shadow-xs transition-all active:scale-95"
                 title="Search lodgings closest to your location"
               >
                 <Navigation className={`w-3 h-3 ${locating ? 'animate-spin' : ''}`} />
                 <span>{locating ? 'Locating...' : 'Near Me'}</span>
               </button>
             </div>
-
-            {/* Travel Style Category Chips */}
-            <div className="flex items-center justify-center flex-wrap gap-2 mt-3 text-xs">
-              {[
-                { key: 'all', label: '🌟 All Stays' },
-                { key: 'beach', label: '🏝️ Beach & Island' },
-                { key: 'mountain', label: '🌲 Highland & Mountain' },
-                { key: 'heritage', label: '🏛️ Heritage & Culture' },
-                { key: 'city', label: '🏙️ Urban & City' },
-                { key: 'eco', label: '🌿 Eco & Nature' },
-              ].map((cat) => (
-                <button
-                  key={cat.key}
-                  onClick={() => setActiveCategory(cat.key as TravelCategory)}
-                  className={`px-3 py-1.5 rounded-full font-bold text-xs transition-all ${
-                    activeCategory === cat.key
-                      ? 'bg-[#1E3A2B] text-white border border-[#D49B41]/50 shadow-sm ring-2 ring-[#D49B41]/25'
-                      : 'bg-white/10 text-slate-300 hover:bg-white/20'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 sm:-mt-12 relative z-10">
+      <main id="listings-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 sm:-mt-12 relative z-10">
         
         {/* Value Trust Ribbon */}
         <div className="bg-white rounded-2xl shadow-xl shadow-[#1E3A2B]/5 border border-[#E8E2D8] p-4 sm:p-5 mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E8E2D8]">
@@ -353,24 +440,112 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
           </div>
         </div>
 
-        {/* Header Bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-6">
+        {/* Header Bar with View Switcher */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-[#212529] tracking-tight">
-              Featured Lodgings & Stays
+            <h2 className="text-xl sm:text-2xl font-black text-[#212529] tracking-tight flex items-center gap-2">
+              <span>Featured Lodgings & Stays</span>
+              {userLocation && (
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Navigation className="w-2.5 h-2.5" />
+                  Sorted by Distance
+                </span>
+              )}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Choose your accommodation to inspect room photos, amenities, and book directly. Displayed in {currency}.
+              {userLocation && hotels.length > 0 && hotels[0].distance_km !== null
+                ? `Showing lodgings closest to your location. Closest stay is ${hotels[0]?.name} (${formatDistance(hotels[0]?.distance_km)}).`
+                : `Choose your accommodation to inspect room photos, amenities, and book directly. Displayed in ${currency}.`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-3 py-1 rounded-full bg-[#FAF8F5] text-[#1E3A2B] border border-[#E8E2D8]">
-              {hotels.length} {hotels.length === 1 ? 'Stay Available' : 'Stays Available'}
+
+          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+            {/* View Mode Switcher: Grid | Map | Split */}
+            <div className="flex items-center bg-white p-1 rounded-2xl border border-[#E8E2D8] shadow-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-[#1E3A2B] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-[#1E3A2B]'
+                }`}
+                title="Cards Grid View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Grid</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('map')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'map'
+                    ? 'bg-[#1E3A2B] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-[#1E3A2B]'
+                }`}
+                title="Full Map View"
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Map</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('split')}
+                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'split'
+                    ? 'bg-[#1E3A2B] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-[#1E3A2B]'
+                }`}
+                title="Split List & Map View"
+              >
+                <Columns2 className="w-3.5 h-3.5" />
+                <span>Split</span>
+              </button>
+            </div>
+
+            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-[#FAF8F5] text-[#1E3A2B] border border-[#E8E2D8] shrink-0">
+              {hotels.length} {hotels.length === 1 ? 'Stay' : 'Stays'}
             </span>
           </div>
         </div>
 
-        {/* Lodging Listings Grid */}
+        {/* Nearest Stay Alert Notification if Geolocation is Active */}
+        {userLocation && hotels.length > 0 && hotels[0].distance_km !== null && (
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-[#FAF8F5] to-amber-50 border border-emerald-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                📍
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-emerald-900">Your Location Detected</span>
+                  <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-200 text-emerald-900">
+                    Live GPS Radar
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Nearest hotel is <strong className="text-[#1E3A2B]">{hotels[0].name}</strong> situated just{' '}
+                  <strong className="text-emerald-700">{formatDistance(hotels[0].distance_km)}</strong> from you.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={() => setViewMode('map')}
+                className="px-3.5 py-1.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                <span>View on Map</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Lodging Listings Content */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {[1, 2, 3].map((n) => (
@@ -401,15 +576,128 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               Reset All Filters
             </button>
           </div>
+        ) : viewMode === 'map' ? (
+          /* Full Interactive Map View */
+          <div className="space-y-4">
+            <HotelMap
+              hotels={hotels}
+              userLocation={userLocation}
+              nearestHotelId={nearestHotelId}
+              onSelectHotel={onSelectHotel}
+              onLocateUser={handleNearMe}
+              isLocating={locating}
+              className="h-[600px] sm:h-[720px] w-full"
+            />
+          </div>
+        ) : viewMode === 'split' ? (
+          /* Split View: Left List Cards | Right Sticky Map */
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-6 space-y-4 max-h-[750px] overflow-y-auto pr-2 no-scrollbar">
+              {hotels.map((hotel) => {
+                const categoryBadge = getCategoryBadge(hotel.category);
+                const isNearest = nearestHotelId === hotel.id;
+                return (
+                  <article
+                    key={hotel.id}
+                    onClick={() => onSelectHotel(hotel.slug)}
+                    onMouseEnter={() => setHoveredHotelId(hotel.id)}
+                    onMouseLeave={() => setHoveredHotelId(null)}
+                    className={`group bg-white rounded-3xl border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col sm:flex-row ${
+                      isNearest
+                        ? 'border-[#D49B41] ring-2 ring-[#D49B41]/20'
+                        : 'border-[#E8E2D8] hover:border-[#1E3A2B]'
+                    }`}
+                  >
+                    <div className="relative w-full sm:w-48 h-44 sm:h-auto overflow-hidden bg-[#212529] shrink-0">
+                      <img
+                        src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'}
+                        alt={hotel.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute top-2.5 left-2.5">
+                        <span className="px-2 py-0.5 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[10px] font-bold">
+                          {getCountryFlag(hotel.country)} {hotel.city}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${categoryBadge.bg}`}>
+                            {categoryBadge.icon}
+                            {categoryBadge.label}
+                          </span>
+                          <div className="flex items-center gap-1 text-xs font-bold text-[#212529]">
+                            <Star className="w-3 h-3 text-[#D49B41] fill-[#D49B41]" />
+                            <span>{hotel.rating}</span>
+                          </div>
+                        </div>
+
+                        <h3 className="text-base font-black text-[#212529] group-hover:text-[#1E3A2B] transition-colors mt-1">
+                          {hotel.name}
+                        </h3>
+
+                        {hotel.distance_km !== undefined && hotel.distance_km !== null && (
+                          <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1 mt-1">
+                            <Navigation className="w-3 h-3 text-emerald-600" />
+                            <span>{formatDistance(hotel.distance_km)}</span>
+                            {isNearest && (
+                              <span className="bg-[#D49B41] text-[#212529] px-1.5 py-0.2 rounded text-[9px] uppercase font-black">
+                                Closest
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="pt-3 mt-3 border-t border-[#E8E2D8] flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-black text-[#1E3A2B]">
+                            {formatPrice(Number(hotel.min_rate || 850))}
+                          </span>
+                          <span className="text-[10px] text-slate-500"> / night</span>
+                        </div>
+                        <button className="px-3 py-1.5 rounded-xl bg-[#1E3A2B] group-hover:bg-[#3B5E43] text-white text-[11px] font-bold flex items-center gap-1 transition-colors">
+                          <span>View Rooms</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="lg:col-span-6 sticky top-24">
+              <HotelMap
+                hotels={hotels}
+                userLocation={userLocation}
+                nearestHotelId={nearestHotelId}
+                selectedHotelId={hoveredHotelId}
+                onSelectHotel={onSelectHotel}
+                onLocateUser={handleNearMe}
+                isLocating={locating}
+                className="h-[750px] w-full"
+              />
+            </div>
+          </div>
         ) : (
+          /* Standard Cards Grid View */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {hotels.map((hotel) => {
               const categoryBadge = getCategoryBadge(hotel.category);
+              const isNearest = nearestHotelId === hotel.id;
               return (
                 <article
                   key={hotel.id}
                   onClick={() => onSelectHotel(hotel.slug)}
-                  className="group bg-white rounded-3xl border border-[#E8E2D8] hover:border-[#3B5E43] overflow-hidden shadow-sm hover:shadow-2xl card-hover-lift cursor-pointer flex flex-col transition-all duration-300"
+                  className={`group bg-white rounded-3xl border overflow-hidden shadow-sm hover:shadow-2xl card-hover-lift cursor-pointer flex flex-col transition-all duration-300 ${
+                    isNearest
+                      ? 'border-[#D49B41] ring-2 ring-[#D49B41]/25'
+                      : 'border-[#E8E2D8] hover:border-[#3B5E43]'
+                  }`}
                 >
                   {/* Image Banner */}
                   <div className="relative h-60 sm:h-64 overflow-hidden bg-[#212529]">
@@ -429,20 +717,42 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                       </span>
                     </div>
 
-                    {/* Rating Pill */}
-                    <div className="absolute top-3.5 right-3.5 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#212529]/85 backdrop-blur-md text-[#D49B41] text-xs font-extrabold border border-[#D49B41]/25 shadow-md">
-                      <Star className="w-3.5 h-3.5 fill-[#D49B41] text-[#D49B41]" />
-                      <span>{hotel.rating}</span>
-                      <span className="text-[10px] text-slate-300 font-normal">({hotel.review_count})</span>
+                    {/* Distance / Nearest Badge OR Rating Pill */}
+                    <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
+                      {hotel.distance_km !== undefined && hotel.distance_km !== null ? (
+                        isNearest ? (
+                          <span className="px-2.5 py-1 rounded-full bg-[#D49B41] text-[#212529] text-[10px] font-black shadow-md flex items-center gap-1 animate-pulse">
+                            <span>⚡ Closest Stay</span>
+                            <span>({formatDistance(hotel.distance_km)})</span>
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full bg-[#1E3A2B]/90 backdrop-blur-md text-emerald-300 text-[10px] font-black border border-emerald-400/30 shadow-md flex items-center gap-1">
+                            <Navigation className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>{formatDistance(hotel.distance_km)}</span>
+                          </span>
+                        )
+                      ) : (
+                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#212529]/85 backdrop-blur-md text-[#D49B41] text-xs font-extrabold border border-[#D49B41]/25 shadow-md">
+                          <Star className="w-3.5 h-3.5 fill-[#D49B41] text-[#D49B41]" />
+                          <span>{hotel.rating}</span>
+                          <span className="text-[10px] text-slate-300 font-normal">({hotel.review_count})</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Hotel Name over gradient */}
                     <div className="absolute bottom-4 left-4 right-4">
-                      <div className="mb-1.5">
+                      <div className="mb-1.5 flex items-center justify-between">
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md ${categoryBadge.bg}`}>
                           {categoryBadge.icon}
                           {categoryBadge.label}
                         </span>
+                        {hotel.distance_km !== undefined && hotel.distance_km !== null && (
+                          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-[#D49B41] text-[11px] font-extrabold">
+                            <Star className="w-3 h-3 fill-[#D49B41] text-[#D49B41]" />
+                            <span>{hotel.rating}</span>
+                          </div>
+                        )}
                       </div>
                       <h3 className="text-xl font-black text-white leading-tight drop-shadow-sm group-hover:text-[#D49B41] transition-colors">
                         {hotel.name}
@@ -506,6 +816,29 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
           </div>
         )}
       </main>
+
+      {/* Floating 1-Tap Map / List Toggle Button (Airbnb Style) */}
+      {viewMode !== 'split' && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === 'map' ? 'grid' : 'map')}
+            className="bg-[#212529] hover:bg-[#1E3A2B] text-white px-5 py-2.5 rounded-full font-black text-xs shadow-2xl flex items-center gap-2 border border-white/20 active:scale-95 transition-all shadow-[0_12px_36px_rgba(0,0,0,0.35)]"
+          >
+            {viewMode === 'map' ? (
+              <>
+                <LayoutGrid className="w-4 h-4 text-[#D49B41]" />
+                <span>Show List View</span>
+              </>
+            ) : (
+              <>
+                <MapIcon className="w-4 h-4 text-[#D49B41]" />
+                <span>Show Interactive Map</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
