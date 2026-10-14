@@ -54,8 +54,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
   const [locating, setLocating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
-  const [nearestHotelId, setNearestHotelId] = useState<number | null>(null);
-  const [hoveredHotelId, setHoveredHotelId] = useState<number | null>(null);
+  const [nearestHotelId, setNearestHotelId] = useState<number | string | null>(null);
+  const [hoveredHotelId, setHoveredHotelId] = useState<number | string | null>(null);
 
   const { formatPrice, currency } = useCurrencyStore();
 

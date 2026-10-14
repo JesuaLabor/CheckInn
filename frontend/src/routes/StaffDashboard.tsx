@@ -100,10 +100,10 @@ export const StaffDashboard: React.FC = () => {
   const [verifyingQr, setVerifyingQr] = useState(false);
 
   // Selected room assignments for approval: { [bookingId]: roomId }
-  const [selectedRoomsForApproval, setSelectedRoomsForApproval] = useState<Record<number, number>>({});
+  const [selectedRoomsForApproval, setSelectedRoomsForApproval] = useState<Record<string | number, string | number>>({});
 
   // Rejection modal
-  const [rejectingBookingId, setRejectingBookingId] = useState<number | null>(null);
+  const [rejectingBookingId, setRejectingBookingId] = useState<number | string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('No rooms available for requested dates.');
 
   const [now, setNow] = useState(Date.now());
@@ -186,7 +186,7 @@ export const StaffDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteStaff = async (staffId: number) => {
+  const handleDeleteStaff = async (staffId: number | string) => {
     if (!confirm('Are you sure you want to deactivate this staff account?')) return;
     try {
       await api.delete(`/hotel-manage/staff/${staffId}/`);
@@ -257,7 +257,7 @@ export const StaffDashboard: React.FC = () => {
     return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
   };
 
-  const handleApprove = async (bookingId: number) => {
+  const handleApprove = async (bookingId: number | string) => {
     setActionError('');
     setActionSuccess('');
     try {
@@ -327,7 +327,7 @@ export const StaffDashboard: React.FC = () => {
     }
   };
 
-  const handleCheckOut = async (bookingId: number) => {
+  const handleCheckOut = async (bookingId: number | string) => {
     if (!window.confirm('Confirm checkout for this guest? Room will be flagged for cleaning.')) return;
     setActionError('');
     setActionSuccess('');
@@ -340,7 +340,7 @@ export const StaffDashboard: React.FC = () => {
     }
   };
 
-  const handleToggleRoomStatus = async (roomId: number, currentStatus: string) => {
+  const handleToggleRoomStatus = async (roomId: number | string, currentStatus: string) => {
     const nextStatus = currentStatus === 'cleaning' ? 'available' : 'cleaning';
     try {
       await api.patch('/staff/rooms/status/', {
@@ -353,7 +353,7 @@ export const StaffDashboard: React.FC = () => {
     }
   };
 
-  const handleServiceRequestStatus = async (reqId: number, newStatus: string) => {
+  const handleServiceRequestStatus = async (reqId: number | string, newStatus: string) => {
     try {
       await api.patch(`/service-requests/${reqId}/`, { status: newStatus });
       fetchDashboardData();

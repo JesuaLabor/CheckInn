@@ -1,13 +1,13 @@
 export type UserRole = 'guest' | 'staff' | 'admin' | 'superadmin';
 
 export interface User {
-  id: number;
+  id: number | string;
   username: string;
   email: string;
   first_name: string;
   last_name: string;
   role: UserRole;
-  hotel?: number | null;
+  hotel?: number | string | null;
   hotel_name?: string | null;
   hotel_slug?: string | null;
   phone_number?: string;
@@ -16,7 +16,7 @@ export interface User {
 export type HotelStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface Hotel {
-  id: number;
+  id: number | string;
   name: string;
   slug: string;
   tagline: string;
@@ -74,7 +74,7 @@ export interface PlatformStats {
 }
 
 export interface StaffMember {
-  id: number;
+  id: number | string;
   username: string;
   email?: string;
   first_name?: string;
@@ -87,8 +87,8 @@ export interface StaffMember {
 }
 
 export interface RoomType {
-  id: number;
-  hotel: number;
+  id: number | string;
+  hotel: number | string;
   hotel_name?: string;
   name: string;
   description: string;
@@ -103,16 +103,16 @@ export interface RoomType {
 }
 
 export interface Room {
-  id: number;
+  id: number | string;
   room_number: string;
   floor: string;
   status: 'available' | 'occupied' | 'maintenance' | 'cleaning';
   is_active: boolean;
-  room_type: number;
+  room_type: number | string;
   room_type_name?: string;
   base_rate?: number | string;
   occupant?: {
-    booking_id: number;
+    booking_id: number | string;
     booking_reference: string;
     guest_name: string;
     guest_phone: string;
@@ -131,7 +131,7 @@ export type BookingStatus =
   | 'expired';
 
 export interface Payment {
-  id: number;
+  id: number | string;
   amount: number | string;
   method: 'pay_at_hotel' | 'gcash' | 'cash' | 'card';
   status: 'unpaid' | 'paid' | 'refunded';
@@ -141,8 +141,8 @@ export interface Payment {
 }
 
 export interface GuestRequest {
-  id: number;
-  booking: number;
+  id: number | string;
+  booking: number | string;
   request_type: string;
   request_type_display: string;
   message: string;
@@ -154,17 +154,17 @@ export interface GuestRequest {
 }
 
 export interface Booking {
-  id: number;
+  id: number | string;
   booking_reference: string;
-  hotel: number;
+  hotel: number | string;
   hotel_name: string;
   hotel_slug: string;
   hotel_address: string;
-  room_type: number;
+  room_type: number | string;
   room_type_name: string;
-  room?: number | null;
+  room?: number | string | null;
   room_number?: string;
-  guest?: number | null;
+  guest?: number | string | null;
   guest_name: string;
   guest_email: string;
   guest_phone: string;
@@ -182,7 +182,7 @@ export interface Booking {
   qr_token?: string;
   special_requests?: string;
   rejection_reason?: string;
-  reviewed_by?: number | null;
+  reviewed_by?: number | string | null;
   reviewed_at?: string | null;
   checked_in_at?: string | null;
   checked_out_at?: string | null;

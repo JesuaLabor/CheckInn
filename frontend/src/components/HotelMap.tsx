@@ -25,8 +25,8 @@ interface HotelWithDistance extends Hotel {
 interface HotelMapProps {
   hotels: HotelWithDistance[];
   userLocation: Coordinates | null;
-  nearestHotelId?: number | null;
-  selectedHotelId?: number | null;
+  nearestHotelId?: number | string | null;
+  selectedHotelId?: number | string | null;
   onSelectHotel: (slug: string) => void;
   onLocateUser?: () => void;
   isLocating?: boolean;

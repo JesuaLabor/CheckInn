@@ -38,7 +38,7 @@ export const PlatformAdmin: React.FC = () => {
 
   // Rejection modal
   const [isRejectOpen, setIsRejectOpen] = useState(false);
-  const [rejectingHotelId, setRejectingHotelId] = useState<number | null>(null);
+  const [rejectingHotelId, setRejectingHotelId] = useState<number | string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('Business permit verification failed or incomplete lodging photos.');
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export const PlatformAdmin: React.FC = () => {
     }
   };
 
-  const handleReviewAction = async (hotelId: number, action: 'approve' | 'reject' | 'suspend' | 'reactivate', reason = '') => {
+  const handleReviewAction = async (hotelId: number | string, action: 'approve' | 'reject' | 'suspend' | 'reactivate', reason = '') => {
     setActionLoading(true);
     setFeedbackMessage(null);
     try {

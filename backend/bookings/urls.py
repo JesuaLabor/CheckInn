@@ -17,24 +17,24 @@ from .views import (
 )
 
 urlpatterns = [
-    # Guest endpoints
+    # Guest & Staff Booking endpoints
     path('bookings/', BookingCreateView.as_view(), name='booking_create'),
     path('bookings/my/', MyBookingsView.as_view(), name='my_bookings'),
-    path('bookings/<int:pk>/', BookingDetailView.as_view(), name='booking_detail'),
+    path('bookings/walkin/', WalkInBookingView.as_view(), name='walkin_booking'),
+    path('bookings/<str:pk>/', BookingDetailView.as_view(), name='booking_detail'),
 
     # Staff endpoints
     path('staff/requests/pending/', StaffPendingRequestsView.as_view(), name='staff_pending_requests'),
     path('staff/bookings/', StaffAllBookingsView.as_view(), name='staff_all_bookings'),
-    path('staff/requests/<int:pk>/approve/', StaffApproveRequestView.as_view(), name='staff_approve_request'),
-    path('staff/requests/<int:pk>/reject/', StaffRejectRequestView.as_view(), name='staff_reject_request'),
-    path('bookings/walkin/', WalkInBookingView.as_view(), name='walkin_booking'),
-    path('bookings/<int:pk>/checkin/', CheckInBookingView.as_view(), name='booking_checkin'),
-    path('bookings/<int:pk>/checkout/', CheckOutBookingView.as_view(), name='booking_checkout'),
+    path('staff/requests/<str:pk>/approve/', StaffApproveRequestView.as_view(), name='staff_approve_request'),
+    path('staff/requests/<str:pk>/reject/', StaffRejectRequestView.as_view(), name='staff_reject_request'),
+    path('bookings/<str:pk>/checkin/', CheckInBookingView.as_view(), name='booking_checkin'),
+    path('bookings/<str:pk>/checkout/', CheckOutBookingView.as_view(), name='booking_checkout'),
     path('staff/rooms/status/', StaffRoomStatusBoardView.as_view(), name='staff_rooms_status'),
 
     # Service requests
     path('service-requests/', ServiceRequestListCreateView.as_view(), name='service_requests_list_create'),
-    path('staff/service-requests/<int:pk>/', ServiceRequestUpdateView.as_view(), name='service_request_update'),
+    path('staff/service-requests/<str:pk>/', ServiceRequestUpdateView.as_view(), name='service_request_update'),
 
     # Admin reports
     path('admin/reports/occupancy/', AdminOccupancyReportView.as_view(), name='admin_occupancy_report'),
