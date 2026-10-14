@@ -12,24 +12,36 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = ['*']
 
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-
-    # Third-party
-    'corsheaders',
-    'rest_framework',
-    'rest_framework_simplejwt',
-
-    # Local apps
-    'accounts',
-    'hotels',
-    'bookings',
-]
+if os.environ.get('MONGODB_URI'):
+    INSTALLED_APPS = [
+        'config.apps.MongoAdminConfig',
+        'config.apps.MongoAuthConfig',
+        'config.apps.MongoContentTypesConfig',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+        'corsheaders',
+        'rest_framework',
+        'rest_framework_simplejwt',
+        'accounts',
+        'hotels',
+        'bookings',
+    ]
+else:
+    INSTALLED_APPS = [
+        'django.contrib.admin',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+        'corsheaders',
+        'rest_framework',
+        'rest_framework_simplejwt',
+        'accounts',
+        'hotels',
+        'bookings',
+    ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
