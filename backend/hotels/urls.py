@@ -13,7 +13,9 @@ from .views import (
     HotelManageStaffView,
     HotelManageStaffDetailView,
     HotelManageRoomTypeView,
+    HotelManageRoomTypeDetailView,
     HotelManageRoomView,
+    HotelManageRoomDetailView,
 )
 
 urlpatterns = [
@@ -35,5 +37,7 @@ urlpatterns = [
     path('hotel-manage/staff/', HotelManageStaffView.as_view(), name='hotel_manage_staff'),
     path('hotel-manage/staff/<str:pk>/', HotelManageStaffDetailView.as_view(), name='hotel_manage_staff_detail'),
     path('hotel-manage/room-types/', HotelManageRoomTypeView.as_view(), name='hotel_manage_room_types'),
+    path('hotel-manage/room-types/<int:pk>/', HotelManageRoomTypeDetailView.as_view(), name='hotel_manage_room_type_detail'),
     path('hotel-manage/rooms/', HotelManageRoomView.as_view(), name='hotel_manage_rooms'),
+    path('hotel-manage/rooms/<int:pk>/', HotelManageRoomDetailView.as_view(), name='hotel_manage_room_detail'),
 ]

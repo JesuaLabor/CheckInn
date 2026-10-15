@@ -1,4 +1,10 @@
+import os
+import uuid
+import base64
 from datetime import datetime
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import Q, Count, Sum
 from django.utils import timezone
@@ -282,6 +288,20 @@ class PartnerRegisterView(APIView):
             role='admin'  # Hotel Owner / Admin
         )
 
+        # Coordinates (optional from map pin picker)
+        raw_lat = data.get('latitude')
+        raw_lng = data.get('longitude')
+        lat = None
+        lng = None
+        try:
+            if raw_lat is not None and str(raw_lat).strip() != '':
+                lat = float(raw_lat)
+            if raw_lng is not None and str(raw_lng).strip() != '':
+                lng = float(raw_lng)
+        except (ValueError, TypeError):
+            lat = None
+            lng = None
+
         # 4. Create Hotel Entity with pending status
         hotel = Hotel.objects.create(
             name=hotel_name,
@@ -293,6 +313,8 @@ class PartnerRegisterView(APIView):
             country=country,
             country_name=country_name,
             postal_code=postal_code,
+            latitude=lat,
+            longitude=lng,
             currency=currency,
             timezone=timezone_val,
             category=category,
@@ -568,11 +590,45 @@ class HotelManageRoomTypeView(APIView):
         if isinstance(amenities, str):
             amenities = [a.strip() for a in amenities.split(',') if a.strip()]
 
-        photos = data.get('photos', [])
-        if isinstance(photos, str):
-            photos = [p.strip() for p in photos.split(',') if p.strip()]
-        if not photos:
-            photos = ['https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80']
+        saved_photos = []
+
+        # 1. Handle multipart uploaded file(s) from local device
+        uploaded_files = request.FILES.getlist('photos') or ([request.FILES.get('photo')] if request.FILES.get('photo') else [])
+        for f in uploaded_files:
+            if f:
+                ext = os.path.splitext(f.name)[1].lower() or '.jpg'
+                if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
+                    ext = '.jpg'
+                filename = f"rooms/{uuid.uuid4().hex}{ext}"
+                file_path = default_storage.save(filename, f)
+                saved_photos.append(f"/media/{file_path}")
+
+        # 2. Handle base64 encoded photo or photo list
+        raw_photos = data.get('photos', [])
+        if isinstance(raw_photos, str):
+            raw_photos = [p.strip() for p in raw_photos.split(',') if p.strip()]
+
+        if data.get('photo') and isinstance(data.get('photo'), str):
+            raw_photos.append(data.get('photo'))
+
+        for p in raw_photos:
+            if not p:
+                continue
+            if p.startswith('data:image/') and ';base64,' in p:
+                try:
+                    header, b64data = p.split(';base64,', 1)
+                    mime = header.split(';')[0].replace('data:image/', '')
+                    ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
+                    filename = f"rooms/{uuid.uuid4().hex}.{ext}"
+                    file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
+                    saved_photos.append(f"/media/{file_path}")
+                except Exception:
+                    pass
+            elif p.startswith('http://') or p.startswith('https://') or p.startswith('/media/'):
+                saved_photos.append(p)
+
+        if not saved_photos:
+            saved_photos = ['https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80']
 
         rt = RoomType.objects.create(
             hotel=hotel,
@@ -581,7 +637,7 @@ class HotelManageRoomTypeView(APIView):
             base_rate=base_rate,
             capacity=capacity,
             amenities=amenities,
-            photos=photos
+            photos=saved_photos
         )
         serializer = RoomTypeSerializer(rt)
         return Response({
@@ -632,3 +688,183 @@ class HotelManageRoomView(APIView):
             'message': f'Room "{room.room_number}" added successfully.',
             'room': serializer.data
         }, status=status.HTTP_201_CREATED)
+
+
+class HotelManageRoomTypeDetailView(APIView):
+    permission_classes = [IsHotelOwnerOrAdmin]
+
+    def patch(self, request, pk):
+        hotel = request.user.hotel
+        try:
+            rt = RoomType.objects.get(pk=pk, hotel=hotel)
+        except RoomType.DoesNotExist:
+            return Response({'error': 'Room category not found under your hotel.'}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+
+        if 'name' in data:
+            name = str(data.get('name', '')).strip()
+            if not name:
+                return Response({'error': 'Room category name cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+            rt.name = name
+
+        if 'base_rate' in data:
+            try:
+                base_rate = float(data.get('base_rate'))
+                if base_rate <= 0:
+                    return Response({'error': 'Base rate must be greater than 0.'}, status=status.HTTP_400_BAD_REQUEST)
+                rt.base_rate = base_rate
+            except (ValueError, TypeError):
+                return Response({'error': 'Invalid base rate format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'capacity' in data:
+            try:
+                rt.capacity = max(1, int(data.get('capacity', 2)))
+            except (ValueError, TypeError):
+                pass
+
+        if 'description' in data:
+            rt.description = str(data.get('description', '')).strip()
+
+        if 'amenities' in data:
+            amenities = data.get('amenities')
+            if isinstance(amenities, str):
+                amenities = [a.strip() for a in amenities.split(',') if a.strip()]
+            if isinstance(amenities, list):
+                rt.amenities = amenities
+
+        # Handle uploaded photo from local device
+        new_photos = []
+        uploaded_files = request.FILES.getlist('photos') or ([request.FILES.get('photo')] if request.FILES.get('photo') else [])
+        for f in uploaded_files:
+            if f:
+                ext = os.path.splitext(f.name)[1].lower() or '.jpg'
+                if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
+                    ext = '.jpg'
+                filename = f"rooms/{uuid.uuid4().hex}{ext}"
+                file_path = default_storage.save(filename, f)
+                new_photos.append(f"/media/{file_path}")
+
+        raw_photos = data.get('photos', [])
+        if isinstance(raw_photos, str):
+            raw_photos = [p.strip() for p in raw_photos.split(',') if p.strip()]
+
+        if data.get('photo') and isinstance(data.get('photo'), str):
+            raw_photos.append(data.get('photo'))
+
+        for p in raw_photos:
+            if not p:
+                continue
+            if p.startswith('data:image/') and ';base64,' in p:
+                try:
+                    header, b64data = p.split(';base64,', 1)
+                    mime = header.split(';')[0].replace('data:image/', '')
+                    ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
+                    filename = f"rooms/{uuid.uuid4().hex}.{ext}"
+                    file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
+                    new_photos.append(f"/media/{file_path}")
+                except Exception:
+                    pass
+            elif p.startswith('http://') or p.startswith('https://') or p.startswith('/media/'):
+                new_photos.append(p)
+
+        if new_photos:
+            rt.photos = new_photos
+
+        rt.save()
+        serializer = RoomTypeSerializer(rt)
+        return Response({
+            'message': f'Room category "{rt.name}" updated successfully.',
+            'room_type': serializer.data
+        })
+
+    def delete(self, request, pk):
+        hotel = request.user.hotel
+        try:
+            rt = RoomType.objects.get(pk=pk, hotel=hotel)
+        except RoomType.DoesNotExist:
+            return Response({'error': 'Room category not found under your hotel.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check for active reservations
+        has_active_bookings = Booking.objects.filter(
+            room_type=rt,
+            status__in=['pending_approval', 'confirmed', 'checked_in']
+        ).exists()
+
+        if has_active_bookings:
+            return Response({
+                'error': f'Cannot delete room category "{rt.name}" because active or pending reservations exist for it.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        category_name = rt.name
+        rt.delete()
+        return Response({'message': f'Room category "{category_name}" has been deleted.'})
+
+
+class HotelManageRoomDetailView(APIView):
+    permission_classes = [IsHotelOwnerOrAdmin]
+
+    def patch(self, request, pk):
+        hotel = request.user.hotel
+        try:
+            room = Room.objects.get(pk=pk, hotel=hotel)
+        except Room.DoesNotExist:
+            return Response({'error': 'Physical room not found under your hotel.'}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+
+        if 'room_number' in data:
+            room_number = str(data.get('room_number', '')).strip()
+            if not room_number:
+                return Response({'error': 'Room number cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+            if Room.objects.filter(hotel=hotel, room_number=room_number).exclude(pk=room.pk).exists():
+                return Response({'error': f'Room number "{room_number}" is already used by another room in your hotel.'}, status=status.HTTP_400_BAD_REQUEST)
+            room.room_number = room_number
+
+        if 'floor' in data:
+            room.floor = str(data.get('floor', '1st Floor')).strip()
+
+        if 'room_type_id' in data:
+            try:
+                room_type = RoomType.objects.get(id=data.get('room_type_id'), hotel=hotel)
+                room.room_type = room_type
+            except RoomType.DoesNotExist:
+                return Response({'error': 'Selected room category is invalid.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'status' in data:
+            valid_statuses = [choice[0] for choice in Room.STATUS_CHOICES]
+            status_val = data.get('status')
+            if status_val in valid_statuses:
+                room.status = status_val
+
+        if 'is_active' in data:
+            room.is_active = bool(data.get('is_active'))
+
+        room.save()
+        serializer = RoomSerializer(room)
+        return Response({
+            'message': f'Room "{room.room_number}" updated successfully.',
+            'room': serializer.data
+        })
+
+    def delete(self, request, pk):
+        hotel = request.user.hotel
+        try:
+            room = Room.objects.get(pk=pk, hotel=hotel)
+        except Room.DoesNotExist:
+            return Response({'error': 'Physical room not found under your hotel.'}, status=status.HTTP_404_NOT_FOUND)
+
+        has_active_stay = Booking.objects.filter(
+            room=room,
+            status__in=['pending_approval', 'confirmed', 'checked_in']
+        ).exists()
+
+        if has_active_stay:
+            return Response({
+                'error': f'Cannot delete Room "{room.room_number}" because an active or pending booking is assigned to it.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        room_num = room.room_number
+        room.delete()
+        return Response({'message': f'Room "{room_num}" deleted successfully.'})
+

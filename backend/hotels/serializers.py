@@ -30,6 +30,7 @@ class HotelListSerializer(serializers.ModelSerializer):
     min_rate = serializers.SerializerMethodField()
     room_types_count = serializers.SerializerMethodField()
     available_rooms_count = serializers.SerializerMethodField()
+    room_types_summary = serializers.SerializerMethodField()
 
     class Meta:
         model = Hotel
@@ -39,7 +40,7 @@ class HotelListSerializer(serializers.ModelSerializer):
             'latitude', 'longitude', 'currency', 'timezone', 'category',
             'contact_phone', 'contact_email', 'image_url',
             'amenities', 'rating', 'review_count', 'min_rate',
-            'room_types_count', 'available_rooms_count', 'status',
+            'room_types_count', 'available_rooms_count', 'room_types_summary', 'status',
             'payout_method', 'payout_account_name', 'payout_account_number'
         ]
 
@@ -52,6 +53,26 @@ class HotelListSerializer(serializers.ModelSerializer):
 
     def get_available_rooms_count(self, obj):
         return obj.rooms.filter(is_active=True, status='available').count()
+
+    def get_room_types_summary(self, obj):
+        return [
+            {
+                'id': rt.id,
+                'name': rt.name,
+                'base_rate': rt.base_rate,
+                'capacity': rt.capacity,
+                'photo': rt.photos[0] if (rt.photos and len(rt.photos) > 0) else None,
+            }
+            for rt in obj.room_types.all()
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('image_url'):
+            first_rt = instance.room_types.first()
+            if first_rt and first_rt.photos and len(first_rt.photos) > 0:
+                data['image_url'] = first_rt.photos[0]
+        return data
 
 
 class HotelDetailSerializer(serializers.ModelSerializer):
