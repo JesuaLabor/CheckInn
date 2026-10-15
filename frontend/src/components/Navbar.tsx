@@ -1,24 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import localstayLogo from '../assets/localstay_icon_with_text.png';
 import {
   CalendarCheck,
   Building2,
+  Building,
   User as UserIcon,
   LogOut,
   ChevronDown,
   Globe,
   HelpCircle,
   Compass,
-  MapPin,
-  Sparkles,
   ShieldCheck,
+  ExternalLink,
+  Bed,
+  Users,
+  TrendingUp,
+  Settings,
+  PlusCircle,
+  BellRing,
+  CheckCircle2,
+  Clock,
+  Ticket,
+  X,
 } from 'lucide-react';
 import { useCurrencyStore, CurrencyCode } from '../stores/currencyStore';
+import { toast } from '../stores/toastStore';
+
+export type NavTab =
+  | 'marketplace'
+  | 'guest_bookings'
+  | 'staff_dashboard'
+  | 'partner_register'
+  | 'platform_admin'
+  | 'inn_detail';
 
 interface NavbarProps {
-  currentTab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'partner_register' | 'platform_admin';
-  onNavigate: (tab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'partner_register' | 'platform_admin', hotelSlug?: string) => void;
+  currentTab: NavTab;
+  onNavigate: (tab: NavTab, hotelSlug?: string, subTab?: string) => void;
   onOpenAuth: () => void;
   onOpenSupport?: () => void;
 }
@@ -36,6 +55,66 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // Dropdown container refs for robust click-outside detection
+  const browseMenuRef = useRef<HTMLDivElement>(null);
+  const currencyMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileDockRef = useRef<HTMLElement>(null);
+  const mobileSheetRef = useRef<HTMLDivElement>(null);
+
+  // UI/UX Standard: Auto-close dropdowns on outside click or Escape key
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+
+      if (
+        showBrowseMenu &&
+        browseMenuRef.current &&
+        !browseMenuRef.current.contains(target)
+      ) {
+        setShowBrowseMenu(false);
+      }
+
+      if (
+        showCurrencyMenu &&
+        currencyMenuRef.current &&
+        !currencyMenuRef.current.contains(target)
+      ) {
+        setShowCurrencyMenu(false);
+      }
+
+      if (
+        showUserMenu &&
+        userMenuRef.current &&
+        !userMenuRef.current.contains(target) &&
+        (!mobileDockRef.current || !mobileDockRef.current.contains(target)) &&
+        (!mobileSheetRef.current || !mobileSheetRef.current.contains(target))
+      ) {
+        setShowUserMenu(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowBrowseMenu(false);
+        setShowCurrencyMenu(false);
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showBrowseMenu || showCurrencyMenu || showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showBrowseMenu, showCurrencyMenu, showUserMenu]);
+
   useEffect(() => {
     fetchRates();
   }, [fetchRates]);
@@ -49,8 +128,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isStaffOrAdmin = user && (user.role === 'staff' || user.role === 'admin' || user.role === 'superadmin');
-  const isSuperAdmin = user && user.role === 'superadmin';
+  const isSuperAdmin = user?.role === 'superadmin';
+  const isHotelAdmin = user?.role === 'admin';
+  const isStaff = user?.role === 'staff';
+  const isGuestOrPublic = !user || user.role === 'guest';
+  const isDarkConsole = false;
 
   const quickDestinations = [
     { name: 'Boracay', badge: 'Island' },
@@ -63,6 +145,23 @@ export const Navbar: React.FC<NavbarProps> = ({
     { name: 'Bali', badge: 'Intl' },
   ];
 
+  const handleLogoClick = () => {
+    if (isSuperAdmin) {
+      onNavigate('platform_admin');
+    } else if (isHotelAdmin || isStaff) {
+      onNavigate('staff_dashboard');
+    } else {
+      onNavigate('marketplace');
+    }
+  };
+
+  const handleSignOut = () => {
+    setShowUserMenu(false);
+    logout();
+    onNavigate('marketplace');
+    toast.info('Signed out successfully.');
+  };
+
   return (
     <>
       {/* 
@@ -73,9 +172,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="fixed top-0 inset-x-0 z-50 pointer-events-none flex justify-center transition-all duration-300 ease-out">
         <header
           className={`pointer-events-auto transition-all duration-300 ease-out ${
-            isScrolled
-              ? 'mt-3 sm:mt-4 w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#FAF8F5]/95 backdrop-blur-xl border border-[#E8E2D8] shadow-[0_16px_40px_rgba(33,37,41,0.12)] py-2 sm:py-2.5 px-4 sm:px-6'
-              : 'w-full rounded-none bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E8E2D8] shadow-sm py-3 sm:py-3.5 px-4 sm:px-6 lg:px-8'
+            isDarkConsole
+              ? isScrolled
+                ? 'mt-3 sm:mt-4 w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#16191C]/95 backdrop-blur-xl border border-[#2A2E33] shadow-[0_16px_40px_rgba(0,0,0,0.5)] py-2 sm:py-2.5 px-4 sm:px-6 text-white'
+                : 'w-full rounded-none bg-[#16191C]/95 backdrop-blur-md border-b border-[#2A2E33] shadow-sm py-3 sm:py-3.5 px-4 sm:px-6 lg:px-8 text-white'
+              : isScrolled
+                ? 'mt-3 sm:mt-4 w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#FAF8F5]/95 backdrop-blur-xl border border-[#E8E2D8] shadow-[0_16px_40px_rgba(33,37,41,0.12)] py-2 sm:py-2.5 px-4 sm:px-6 text-[#212529]'
+                : 'w-full rounded-none bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E8E2D8] shadow-sm py-3 sm:py-3.5 px-4 sm:px-6 lg:px-8 text-[#212529]'
           }`}
         >
           <div
@@ -83,256 +186,904 @@ export const Navbar: React.FC<NavbarProps> = ({
               isScrolled ? 'w-full' : 'max-w-7xl mx-auto'
             }`}
           >
-            {/* Left Group: Logo naturally sitting on the Warm Cream background */}
-            <div className="flex items-center shrink-0">
+            {/* Left Group: Logo + Role/Hotel Context Badge */}
+            <div className="flex items-center gap-3 shrink-0">
               <div
                 className="flex items-center cursor-pointer group"
-                onClick={() => onNavigate('marketplace')}
+                onClick={handleLogoClick}
+                title="Go to Home"
               >
                 <img
                   src={localstayLogo}
                   alt="LocalStay"
-                  className="h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-105"
+                  className={`h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-105 ${
+                    isDarkConsole ? 'brightness-110 drop-shadow-[0_2px_8px_rgba(212,155,65,0.3)]' : ''
+                  }`}
                 />
               </div>
+
+              {/* Contextual Role & Property Badge */}
+              {isStaff && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/90 text-emerald-900 text-xs font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="max-w-[130px] md:max-w-[190px] truncate">
+                    {user.hotel_name || 'Front Desk'}
+                  </span>
+                  <span className="text-[10px] text-emerald-700/80 font-medium hidden md:inline">
+                    • Staff Portal
+                  </span>
+                </div>
+              )}
+
+              {isHotelAdmin && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-[#D49B41]/40 text-[#8F611A] text-xs font-bold shadow-2xs">
+                  <span className="text-[11px]">👑</span>
+                  <span className="max-w-[130px] md:max-w-[190px] truncate">
+                    {user.hotel_name || 'Property'}
+                  </span>
+                  <span className="text-[10px] text-[#8F611A]/80 font-medium hidden md:inline">
+                    • Owner Portal
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Center / Left-Center: Main Navigation Items matching user specification */}
-            <nav className="hidden md:flex items-center gap-2 sm:gap-4">
-              {/* 1. Browse Stays ˅ Dropdown */}
-              <div className="relative">
+            {/* Center: Role-Tailored Navigation Items (Strictly max 3 items to avoid overcrowding) */}
+            {/* 1. FRONT DESK STAFF CENTER NAV */}
+            {isStaff && (
+              <nav className="hidden md:flex items-center gap-1.5 sm:gap-2">
                 <button
-                  onClick={() => setShowBrowseMenu(!showBrowseMenu)}
+                  onClick={() => onNavigate('staff_dashboard')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
+                    currentTab === 'staff_dashboard'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>Front Desk Operations</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('marketplace')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                    currentTab === 'marketplace'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5 opacity-70" />
+                  <span>Public Marketplace</span>
+                </button>
+
+                {onOpenSupport && (
+                  <button
+                    onClick={onOpenSupport}
+                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 transition-all"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 opacity-70" />
+                    <span>Staff Help</span>
+                  </button>
+                )}
+              </nav>
+            )}
+
+            {/* 2. HOTEL OWNER / ADMIN CENTER NAV */}
+            {isHotelAdmin && (
+              <nav className="hidden md:flex items-center gap-1.5 sm:gap-2">
+                <button
+                  onClick={() => onNavigate('staff_dashboard')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
+                    currentTab === 'staff_dashboard'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>Management Portal</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (user.hotel_slug) {
+                      onNavigate('inn_detail', user.hotel_slug);
+                    } else {
+                      onNavigate('marketplace');
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                    currentTab === 'inn_detail'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                  title="View your public hotel listing page"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>View Live Listing</span>
+                </button>
+
+                {onOpenSupport && (
+                  <button
+                    onClick={onOpenSupport}
+                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 transition-all"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 opacity-70" />
+                    <span>Owner Support</span>
+                  </button>
+                )}
+              </nav>
+            )}
+
+            {/* 3. SUPER ADMIN CENTER NAV */}
+            {isSuperAdmin && (
+              <nav className="hidden md:flex items-center gap-1.5 sm:gap-2">
+                <button
+                  onClick={() => onNavigate('platform_admin')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
+                    currentTab === 'platform_admin'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                >
+                  <ShieldCheck className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' ? 'text-white' : 'text-[#D49B41]'}`} />
+                  <span>Overview & Approvals</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('marketplace')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                    currentTab === 'marketplace'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                >
+                  <Compass className={`w-3.5 h-3.5 ${currentTab === 'marketplace' ? 'text-white' : 'opacity-70'}`} />
+                  <span>Live Marketplace</span>
+                </button>
+              </nav>
+            )}
+
+            {/* 4. GUEST / PUBLIC CENTER NAV */}
+            {isGuestOrPublic && (
+              <nav className="hidden md:flex items-center gap-2 sm:gap-4">
+                {/* Explore Stays link */}
+                <button
+                  onClick={() => onNavigate('marketplace')}
                   className={`flex items-center gap-1.5 py-2 px-1 text-sm font-semibold transition-colors ${
                     currentTab === 'marketplace'
                       ? 'text-[#1E3A2B] font-bold'
                       : 'text-[#212529] hover:text-[#1E3A2B]'
                   }`}
                 >
-                  <span>Browse Stays</span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      showBrowseMenu ? 'rotate-180 text-[#D49B41]' : 'opacity-70'
-                    }`}
-                  />
+                  <Compass className="w-4 h-4 text-[#D49B41]" />
+                  <span>Explore Stays</span>
                 </button>
 
-                {showBrowseMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowBrowseMenu(false)}></div>
-                    <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-[#E8E2D8] p-3 z-50 text-[#212529] animate-in fade-in zoom-in-95 duration-150">
-                      <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-[#E8E2D8] flex items-center justify-between">
-                        <span>Popular Destinations</span>
-                        <span className="text-[9px] bg-[#D49B41]/20 text-[#8F611A] px-1.5 py-0.5 rounded font-bold">
-                          Global
-                        </span>
-                      </div>
+                {/* Browse Destinations ˅ Dropdown */}
+                <div className="relative" ref={browseMenuRef}>
+                  <button
+                    onClick={() => {
+                      setShowBrowseMenu(!showBrowseMenu);
+                      setShowCurrencyMenu(false);
+                      setShowUserMenu(false);
+                    }}
+                    className="flex items-center gap-1.5 py-2 px-1 text-sm font-semibold text-[#212529] hover:text-[#1E3A2B] transition-colors"
+                  >
+                    <span>Destinations</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        showBrowseMenu ? 'rotate-180 text-[#D49B41]' : 'opacity-70'
+                      }`}
+                    />
+                  </button>
 
-                      <div className="grid grid-cols-2 gap-1 mt-2">
-                        {quickDestinations.map((dest) => (
+                  {showBrowseMenu && (
+                    <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-[#E8E2D8] p-3 z-50 text-[#212529] animate-in fade-in zoom-in-95 duration-150">
+                        <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-[#E8E2D8] flex items-center justify-between">
+                          <span>Popular Destinations</span>
+                          <span className="text-[9px] bg-[#D49B41]/20 text-[#8F611A] px-1.5 py-0.5 rounded font-bold">
+                            Global
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1 mt-2">
+                          {quickDestinations.map((dest) => (
+                            <button
+                              key={dest.name}
+                              onClick={() => {
+                                setShowBrowseMenu(false);
+                                onNavigate('marketplace');
+                              }}
+                              className="flex items-center justify-between p-2 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left"
+                            >
+                              <span className="font-semibold text-[#212529]">{dest.name}</span>
+                              <span className="text-[9px] text-slate-400">{dest.badge}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-[#E8E2D8]">
                           <button
-                            key={dest.name}
                             onClick={() => {
                               setShowBrowseMenu(false);
                               onNavigate('marketplace');
                             }}
-                            className="flex items-center justify-between p-2 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left"
+                            className="w-full text-center py-1.5 rounded-lg text-xs font-bold text-[#8F611A] hover:bg-[#FAF8F5] transition-colors flex items-center justify-center gap-1.5"
                           >
-                            <span className="font-semibold text-[#212529]">{dest.name}</span>
-                            <span className="text-[9px] text-slate-400">{dest.badge}</span>
+                            <Compass className="w-3.5 h-3.5" />
+                            <span>View All Inns & Stays</span>
                           </button>
-                        ))}
+                        </div>
                       </div>
+                  )}
+                </div>
 
-                      <div className="mt-2 pt-2 border-t border-[#E8E2D8]">
-                        <button
-                          onClick={() => {
-                            setShowBrowseMenu(false);
-                            onNavigate('marketplace');
-                          }}
-                          className="w-full text-center py-1.5 rounded-lg text-xs font-bold text-[#8F611A] hover:bg-[#FAF8F5] transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <Compass className="w-3.5 h-3.5" />
-                          <span>View All Inns & Stays</span>
-                        </button>
-                      </div>
-                    </div>
-                  </>
+                {/* Help & Support */}
+                {onOpenSupport && (
+                  <button
+                    onClick={onOpenSupport}
+                    className="flex items-center gap-1.5 py-2 px-1 text-sm font-semibold text-[#212529] hover:text-[#1E3A2B] transition-colors"
+                  >
+                    <span>Help & Support</span>
+                  </button>
                 )}
-              </div>
+              </nav>
+            )}
 
-              {/* 2. My Bookings */}
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onOpenAuth();
-                  } else {
-                    onNavigate('guest_bookings');
-                  }
-                }}
-                className={`flex items-center gap-1.5 py-2 px-1 text-sm font-semibold transition-colors ${
-                  currentTab === 'guest_bookings'
-                    ? 'text-[#1E3A2B] font-bold'
-                    : 'text-[#212529] hover:text-[#1E3A2B]'
-                }`}
-              >
-                <span>My Bookings</span>
-                {user && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#D49B41] animate-pulse"></span>
-                )}
-              </button>
-
-              {/* 3. Help & Support */}
-              <button
-                onClick={() => {
-                  if (onOpenSupport) {
-                    onOpenSupport();
-                  }
-                }}
-                className="flex items-center gap-1.5 py-2 px-1 text-sm font-semibold text-[#212529] hover:text-[#1E3A2B] transition-colors"
-              >
-                <span>Help & Support</span>
-              </button>
-            </nav>
-
-            {/* Right Group: Currency + List Your Property + Sign In / User Profile */}
+            {/* Right Group: Role-Tailored Actions & Profile Menu */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Currency Picker Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowCurrencyMenu(!showCurrencyMenu)}
-                  className="flex items-center gap-1.5 bg-[#F4EFEA] hover:bg-[#E8E2D8]/60 text-[#212529] text-xs font-bold px-2.5 py-2 rounded-full border border-[#E8E2D8] transition-colors"
-                  title="Change Currency"
-                >
-                  <Globe className="w-3.5 h-3.5 text-[#3B5E43]" />
-                  <span>{currency}</span>
-                  <ChevronDown className="w-2.5 h-2.5 opacity-60" />
-                </button>
+              {/* Currency Picker Dropdown (Guest, Owner, Superadmin) */}
+              {(isGuestOrPublic || isHotelAdmin || isSuperAdmin) && (
+                <div className="relative" ref={currencyMenuRef}>
+                  <button
+                    onClick={() => {
+                      setShowCurrencyMenu(!showCurrencyMenu);
+                      setShowBrowseMenu(false);
+                      setShowUserMenu(false);
+                    }}
+                    className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-2 rounded-full border transition-colors ${
+                      isDarkConsole
+                        ? 'bg-[#22262B] hover:bg-[#2A2E33] text-slate-200 border-[#33383F]'
+                        : 'bg-[#F4EFEA] hover:bg-[#E8E2D8]/60 text-[#212529] border-[#E8E2D8]'
+                    }`}
+                    title="Change Currency"
+                  >
+                    <Globe className={`w-3.5 h-3.5 ${isDarkConsole ? 'text-[#D49B41]' : 'text-[#3B5E43]'}`} />
+                    <span>{currency}</span>
+                    <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                  </button>
 
-                {showCurrencyMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowCurrencyMenu(false)}></div>
-                    <div className="absolute right-0 mt-2 w-44 bg-white rounded-2xl shadow-2xl border border-[#E8E2D8] p-1.5 z-50 text-[#212529] animate-in fade-in zoom-in-95 duration-150">
-                      <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-[#E8E2D8] flex items-center justify-between">
-                        <span>Currency</span>
-                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded font-bold">Auto FX</span>
-                      </div>
-                      <div className="space-y-0.5 mt-1">
-                        {(['PHP', 'USD', 'JPY', 'EUR', 'SGD', 'AUD', 'GBP'] as CurrencyCode[]).map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => {
-                              setCurrency(c);
-                              setShowCurrencyMenu(false);
-                            }}
-                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors ${
-                              currency === c
-                                ? 'bg-[#1E3A2B]/10 text-[#1E3A2B] font-bold'
-                                : 'hover:bg-[#FAF8F5] text-[#212529]'
+                  {showCurrencyMenu && (
+                    <div
+                      className={`absolute right-0 mt-2 w-44 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 ${
+                          isDarkConsole
+                            ? 'bg-[#1E2227] border border-[#33383F] text-slate-100'
+                            : 'bg-white border border-[#E8E2D8] text-[#212529]'
+                        }`}
+                      >
+                        <div
+                          className={`px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider border-b flex items-center justify-between ${
+                            isDarkConsole ? 'border-[#33383F] text-slate-400' : 'border-[#E8E2D8] text-slate-400'
+                          }`}
+                        >
+                          <span>Currency</span>
+                          <span
+                            className={`text-[9px] px-1 py-0.5 rounded font-bold ${
+                              isDarkConsole ? 'bg-slate-700/40 text-amber-300' : 'bg-slate-100 text-slate-600'
                             }`}
                           >
-                            <span>{c}</span>
-                            <span className="text-slate-400 text-[11px]">{symbols[c]}</span>
-                          </button>
-                        ))}
+                            Live FX
+                          </span>
+                        </div>
+                        <div className="space-y-0.5 mt-1">
+                          {(['PHP', 'USD', 'JPY', 'EUR', 'SGD', 'AUD', 'GBP'] as CurrencyCode[]).map((c) => (
+                            <button
+                              key={c}
+                              onClick={() => {
+                                setCurrency(c);
+                                setShowCurrencyMenu(false);
+                              }}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors ${
+                                currency === c
+                                  ? isDarkConsole
+                                    ? 'bg-purple-600/30 text-purple-200 font-bold'
+                                    : 'bg-[#1E3A2B]/10 text-[#1E3A2B] font-bold'
+                                  : isDarkConsole
+                                    ? 'hover:bg-white/5 text-slate-200'
+                                    : 'hover:bg-[#FAF8F5] text-[#212529]'
+                              }`}
+                            >
+                              <span>{c}</span>
+                              <span className="opacity-60 text-[11px]">{symbols[c]}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
-              {/* 4. 'List Your Property' (Warm Ochre Solid Button) */}
-              <button
-                onClick={() => onNavigate('partner_register')}
-                className="bg-[#D49B41] hover:bg-[#BF8832] text-white text-xs sm:text-sm font-bold px-4 sm:px-5 py-2 rounded-xl sm:rounded-full shadow-md shadow-[#D49B41]/25 transition-all active:scale-95 shrink-0"
-              >
-                List Your Property
-              </button>
+              {/* Staff Front Desk Active Status Pill */}
+              {isStaff && (
+                <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100/70 border border-emerald-300 text-emerald-900 text-xs font-black">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Front Desk On Duty</span>
+                </div>
+              )}
 
-              {/* 5. 'Sign in' (Refined Ghost Outline Button) OR Logged-in Profile Pill */}
+              {/* Guest / Public: 'List Your Property' Button - Hidden on mobile (<sm) to prevent navbar blowout; accessible via mobile bottom dock and menu */}
+              {isGuestOrPublic && (
+                <button
+                  onClick={() => onNavigate('partner_register')}
+                  className="hidden sm:inline-flex bg-[#D49B41] hover:bg-[#BF8832] text-white text-xs sm:text-sm font-bold px-4 sm:px-5 py-2 rounded-xl sm:rounded-full shadow-md shadow-[#D49B41]/25 transition-all active:scale-95 shrink-0"
+                >
+                  List Your Property
+                </button>
+              )}
+
+              {/* User Profile Pill OR Sign In Button */}
               {user ? (
-                <div className="relative">
+                <div className="relative" ref={userMenuRef}>
                   <button
-                    onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center gap-2 bg-[#F4EFEA] hover:bg-[#E8E2D8]/60 text-[#212529] text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl sm:rounded-full border border-[#E8E2D8] transition-all"
+                    onClick={() => {
+                      setShowUserMenu(!showUserMenu);
+                      setShowBrowseMenu(false);
+                      setShowCurrencyMenu(false);
+                    }}
+                    className={`flex items-center gap-2 text-xs sm:text-sm font-semibold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-full border transition-all ${
+                      isDarkConsole
+                        ? 'bg-[#22262B] hover:bg-[#2A2E33] text-slate-200 border-[#33383F]'
+                        : 'bg-[#F4EFEA] hover:bg-[#E8E2D8]/60 text-[#212529] border-[#E8E2D8]'
+                    }`}
                   >
-                    <div className="w-5 h-5 rounded-full bg-[#1E3A2B] text-white text-[10px] font-black flex items-center justify-center uppercase">
+                    <div
+                      className={`w-6 h-6 rounded-full text-white text-[10px] font-black flex items-center justify-center uppercase shadow-2xs ${
+                        isSuperAdmin
+                          ? 'bg-[#D49B41] text-[#212529]'
+                          : isHotelAdmin
+                          ? 'bg-[#8F611A]'
+                          : isStaff
+                          ? 'bg-[#1E3A2B]'
+                          : 'bg-[#212529]'
+                      }`}
+                    >
                       {user.first_name ? user.first_name.charAt(0) : user.username.charAt(0)}
                     </div>
-                    <span className="max-w-[80px] sm:max-w-[120px] truncate font-bold">
+                    <span className="hidden sm:inline max-w-[70px] sm:max-w-[110px] truncate font-bold">
                       {user.first_name || user.username}
+                    </span>
+                    <span
+                      className={`hidden xl:inline text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                        isSuperAdmin
+                          ? isDarkConsole
+                            ? 'bg-[#D49B41]/20 text-[#D49B41] border border-[#D49B41]/40'
+                            : 'bg-emerald-100 text-emerald-800'
+                          : isHotelAdmin
+                          ? 'bg-amber-100 text-[#8F611A]'
+                          : isStaff
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {user.role}
                     </span>
                     <ChevronDown className="w-3 h-3 opacity-60" />
                   </button>
 
+                  {/* Desktop Profile Shortcut Dropdown Menu (Hidden on mobile < sm, visible >= sm) */}
                   {showUserMenu && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)}></div>
-                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-[#E8E2D8] p-2 z-50 text-[#212529] animate-in fade-in zoom-in-95 duration-150">
-                        <div className="px-3 py-2 border-b border-[#E8E2D8]">
-                          <p className="text-xs font-bold text-[#212529]">{user.first_name || user.username}</p>
-                          <p className="text-[10px] text-slate-500 truncate">{user.email || user.username}</p>
+                    <div
+                      className={`hidden sm:block absolute right-0 mt-2 w-80 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 ${
+                          isDarkConsole
+                            ? 'bg-[#181B1F] border border-[#2E3339] text-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.6)]'
+                            : 'bg-white border border-[#E8E2D8] text-[#212529] shadow-[0_20px_50px_rgba(33,37,41,0.18)]'
+                        }`}
+                      >
+                        {/* Profile Header Card */}
+                        <div
+                          className={`px-3 py-3 border-b rounded-xl mb-1.5 ${
+                            isDarkConsole
+                              ? 'bg-[#1E2228] border-[#2A2E33]'
+                              : 'bg-[#FAF8F5] border-[#E8E2D8]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-10 h-10 rounded-full text-white text-sm font-black flex items-center justify-center uppercase shrink-0 shadow-sm ${
+                                isSuperAdmin
+                                  ? 'bg-[#D49B41] text-[#212529]'
+                                  : isHotelAdmin
+                                  ? 'bg-[#8F611A]'
+                                  : isStaff
+                                  ? 'bg-[#1E3A2B]'
+                                  : 'bg-[#212529]'
+                              }`}
+                            >
+                              {user.first_name ? user.first_name.charAt(0) : user.username.charAt(0)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <span
+                                  className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                    isSuperAdmin
+                                      ? isDarkConsole
+                                        ? 'bg-[#D49B41]/20 text-[#D49B41] border border-[#D49B41]/40'
+                                        : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                      : isHotelAdmin
+                                      ? 'bg-amber-100 text-[#8F611A] border border-[#D49B41]/30'
+                                      : isStaff
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300/40'
+                                      : 'bg-slate-200 text-slate-700'
+                                  }`}
+                                >
+                                  {isSuperAdmin
+                                    ? 'Root Administrator'
+                                    : isHotelAdmin
+                                    ? 'Property Owner'
+                                    : isStaff
+                                    ? 'Front Desk Reception'
+                                    : 'Verified Traveler'}
+                                </span>
+                              </div>
+                              <p className={`text-xs font-black truncate ${isDarkConsole ? 'text-white' : 'text-[#212529]'}`}>
+                                {user.first_name ? `${user.first_name} ${user.last_name || ''}` : user.username}
+                              </p>
+                              <p className={`text-[10px] truncate ${isDarkConsole ? 'text-slate-400' : 'text-slate-500'}`}>
+                                {user.email || user.username}
+                              </p>
+                            </div>
+                          </div>
+                          {(isStaff || isHotelAdmin) && user.hotel_name && (
+                            <div
+                              className={`mt-2 pt-2 border-t flex items-center gap-1.5 text-[11px] font-bold ${
+                                isDarkConsole ? 'border-[#2A2E33] text-amber-300' : 'border-[#E8E2D8] text-[#1E3A2B]'
+                              }`}
+                            >
+                              <span>🏨</span>
+                              <span className="truncate">{user.hotel_name}</span>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="space-y-1 mt-1">
-                          <button
-                            onClick={() => {
-                              setShowUserMenu(false);
-                              onNavigate('guest_bookings');
-                            }}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-[#212529] hover:bg-[#FAF8F5] transition-colors text-left font-medium"
-                          >
-                            <CalendarCheck className="w-3.5 h-3.5 text-[#D49B41]" />
-                            <span>My Bookings</span>
-                          </button>
+                        {/* Role-Specific Shortcut Items */}
+                        <div className="space-y-1">
+                          {/* 1. FRONT DESK STAFF SHORTCUTS */}
+                          {isStaff && (
+                            <>
+                              <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                                Operational Shortcuts
+                              </div>
 
-                          {isStaffOrAdmin && !isSuperAdmin && (
-                            <button
-                              onClick={() => {
-                                setShowUserMenu(false);
-                                onNavigate('staff_dashboard');
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-[#212529] hover:bg-[#FAF8F5] transition-colors text-left font-medium"
-                            >
-                              <Building2 className="w-3.5 h-3.5 text-[#3B5E43]" />
-                              <span>Front Desk Dashboard</span>
-                            </button>
+                              {/* Walk-in Fast Pass */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'walkin');
+                                }}
+                                className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs hover:bg-emerald-50 transition-colors text-left group"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 group-hover:scale-105 transition-transform">
+                                    <PlusCircle className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-emerald-950">+ Direct Walk-in Check-in</p>
+                                    <p className="text-[10px] text-emerald-700/80">Fast reservation modal</p>
+                                  </div>
+                                </div>
+                                <span className="text-[9px] bg-emerald-200 text-emerald-900 font-extrabold px-1.5 py-0.5 rounded">
+                                  Action
+                                </span>
+                              </button>
+
+                              {/* Room Status Board Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'rooms');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center text-teal-700 group-hover:scale-105 transition-transform">
+                                  <Bed className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Room Status Board</p>
+                                  <p className="text-[10px] text-slate-500">Live cleanliness & occupied status</p>
+                                </div>
+                              </button>
+
+                              {/* Guest Service Requests Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'requests');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-700 group-hover:scale-105 transition-transform">
+                                  <BellRing className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Guest Service Requests</p>
+                                  <p className="text-[10px] text-slate-500">Housekeeping & amenities queue</p>
+                                </div>
+                              </button>
+
+                              {/* Workspaces Group */}
+                              <div className="px-2 pt-1.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-[#E8E2D8] mt-1">
+                                Workspaces
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'pending');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-bold text-slate-700"
+                              >
+                                <Building2 className="w-4 h-4 text-[#1E3A2B]" />
+                                <span>Operations Dashboard Home</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('marketplace');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-600"
+                              >
+                                <Compass className="w-4 h-4 text-slate-400" />
+                                <span>Public Marketplace Directory</span>
+                              </button>
+                            </>
                           )}
 
+                          {/* 2. HOTEL OWNER / ADMIN SHORTCUTS */}
+                          {isHotelAdmin && (
+                            <>
+                              <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                                Property Management
+                              </div>
+
+                              {/* Room Categories & Rates Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'inventory_manage');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-amber-50/60 transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-700 group-hover:scale-105 transition-transform">
+                                  <Bed className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Room Categories & Rates</p>
+                                  <p className="text-[10px] text-slate-500">Photos, nightly rates & capacity</p>
+                                </div>
+                              </button>
+
+                              {/* Staff Team & Permissions Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'staff_manage');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-amber-50/60 transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-700 group-hover:scale-105 transition-transform">
+                                  <Users className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Staff Team & Permissions</p>
+                                  <p className="text-[10px] text-slate-500">Create & manage receptionist logins</p>
+                                </div>
+                              </button>
+
+                              {/* Occupancy & Revenue Reports Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'reports');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-amber-50/60 transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700 group-hover:scale-105 transition-transform">
+                                  <TrendingUp className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Occupancy & Financial Reports</p>
+                                  <p className="text-[10px] text-slate-500">Revenue, RevPAR & guest analytics</p>
+                                </div>
+                              </button>
+
+                              {/* Property Profile & Payout Settings Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'hotel_settings');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-amber-50/60 transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 group-hover:scale-105 transition-transform">
+                                  <Settings className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Property Profile & Settings</p>
+                                  <p className="text-[10px] text-slate-500">Bank payouts, amenities & policies</p>
+                                </div>
+                              </button>
+
+                              {/* Secondary Group */}
+                              <div className="px-2 pt-1.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-[#E8E2D8] mt-1">
+                                Property & Personal
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('partner_register');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-700"
+                              >
+                                <Building className="w-4 h-4 text-[#D49B41]" />
+                                <span>+ Register Another Property</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('guest_bookings');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-700"
+                              >
+                                <CalendarCheck className="w-4 h-4 text-slate-500" />
+                                <span>My Personal Bookings</span>
+                              </button>
+                            </>
+                          )}
+
+                          {/* 3. PLATFORM SUPER ADMIN SHORTCUTS */}
                           {isSuperAdmin && (
-                            <button
-                              onClick={() => {
-                                setShowUserMenu(false);
-                                onNavigate('platform_admin');
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-purple-700 hover:bg-purple-50 transition-colors text-left font-medium"
-                            >
-                              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                              <span>Platform Admin</span>
-                            </button>
+                            <>
+                              <div
+                                className={`px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider ${
+                                  isDarkConsole ? 'text-slate-400' : 'text-slate-400'
+                                }`}
+                              >
+                                Platform Governance
+                              </div>
+
+                              {/* Pending Approvals Filter Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('platform_admin', undefined, 'pending');
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-colors text-left group ${
+                                  isDarkConsole ? 'hover:bg-white/5' : 'hover:bg-[#FAF8F5]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+                                    <Clock className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className={`font-bold ${isDarkConsole ? 'text-amber-300' : 'text-amber-900'}`}>
+                                      Pending Hotel Approvals
+                                    </p>
+                                    <p className={`text-[10px] ${isDarkConsole ? 'text-slate-400' : 'text-slate-500'}`}>
+                                      Review partner applications
+                                    </p>
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${
+                                    isDarkConsole
+                                      ? 'bg-amber-500/30 text-amber-200 border-amber-500/30'
+                                      : 'bg-amber-100 text-amber-800 border-amber-200'
+                                  }`}
+                                >
+                                  Filter
+                                </span>
+                              </button>
+
+                              {/* Live Approved Lodgings Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('platform_admin', undefined, 'approved');
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-colors text-left group ${
+                                  isDarkConsole ? 'hover:bg-white/5' : 'hover:bg-[#FAF8F5]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className={`font-bold ${isDarkConsole ? 'text-emerald-300' : 'text-emerald-900'}`}>
+                                      Live Approved Lodgings
+                                    </p>
+                                    <p className={`text-[10px] ${isDarkConsole ? 'text-slate-400' : 'text-slate-500'}`}>
+                                      Active marketplace properties
+                                    </p>
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${
+                                    isDarkConsole
+                                      ? 'bg-emerald-500/30 text-emerald-200 border-emerald-500/30'
+                                      : 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                  }`}
+                                >
+                                  Filter
+                                </span>
+                              </button>
+
+                              {/* Platform Metrics Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('platform_admin', undefined, 'all');
+                                }}
+                                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs transition-colors text-left group ${
+                                  isDarkConsole ? 'hover:bg-white/5' : 'hover:bg-[#FAF8F5]'
+                                }`}
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-[#D49B41]/20 flex items-center justify-center text-[#D49B41] group-hover:scale-105 transition-transform">
+                                  <TrendingUp className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className={`font-bold ${isDarkConsole ? 'text-slate-200' : 'text-slate-900'}`}>
+                                    Platform Metrics & GMV
+                                  </p>
+                                  <p className={`text-[10px] ${isDarkConsole ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    Global system overview
+                                  </p>
+                                </div>
+                              </button>
+
+                              {/* Secondary Group */}
+                              <div
+                                className={`px-2 pt-1.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider border-t mt-1 ${
+                                  isDarkConsole ? 'border-[#2A2E33] text-slate-500' : 'border-[#E8E2D8] text-slate-400'
+                                }`}
+                              >
+                                Directory & Tools
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('marketplace');
+                                }}
+                                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left font-medium ${
+                                  isDarkConsole
+                                    ? 'hover:bg-white/5 text-slate-300'
+                                    : 'hover:bg-[#FAF8F5] text-slate-700'
+                                }`}
+                              >
+                                <Compass className="w-4 h-4 text-slate-400" />
+                                <span>Public Guest Directory</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('partner_register');
+                                }}
+                                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs transition-colors text-left font-medium ${
+                                  isDarkConsole
+                                    ? 'hover:bg-white/5 text-slate-300'
+                                    : 'hover:bg-[#FAF8F5] text-slate-700'
+                                }`}
+                              >
+                                <Building className="w-4 h-4 text-slate-400" />
+                                <span>Partner Onboarding Form</span>
+                              </button>
+                            </>
                           )}
 
-                          <div className="pt-1 border-t border-[#E8E2D8]">
+                          {/* 4. GUEST / PUBLIC SHORTCUTS */}
+                          {isGuestOrPublic && (
+                            <>
+                              <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                                Trips & Reservations
+                              </div>
+
+                              {/* Digital Passes & Reservations */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('guest_bookings');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-amber-50/60 transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-amber-100/70 flex items-center justify-center text-[#8F611A] group-hover:scale-105 transition-transform">
+                                  <Ticket className="w-4 h-4 text-[#D49B41]" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">My Bookings & Digital Passes</p>
+                                  <p className="text-[10px] text-slate-500">View check-in codes & vouchers</p>
+                                </div>
+                              </button>
+
+                              {/* Explore Stays */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('marketplace');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700 group-hover:scale-105 transition-transform">
+                                  <Compass className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Explore Stays</p>
+                                  <p className="text-[10px] text-slate-500">Discover boutique inns & villas</p>
+                                </div>
+                              </button>
+
+                              {/* Support & Host Group */}
+                              <div className="px-2 pt-1.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-[#E8E2D8] mt-1">
+                                Hosting & Support
+                              </div>
+
+                              {onOpenSupport && (
+                                <button
+                                  onClick={() => {
+                                    setShowUserMenu(false);
+                                    onOpenSupport();
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-700"
+                                >
+                                  <HelpCircle className="w-4 h-4 text-blue-600" />
+                                  <span>Help Center & Support</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('partner_register');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-700"
+                              >
+                                <Building className="w-4 h-4 text-[#D49B41]" />
+                                <span>List Your Property (Become a Host)</span>
+                              </button>
+                            </>
+                          )}
+
+                          {/* Sign Out Action */}
+                          <div
+                            className={`pt-1.5 mt-1 border-t ${
+                              isDarkConsole ? 'border-[#2A2E33]' : 'border-[#E8E2D8]'
+                            }`}
+                          >
                             <button
-                              onClick={() => {
-                                setShowUserMenu(false);
-                                logout();
-                              }}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-rose-600 hover:bg-rose-50 transition-colors text-left font-medium"
+                              onClick={handleSignOut}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors text-left ${
+                                isDarkConsole
+                                  ? 'text-rose-400 hover:bg-rose-950/40'
+                                  : 'text-rose-600 hover:bg-rose-50'
+                              }`}
                             >
                               <LogOut className="w-3.5 h-3.5" />
-                              <span>Sign out</span>
+                              <span>{isStaff ? 'Sign out & End Shift' : 'Sign out'}</span>
                             </button>
                           </div>
                         </div>
                       </div>
-                    </>
                   )}
                 </div>
               ) : (
                 <button
                   onClick={onOpenAuth}
-                  className="border border-[#212529]/30 hover:border-[#1E3A2B] text-[#212529] hover:text-[#1E3A2B] hover:bg-black/5 text-xs sm:text-sm font-semibold px-4 sm:px-5 py-2 rounded-xl sm:rounded-full transition-all active:scale-95 shadow-sm"
+                  className="hidden sm:inline-flex border border-[#212529]/30 hover:border-[#1E3A2B] text-[#212529] hover:text-[#1E3A2B] hover:bg-black/5 text-xs sm:text-sm font-semibold px-4 sm:px-5 py-2 rounded-xl sm:rounded-full transition-all active:scale-95 shadow-sm shrink-0"
                 >
                   Sign in
                 </button>
@@ -342,59 +1093,621 @@ export const Navbar: React.FC<NavbarProps> = ({
         </header>
       </div>
 
-      {/* Floating Bottom Navigation Dock for Mobile Thumbs */}
-      <nav className="md:hidden fixed bottom-3 inset-x-4 z-40 bg-[#FAF8F5]/95 backdrop-blur-2xl text-slate-600 rounded-3xl p-1.5 shadow-[0_16px_40px_rgba(33,37,41,0.12)] border border-[#E8E2D8] flex items-center justify-around">
-        <button
-          onClick={() => onNavigate('marketplace')}
-          className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all duration-200 ${
-            currentTab === 'marketplace'
-              ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
-              : 'text-slate-600 hover:text-[#1E3A2B]'
-          }`}
-        >
-          <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-          <span>Explore</span>
-        </button>
+      {/* Floating Bottom Navigation Dock for Mobile Thumbs (Tailored per role with safe-area support) */}
+      <nav ref={mobileDockRef} className="md:hidden fixed bottom-3 inset-x-3 sm:inset-x-4 z-40 bg-[#FAF8F5]/95 backdrop-blur-2xl text-slate-600 rounded-3xl p-1.5 shadow-[0_16px_40px_rgba(33,37,41,0.14)] border border-[#E8E2D8] flex items-center justify-around pb-[max(0.375rem,env(safe-area-inset-bottom))]">
+        {/* STAFF MOBILE DOCK */}
+        {isStaff && (
+          <>
+            <button
+              onClick={() => onNavigate('staff_dashboard')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'staff_dashboard'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Building2 className={`w-5 h-5 ${currentTab === 'staff_dashboard' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Front Desk</span>
+            </button>
 
-        <button
-          onClick={() => {
-            if (!user) onOpenAuth();
-            else onNavigate('guest_bookings');
-          }}
-          className={`relative flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all duration-200 ${
-            currentTab === 'guest_bookings'
-              ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
-              : 'text-slate-600 hover:text-[#1E3A2B]'
-          }`}
-        >
-          <CalendarCheck className={`w-5 h-5 ${currentTab === 'guest_bookings' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-          <span>My Bookings</span>
-          {user && (
-            <span className="absolute top-1 right-2.5 w-2 h-2 rounded-full bg-[#D49B41] ring-2 ring-[#FAF8F5]"></span>
-          )}
-        </button>
+            <button
+              onClick={() => onNavigate('marketplace')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'marketplace'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Explore</span>
+            </button>
 
-        <button
-          onClick={() => {
-            if (onOpenSupport) onOpenSupport();
-          }}
-          className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
-        >
-          <HelpCircle className="w-5 h-5 text-slate-500" />
-          <span>Support</span>
-        </button>
+            <button
+              onClick={() => {
+                if (onOpenSupport) onOpenSupport();
+              }}
+              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+            >
+              <HelpCircle className="w-5 h-5 text-slate-500" />
+              <span>Support</span>
+            </button>
 
-        <button
-          onClick={() => {
-            if (!user) onOpenAuth();
-            else setShowUserMenu(!showUserMenu);
-          }}
-          className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
-        >
-          <UserIcon className="w-5 h-5 text-slate-500" />
-          <span>{user ? (user.first_name || 'Account') : 'Sign in'}</span>
-        </button>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+            >
+              <UserIcon className="w-5 h-5 text-slate-500" />
+              <span>{user?.first_name || 'Staff'}</span>
+            </button>
+          </>
+        )}
+
+        {/* HOTEL OWNER / ADMIN MOBILE DOCK */}
+        {isHotelAdmin && (
+          <>
+            <button
+              onClick={() => onNavigate('staff_dashboard')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'staff_dashboard'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Building2 className={`w-5 h-5 ${currentTab === 'staff_dashboard' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Management</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('marketplace')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'marketplace'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Explore</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('guest_bookings')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'guest_bookings'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <CalendarCheck className={`w-5 h-5 ${currentTab === 'guest_bookings' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Bookings</span>
+            </button>
+
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+            >
+              <UserIcon className="w-5 h-5 text-slate-500" />
+              <span>{user?.first_name || 'Owner'}</span>
+            </button>
+          </>
+        )}
+
+        {/* SUPER ADMIN MOBILE DOCK */}
+        {isSuperAdmin && (
+          <>
+            <button
+              onClick={() => onNavigate('platform_admin')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'platform_admin'
+                  ? 'text-purple-800 bg-purple-100'
+                  : 'text-slate-600 hover:text-purple-800'
+              }`}
+            >
+              <ShieldCheck className={`w-5 h-5 ${currentTab === 'platform_admin' ? 'text-purple-700' : 'text-slate-500'}`} />
+              <span>Console</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('marketplace')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'marketplace'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Directory</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('partner_register')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+                currentTab === 'partner_register'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Building className={`w-5 h-5 ${currentTab === 'partner_register' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Register</span>
+            </button>
+
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+            >
+              <UserIcon className="w-5 h-5 text-slate-500" />
+              <span>Admin</span>
+            </button>
+          </>
+        )}
+
+        {/* GUEST / PUBLIC MOBILE DOCK */}
+        {isGuestOrPublic && (
+          <>
+            <button
+              onClick={() => onNavigate('marketplace')}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all duration-200 ${
+                currentTab === 'marketplace'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Explore</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (!user) onOpenAuth();
+                else onNavigate('guest_bookings');
+              }}
+              className={`relative flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all duration-200 ${
+                currentTab === 'guest_bookings'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <CalendarCheck className={`w-5 h-5 ${currentTab === 'guest_bookings' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>My Bookings</span>
+              {user && (
+                <span className="absolute top-1 right-2.5 w-2 h-2 rounded-full bg-[#D49B41] ring-2 ring-[#FAF8F5]"></span>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                if (onOpenSupport) onOpenSupport();
+              }}
+              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+            >
+              <HelpCircle className="w-5 h-5 text-slate-500" />
+              <span>Support</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (!user) onOpenAuth();
+                else setShowUserMenu(!showUserMenu);
+              }}
+              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+            >
+              <UserIcon className="w-5 h-5 text-slate-500" />
+              <span>{user ? (user.first_name || 'Account') : 'Sign in'}</span>
+            </button>
+          </>
+        )}
       </nav>
+
+      {/* Mobile Action Sheet / Profile Bottom Drawer (iOS & Airbnb Gold-Standard UX) */}
+      {showUserMenu && user && (
+        <div className="sm:hidden fixed inset-0 z-[100] flex flex-col justify-end pointer-events-auto">
+          {/* Dimmed Backdrop with tap-to-dismiss */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            onClick={() => setShowUserMenu(false)}
+            aria-hidden="true"
+          />
+
+          {/* Sliding Bottom Drawer Container */}
+          <div
+            ref={mobileSheetRef}
+            className={`relative z-10 w-full rounded-t-[28px] border-t max-h-[82vh] flex flex-col shadow-[0_-16px_40px_rgba(0,0,0,0.35)] animate-in slide-in-from-bottom duration-250 ease-out ${
+              isDarkConsole
+                ? 'bg-[#181B1F] border-[#2E3339] text-slate-100'
+                : 'bg-[#FAF8F5] border-[#E8E2D8] text-[#212529]'
+            }`}
+          >
+            {/* Grab Handle */}
+            <div className="pt-2.5 pb-1 flex justify-center">
+              <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+            </div>
+
+            {/* Profile Header Card */}
+            <div className="px-4 py-2.5 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`w-9 h-9 rounded-full text-white text-xs font-black flex items-center justify-center uppercase shrink-0 shadow-sm ${
+                    isSuperAdmin
+                      ? 'bg-[#D49B41] text-[#212529]'
+                      : isHotelAdmin
+                      ? 'bg-[#8F611A]'
+                      : isStaff
+                      ? 'bg-[#1E3A2B]'
+                      : 'bg-[#212529]'
+                  }`}
+                >
+                  {user.first_name ? user.first_name.charAt(0) : user.username.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-black truncate">
+                      {user.first_name ? `${user.first_name} ${user.last_name || ''}` : user.username}
+                    </p>
+                    <span
+                      className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+                        isSuperAdmin
+                          ? 'bg-[#D49B41]/20 text-[#D49B41] border border-[#D49B41]/40'
+                          : isHotelAdmin
+                          ? 'bg-amber-100 text-[#8F611A]'
+                          : isStaff
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {isSuperAdmin
+                        ? 'Superadmin'
+                        : isHotelAdmin
+                        ? 'Owner'
+                        : isStaff
+                        ? 'Reception'
+                        : 'Guest'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {(isStaff || isHotelAdmin) && user.hotel_name
+                      ? `🏨 ${user.hotel_name}`
+                      : user.email || user.username}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowUserMenu(false)}
+                className="w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 flex items-center justify-center text-slate-500 shrink-0 transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Action Items List */}
+            <div className="px-3 py-2 overflow-y-auto max-h-[calc(82vh-150px)] space-y-1">
+              {/* STAFF ROLE */}
+              {isStaff && (
+                <>
+                  <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Operational Shortcuts
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'walkin');
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold hover:bg-emerald-50 active:bg-emerald-100 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                        <PlusCircle className="w-4 h-4" />
+                      </div>
+                      <span className="text-emerald-950 font-bold">+ Direct Walk-in Check-in</span>
+                    </div>
+                    <span className="text-[9px] bg-emerald-200 text-emerald-900 font-extrabold px-1.5 py-0.5 rounded">
+                      Action
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'rooms');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center">
+                      <Bed className="w-4 h-4" />
+                    </div>
+                    <span>Room Status Board</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'requests');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                      <BellRing className="w-4 h-4" />
+                    </div>
+                    <span>Guest Service Requests</span>
+                  </button>
+
+                  <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 dark:border-white/10 mt-1">
+                    Workspaces
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'pending');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <Building2 className="w-4 h-4 text-[#1E3A2B]" />
+                    <span>Front Desk Operations Home</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('marketplace');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <Compass className="w-4 h-4 text-slate-400" />
+                    <span>Public Marketplace Directory</span>
+                  </button>
+                </>
+              )}
+
+              {/* HOTEL OWNER / ADMIN ROLE */}
+              {isHotelAdmin && (
+                <>
+                  <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Property Management
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'inventory_manage');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50/70 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+                      <Bed className="w-4 h-4" />
+                    </div>
+                    <span>Room Categories & Rates</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'staff_manage');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50/70 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <span>Staff Team & Permissions</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'reports');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50/70 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <span>Occupancy & Financial Reports</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'hotel_settings');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50/70 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                      <Settings className="w-4 h-4" />
+                    </div>
+                    <span>Property Profile & Settings</span>
+                  </button>
+
+                  <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 dark:border-white/10 mt-1">
+                    Property & Personal
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('partner_register');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-black/5 transition-colors text-left"
+                  >
+                    <Building className="w-4 h-4 text-[#D49B41]" />
+                    <span>+ Register Another Property</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('guest_bookings');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-black/5 transition-colors text-left"
+                  >
+                    <CalendarCheck className="w-4 h-4 text-slate-500" />
+                    <span>My Personal Bookings</span>
+                  </button>
+                </>
+              )}
+
+              {/* SUPER ADMIN ROLE */}
+              {isSuperAdmin && (
+                <>
+                  <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Platform Governance
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('platform_admin', undefined, 'pending');
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <span>Pending Hotel Approvals</span>
+                    </div>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                      Filter
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('platform_admin', undefined, 'approved');
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <span>Live Approved Lodgings</span>
+                    </div>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      Filter
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('platform_admin', undefined, 'all');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-[#D49B41]/20 text-[#D49B41] flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <span>Platform Metrics & GMV</span>
+                  </button>
+
+                  <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 dark:border-white/10 mt-1">
+                    Directory & Tools
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('marketplace');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/5 transition-colors text-left"
+                  >
+                    <Compass className="w-4 h-4 text-slate-400" />
+                    <span>Public Guest Directory</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('partner_register');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/5 transition-colors text-left"
+                  >
+                    <Building className="w-4 h-4 text-slate-400" />
+                    <span>Partner Onboarding Form</span>
+                  </button>
+                </>
+              )}
+
+              {/* GUEST / PUBLIC ROLE */}
+              {isGuestOrPublic && (
+                <>
+                  <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                    Trips & Reservations
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('guest_bookings');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50/70 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-amber-100/70 text-[#8F611A] flex items-center justify-center">
+                      <Ticket className="w-4 h-4 text-[#D49B41]" />
+                    </div>
+                    <span>My Bookings & Digital Passes</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('marketplace');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                      <Compass className="w-4 h-4" />
+                    </div>
+                    <span>Explore Stays Directory</span>
+                  </button>
+
+                  <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 mt-1">
+                    Hosting & Support
+                  </div>
+
+                  {onOpenSupport && (
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenSupport();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-black/5 transition-colors text-left"
+                    >
+                      <HelpCircle className="w-4 h-4 text-blue-600" />
+                      <span>Help Center & Support</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('partner_register');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-black/5 transition-colors text-left"
+                  >
+                    <Building className="w-4 h-4 text-[#D49B41]" />
+                    <span>List Your Property (Become a Host)</span>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Bottom Sign Out Button */}
+            <div className="px-4 pt-2 pb-1 border-t border-black/5 dark:border-white/10 mt-auto">
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-extrabold text-xs border border-red-200 dark:border-red-900/50 transition-colors active:scale-98"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign out & End Shift</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

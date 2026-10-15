@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
+import { toast } from '../stores/toastStore';
 import { api } from '../api/client';
 import {
   X,
   Lock,
   User,
   Sparkles,
-  CheckCircle2,
-  AlertCircle,
   Eye,
   EyeOff,
   LogIn,
@@ -46,8 +45,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     phone_number: '',
   });
   const [showRegPassword, setShowRegPassword] = useState(false);
-  const [regSuccess, setRegSuccess] = useState(false);
-  const [regError, setRegError] = useState('');
 
   // Google OAuth loading state
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -58,17 +55,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     e.preventDefault();
     const ok = await login(username, password);
     if (ok) {
+      toast.success('Signed in successfully! Welcome back.');
       onClose();
       if (onSuccess) onSuccess();
+    } else {
+      const err = useAuthStore.getState().error || 'No active account found with the given credentials.';
+      toast.error(err);
     }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRegError('');
     try {
       await api.post('/auth/register/', regData);
-      setRegSuccess(true);
+      toast.success('Account created successfully! Logging you in...');
       setTimeout(async () => {
         const ok = await login(regData.username, regData.password);
         if (ok) {
@@ -80,9 +80,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       const errors = err.response?.data;
       if (typeof errors === 'object') {
         const firstKey = Object.keys(errors)[0];
-        setRegError(`${firstKey}: ${errors[firstKey]}`);
+        toast.error(`${firstKey}: ${errors[firstKey]}`);
       } else {
-        setRegError('Registration failed. Please check your information.');
+        toast.error('Registration failed. Please check your information.');
       }
     }
   };
@@ -90,8 +90,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const handleQuickDemo = async (key: 'guest' | 'pine_staff' | 'pine_admin' | 'superadmin') => {
     const ok = await quickLogin(key);
     if (ok) {
+      toast.success('Demo account connected!');
       onClose();
       if (onSuccess) onSuccess();
+    } else {
+      toast.error('Quick demo login failed.');
     }
   };
 
@@ -99,7 +102,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     const google = (window as any).google;
 
     if (!google?.accounts?.oauth2) {
-      alert('Google services are still loading. Please wait a second and try again.');
+      toast.warning('Google services are still loading. Please try again in a moment.');
       return;
     }
 
@@ -113,8 +116,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             const ok = await loginWithGoogle(tokenResponse.access_token);
             setGoogleLoading(false);
             if (ok) {
+              toast.success('Google authentication successful!');
               onClose();
               if (onSuccess) onSuccess();
+            } else {
+              const err = useAuthStore.getState().error || 'Google authentication failed.';
+              toast.error(err);
             }
           } else {
             setGoogleLoading(false);
@@ -123,6 +130,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         error_callback: (err: any) => {
           console.warn('Google OAuth popup error:', err);
           setGoogleLoading(false);
+          toast.error('Google sign-in was closed or could not be completed.');
         },
       });
 
@@ -130,13 +138,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     } catch (err) {
       console.warn('Google OAuth2 error:', err);
       setGoogleLoading(false);
+      toast.error('Could not initialize Google sign-in.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      {/* Modal Container: Height-constrained to 90vh with flex column layout to prevent any viewport clipping */}
-      <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[min(90vh,760px)] flex flex-col border border-[#E8E2D8] overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      {/* Modal Container: Bottom sheet on mobile / centered dialog on desktop */}
+      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-md w-full max-h-[min(92vh,760px)] flex flex-col border border-[#E8E2D8] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 pb-safe">
         
         {/* Header - Fixed & Pinned */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#E8E2D8]/70 shrink-0 bg-white">
@@ -166,10 +175,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         <div className="px-6 pt-3 pb-2 bg-white shrink-0">
           <div className="p-1 bg-[#F4EFEA] rounded-2xl flex gap-1 border border-[#E8E2D8]/60">
             <button
-              onClick={() => {
-                setTab('login');
-                setRegError('');
-              }}
+              onClick={() => setTab('login')}
               className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
                 tab === 'login'
                   ? 'bg-white text-[#1E3A2B] shadow-sm shadow-black/5 border border-[#E8E2D8]/80'
@@ -180,10 +186,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               <span>Sign In</span>
             </button>
             <button
-              onClick={() => {
-                setTab('register');
-                setRegError('');
-              }}
+              onClick={() => setTab('register')}
               className={`flex-1 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all ${
                 tab === 'register'
                   ? 'bg-white text-[#1E3A2B] shadow-sm shadow-black/5 border border-[#E8E2D8]/80'
@@ -200,12 +203,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         <div className="flex-1 overflow-y-auto px-6 py-3 space-y-4 overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300">
           {tab === 'login' ? (
             <div>
-              {error && (
-                <div className="mb-3.5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-                  <span>{error}</span>
-                </div>
-              )}
 
               {/* Official Google OAuth Popup Button */}
               <div className="mb-3.5">
@@ -244,6 +241,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   <div className="relative">
                     <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
+                      id="login-username-input"
                       type="text"
                       required
                       placeholder="e.g. juandelacruz"
@@ -261,6 +259,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                     <input
+                      id="login-password-input"
                       type={showPassword ? 'text' : 'password'}
                       required
                       placeholder="••••••••"
@@ -280,6 +279,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 </div>
 
                 <button
+                  id="btn-sign-in-submit"
                   type="submit"
                   disabled={isLoading}
                   className="w-full py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-black text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-[0.98] transition-all mt-1"
@@ -353,19 +353,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             </div>
           ) : (
             <div>
-              {regError && (
-                <div className="mb-3.5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-                  <span>{regError}</span>
-                </div>
-              )}
-
-              {regSuccess && (
-                <div className="mb-3.5 p-3 rounded-2xl bg-[#3B5E43]/15 border border-[#3B5E43]/30 text-[#1E3A2B] text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#3B5E43] shrink-0" />
-                  <span>Account registered! Logging you in automatically...</span>
-                </div>
-              )}
 
               {/* Official Google OAuth Popup Button on Register */}
               <div className="mb-3.5">
