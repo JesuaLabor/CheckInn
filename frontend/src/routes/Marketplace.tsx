@@ -746,8 +746,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
             </div>
           </div>
         ) : (
-          /* Standard Cards Grid View */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          /* Standard Cards Grid View - 2 Columns on Mobile, 2 on Tablet, 3 on Desktop */
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6 lg:gap-8">
             {hotels.map((hotel) => {
               const categoryBadge = getCategoryBadge(hotel.category);
               const isNearest = nearestHotelId === hotel.id;
@@ -755,56 +755,56 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                 <article
                   key={hotel.id}
                   onClick={() => onSelectHotel(hotel.slug)}
-                  className={`group bg-white rounded-3xl border overflow-hidden shadow-sm hover:shadow-2xl card-hover-lift cursor-pointer flex flex-col transition-all duration-300 ${
+                  className={`group bg-white rounded-2xl sm:rounded-3xl border overflow-hidden shadow-xs hover:shadow-xl card-hover-lift cursor-pointer flex flex-col transition-all duration-300 active:scale-[0.98] ${
                     isNearest
                       ? 'border-[#D49B41] ring-2 ring-[#D49B41]/25'
                       : 'border-[#E8E2D8] hover:border-[#3B5E43]'
                   }`}
                 >
                   {/* Image Banner */}
-                  <div className="relative h-60 sm:h-64 overflow-hidden bg-[#212529]">
+                  <div className="relative h-36 sm:h-64 overflow-hidden bg-[#212529] shrink-0">
                     <img
                       src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'}
                       alt={hotel.name}
                       className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#212529]/90 via-[#212529]/25 to-transparent"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#212529]/90 via-[#212529]/20 to-transparent"></div>
 
                     {/* Location & Country Tag */}
-                    <div className="absolute top-3.5 left-3.5 flex items-center gap-1.5">
-                      <span className="px-3 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[11px] font-extrabold border border-white/10 shadow-md flex items-center gap-1">
+                    <div className="absolute top-2 left-2 sm:top-3.5 sm:left-3.5 flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[9px] sm:text-[11px] font-extrabold border border-white/10 shadow-sm flex items-center gap-1 max-w-[85px] sm:max-w-none truncate">
                         <span>{getCountryFlag(hotel.country)}</span>
-                        <span>{hotel.city}</span>
+                        <span className="truncate">{hotel.city}</span>
                       </span>
                     </div>
 
                     {/* Distance / Nearest Badge OR Rating Pill */}
-                    <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
+                    <div className="absolute top-2 right-2 sm:top-3.5 sm:right-3.5 flex items-center gap-1.5">
                       {hotel.distance_km !== undefined && hotel.distance_km !== null ? (
                         isNearest ? (
-                          <span className="px-2.5 py-1 rounded-full bg-[#D49B41] text-[#212529] text-[10px] font-black shadow-md flex items-center gap-1 animate-pulse">
-                            <span>⚡ Closest Stay</span>
-                            <span>({formatDistance(hotel.distance_km)})</span>
+                          <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-[#D49B41] text-[#212529] text-[9px] sm:text-[10px] font-black shadow-sm flex items-center gap-1">
+                            <span>⚡ Closest</span>
+                            <span className="hidden sm:inline">({formatDistance(hotel.distance_km)})</span>
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-full bg-[#1E3A2B]/90 backdrop-blur-md text-emerald-300 text-[10px] font-black border border-emerald-400/30 shadow-md flex items-center gap-1">
+                          <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-[#1E3A2B]/90 backdrop-blur-md text-emerald-300 text-[9px] sm:text-[10px] font-black border border-emerald-400/30 shadow-sm flex items-center gap-1">
                             <Navigation className="w-2.5 h-2.5 text-emerald-400" />
                             <span>{formatDistance(hotel.distance_km)}</span>
                           </span>
                         )
                       ) : (
-                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#212529]/85 backdrop-blur-md text-[#D49B41] text-xs font-extrabold border border-[#D49B41]/25 shadow-md">
-                          <Star className="w-3.5 h-3.5 fill-[#D49B41] text-[#D49B41]" />
+                        <div className="flex items-center gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-[#212529]/85 backdrop-blur-md text-[#D49B41] text-[10px] sm:text-xs font-extrabold border border-[#D49B41]/25 shadow-sm">
+                          <Star className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-[#D49B41] text-[#D49B41]" />
                           <span>{hotel.rating}</span>
-                          <span className="text-[10px] text-slate-300 font-normal">({hotel.review_count})</span>
+                          <span className="hidden sm:inline text-[10px] text-slate-300 font-normal">({hotel.review_count})</span>
                         </div>
                       )}
                     </div>
 
                     {/* Hotel Name over gradient */}
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <div className="mb-1.5 flex items-center justify-between">
+                    <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4">
+                      <div className="mb-1 hidden sm:flex items-center justify-between">
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md ${categoryBadge.bg}`}>
                           {categoryBadge.icon}
                           {categoryBadge.label}
@@ -816,10 +816,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                           </div>
                         )}
                       </div>
-                      <h3 className="text-xl font-black text-white leading-tight drop-shadow-sm group-hover:text-[#D49B41] transition-colors">
+                      <h3 className="text-xs sm:text-xl font-black text-white leading-tight drop-shadow-sm group-hover:text-[#D49B41] transition-colors line-clamp-2 sm:line-clamp-none">
                         {hotel.name}
                       </h3>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-300 mt-1">
+                      <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-300 mt-1">
                         <MapPin className="w-3.5 h-3.5 text-[#3B5E43] shrink-0" />
                         <span className="truncate text-[11px]">{hotel.address}</span>
                       </div>
@@ -827,14 +827,32 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                   </div>
 
                   {/* Body Content */}
-                  <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-4">
-                    <div>
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal">
+                  <div className="p-2.5 sm:p-6 flex-1 flex flex-col justify-between space-y-2 sm:space-y-4 min-w-0">
+                    <div className="min-w-0">
+                      {/* Mobile Category Pill & Room Count */}
+                      <div className="sm:hidden flex items-center justify-between gap-1 mb-1">
+                        <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${categoryBadge.bg}`}>
+                          {categoryBadge.icon}
+                          <span className="truncate max-w-[80px]">{categoryBadge.label}</span>
+                        </span>
+                        {hotel.room_types_summary && hotel.room_types_summary.length > 0 && (
+                          <span className="text-[9px] text-slate-500 font-semibold flex items-center gap-0.5 shrink-0">
+                            <Bed className="w-2.5 h-2.5 text-[#D49B41]" />
+                            <span>
+                              {hotel.room_types_summary.length}{' '}
+                              {hotel.room_types_summary.length === 1 ? 'tier' : 'tiers'}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Desktop Description */}
+                      <p className="hidden sm:block text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal">
                         {hotel.tagline || hotel.description}
                       </p>
 
-                      {/* Amenities Badges */}
-                      <div className="flex flex-wrap gap-1.5 mt-3.5">
+                      {/* Desktop Amenities Badges */}
+                      <div className="hidden sm:flex flex-wrap gap-1.5 mt-3.5">
                         {(hotel.amenities || []).slice(0, 3).map((amenity, idx) => (
                           <span
                             key={idx}
@@ -851,9 +869,9 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                         )}
                       </div>
 
-                      {/* Room Categories Available Preview */}
+                      {/* Desktop Room Categories Available Preview */}
                       {hotel.room_types_summary && hotel.room_types_summary.length > 0 && (
-                        <div className="mt-3.5 pt-3 border-t border-[#E8E2D8]/60">
+                        <div className="hidden sm:block mt-3.5 pt-3 border-t border-[#E8E2D8]/60">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
                             Available Room Tiers ({hotel.room_types_summary.length})
                           </span>
@@ -878,22 +896,22 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                     </div>
 
                     {/* Bottom Footer: Price & CTA */}
-                    <div className="pt-4 border-t border-[#E8E2D8]/80 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                    <div className="pt-2 sm:pt-4 border-t border-[#E8E2D8]/80 flex items-center justify-between gap-1">
+                      <div className="min-w-0">
+                        <span className="hidden sm:block text-[10px] uppercase font-bold tracking-wider text-slate-400">
                           Rate per night
                         </span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-lg font-black text-[#1E3A2B]">
+                        <div className="flex items-baseline gap-0.5 sm:gap-1">
+                          <span className="text-xs sm:text-lg font-black text-[#1E3A2B] truncate">
                             {formatPrice(Number(hotel.min_rate || 850))}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-medium">/ night</span>
+                          <span className="text-[9px] sm:text-[11px] text-slate-500 font-medium shrink-0">/nt</span>
                         </div>
                       </div>
 
-                      <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#1E3A2B] group-hover:bg-[#3B5E43] text-white text-xs font-black shadow-sm shadow-[#1E3A2B]/20 group-hover:shadow-md transition-all">
-                        <span>View Rooms</span>
-                        <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform stroke-[2.5]" />
+                      <button className="flex items-center gap-1 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-[#1E3A2B] group-hover:bg-[#3B5E43] text-white text-[10px] sm:text-xs font-black shadow-xs sm:shadow-sm shadow-[#1E3A2B]/20 group-hover:shadow-md transition-all shrink-0">
+                        <span>View</span>
+                        <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 transition-transform stroke-[2.5]" />
                       </button>
                     </div>
                   </div>
