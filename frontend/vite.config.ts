@@ -74,6 +74,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
@@ -145,6 +146,10 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
+        target: 'http://127.0.0.1:8008',
+        changeOrigin: true
+      },
+      '/media': {
         target: 'http://127.0.0.1:8008',
         changeOrigin: true
       }
