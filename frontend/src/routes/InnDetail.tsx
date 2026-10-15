@@ -127,31 +127,31 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
 
       {/* Hero Showcase Card */}
       <section className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-sm">
-        <div className="relative h-72 sm:h-[420px] w-full overflow-hidden bg-[#212529]">
+        <div className="relative min-h-[280px] h-72 sm:h-[420px] w-full overflow-hidden bg-[#212529]">
           <img
             src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'}
             alt={hotel.name}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#212529]/95 via-[#212529]/30 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#212529]/95 via-[#212529]/35 to-transparent"></div>
 
-          <div className="absolute bottom-6 left-6 right-6 text-white space-y-2 sm:space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-[#1E3A2B] font-extrabold text-[11px] uppercase tracking-wider shadow-sm border border-[#3B5E43]/50">
+          <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 right-4 sm:right-6 text-white space-y-1.5 sm:space-y-3">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="px-2.5 sm:px-3 py-1 rounded-full bg-[#1E3A2B] font-extrabold text-[10px] sm:text-[11px] uppercase tracking-wider shadow-sm border border-[#3B5E43]/50">
                 {hotel.city}, {hotel.province}
               </span>
-              <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#D49B41] text-xs font-bold border border-[#D49B41]/25">
+              <div className="flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#D49B41] text-[11px] sm:text-xs font-bold border border-[#D49B41]/25">
                 <Star className="w-3.5 h-3.5 fill-[#D49B41] text-[#D49B41]" />
                 <span>{hotel.rating}</span>
                 <span className="text-slate-300 font-normal">({hotel.review_count} verified reviews)</span>
               </div>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight drop-shadow-sm">
+            <h1 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight drop-shadow-sm">
               {hotel.name}
             </h1>
             
-            <p className="text-xs sm:text-sm text-slate-200 max-w-2xl font-light leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-200 max-w-2xl font-light leading-relaxed line-clamp-2 sm:line-clamp-none">
               {hotel.tagline}
             </p>
           </div>
@@ -297,7 +297,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                 className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#3B5E43] card-hover-lift transition-all duration-300 flex flex-col md:flex-row"
               >
                 {/* Room Image */}
-                <div className="md:w-80 h-56 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
+                <div className="w-full md:w-72 lg:w-80 h-52 sm:h-60 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
                   <img
                     src={
                       rt.photos && rt.photos.length > 0
@@ -306,6 +306,10 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                     }
                     alt={rt.name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80';
+                    }}
                   />
                   <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[11px] font-bold flex items-center gap-1 border border-white/10">
                     <Users className="w-3 h-3 text-[#D49B41]" />
@@ -314,7 +318,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                 </div>
 
                 {/* Room Details & Pricing */}
-                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
+                <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                       <div>
@@ -361,7 +365,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
 
                     <button
                       onClick={() => handleReserve(rt)}
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/25 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto px-6 py-3 min-h-[44px] rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/25 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       <span>Reserve This Room</span>

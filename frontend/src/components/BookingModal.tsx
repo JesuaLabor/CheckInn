@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBookingDraftStore } from '../stores/bookingDraftStore';
 import { useAuthStore } from '../stores/authStore';
 import { useCurrencyStore } from '../stores/currencyStore';
+import { toast } from '../stores/toastStore';
 import { api } from '../api/client';
 import confetti from 'canvas-confetti';
 import {
@@ -32,7 +33,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
   const { formatPrice, currency } = useCurrencyStore();
 
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
   const [copiedNumber, setCopiedNumber] = useState(false);
 
   if (!isModalOpen || !draft || !draft.hotel || !draft.roomType) return null;
@@ -69,12 +69,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
     }
 
     if (draft.paymentMethod === 'gcash' && !draft.paymentReference?.trim()) {
-      setErrorMsg('Please enter your GCash / Bank Transfer transaction reference number to proceed.');
+      toast.error('Please enter your GCash / Bank Transfer transaction reference number to proceed.');
       return;
     }
 
     setLoading(true);
-    setErrorMsg('');
 
     try {
       const payload = {
@@ -103,126 +102,162 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
         });
       } catch {}
 
+      toast.success('Reservation request submitted! 45-min hold secured.');
       closeBookingModal();
       onSuccess(bookingData.booking_reference);
     } catch (err: any) {
       const data = err.response?.data;
+      let msg = 'Failed to submit booking request. Please check room availability.';
       if (typeof data === 'string') {
-        setErrorMsg(data);
+        msg = data;
       } else if (data?.detail) {
-        setErrorMsg(data.detail);
+        msg = data.detail;
       } else if (Array.isArray(data)) {
-        setErrorMsg(data[0]);
+        msg = data[0];
       } else if (typeof data === 'object') {
         const first = Object.values(data)[0];
-        setErrorMsg(Array.isArray(first) ? first[0] : String(first));
-      } else {
-        setErrorMsg('Failed to submit booking request. Please check room availability.');
+        msg = Array.isArray(first) ? first[0] : String(first);
       }
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-[#E8E2D8] my-8 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      {/* Modal Container: Bottom sheet on mobile / centered dialog on desktop */}
+      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full max-h-[min(92vh,780px)] flex flex-col border border-[#E8E2D8] overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 pb-safe">
         
-        {/* Header */}
-        <div className="bg-gradient-to-br from-[#212529] via-[#1E3A2B] to-[#12241A] text-white p-6 relative">
-          <button
-            onClick={closeBookingModal}
-            className="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        {/* Header - Fixed & Pinned */}
+        <div className="px-6 py-4 border-b border-[#E8E2D8]/80 shrink-0 bg-white">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#1E3A2B]/10 text-[#1E3A2B] text-[10px] font-black border border-[#1E3A2B]/20">
+                <Building className="w-3 h-3 text-[#3B5E43]" />
+                <span className="truncate max-w-[220px] sm:max-w-[280px]">{hotel.name}</span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-black text-[#212529] tracking-tight leading-tight">
+                {roomType.name}
+              </h2>
+              <p className="text-[11px] text-slate-500 font-medium flex items-center gap-2">
+                <span>{formatPrice(baseRate)} / night</span>
+                <span>•</span>
+                <span>Max {roomType.capacity} {roomType.capacity === 1 ? 'guest' : 'guests'}</span>
+              </p>
+            </div>
 
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#3B5E43]/30 text-[#E2AE55] text-[10px] font-bold border border-[#D49B41]/35 mb-2">
-            <Building className="w-3 h-3" />
-            <span>{hotel.name}</span>
+            <button
+              onClick={closeBookingModal}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all active:scale-95 shrink-0"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">{roomType.name}</h2>
-          <p className="text-xs text-slate-300 mt-1 font-medium">
-            ₱{Number(roomType.base_rate).toLocaleString()} / night • Max {roomType.capacity} guests
-          </p>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-4">
-          {errorMsg && (
-            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-shake">
-              {errorMsg}
-            </div>
-          )}
+        {/* Scrollable Form Body */}
+        <form
+          id="booking-form"
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto px-6 py-4 space-y-4 overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300"
+        >
 
-          {/* Soft Hold Alert Badge */}
-          <div className="p-3.5 rounded-2xl bg-[#D49B41]/10 border border-[#D49B41]/35 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#FAF8F5] text-[#D49B41] border border-[#E8E2D8] flex items-center justify-center shrink-0 mt-0.5">
+          {/* 45-Minute Soft Hold Guarantee Micro-Banner */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#D49B41]/10 via-[#FAF8F5] to-[#3B5E43]/10 border border-[#D49B41]/35 flex items-start gap-3 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl bg-white text-[#D49B41] border border-[#D49B41]/30 flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
               <Clock className="w-4 h-4 text-[#D49B41]" />
             </div>
             <div className="text-xs text-[#212529]">
-              <span className="font-extrabold text-[#8F611A]">45-Minute Soft Hold Guarantee:</span> Submitting immediately locks room inventory for you. Other travelers cannot book these dates while hotel staff reviews your stay.
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-black text-[#8F611A]">45-Minute Soft Hold Guarantee</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#3B5E43]/15 text-[#1E3A2B] font-bold">
+                  Zero Upfront Charge
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                Locks room inventory immediately so no other traveler can book these dates while hotel staff confirms your stay.
+              </p>
             </div>
           </div>
 
           {/* Dates Selector */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Check-in</label>
-              <input
-                type="date"
-                required
-                min={new Date().toISOString().split('T')[0]}
-                value={draft.checkIn}
-                onChange={(e) => setDraft({ checkIn: e.target.value })}
-                className="w-full px-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
-              />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">Stay Dates</label>
+              <span className="text-[11px] font-bold text-[#1E3A2B] bg-[#1E3A2B]/10 px-2 py-0.5 rounded-full">
+                {nights} {nights === 1 ? 'night' : 'nights'} stay
+              </span>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Check-out</label>
-              <input
-                type="date"
-                required
-                min={draft.checkIn}
-                value={draft.checkOut}
-                onChange={(e) => setDraft({ checkOut: e.target.value })}
-                className="w-full px-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
-              />
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Check-in
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                    value={draft.checkIn}
+                    onChange={(e) => setDraft({ checkIn: e.target.value })}
+                    className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Check-out
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    required
+                    min={draft.checkIn || new Date().toISOString().split('T')[0]}
+                    value={draft.checkOut}
+                    onChange={(e) => setDraft({ checkOut: e.target.value })}
+                    className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Number of Guests */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Number of Guests</label>
+            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+              Number of Guests
+            </label>
             <div className="relative">
-              <Users className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <Users className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
               <select
                 value={draft.guestCount}
                 onChange={(e) => setDraft({ guestCount: Number(e.target.value) })}
-                className="w-full pl-10 pr-3.5 py-2.5 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5] cursor-pointer"
+                className="w-full pl-10 pr-3.5 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5] cursor-pointer"
               >
                 {Array.from({ length: roomType.capacity }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
-                    {n} {n === 1 ? 'Guest' : 'Guests'}
+                    {n} {n === 1 ? 'Guest' : 'Guests'} (Room max: {roomType.capacity})
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Payment Method Radio Pills */}
+          {/* Payment Method Selector */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-slate-700">Payment Option</label>
-              <span className="text-[10px] text-slate-400 font-medium">Boutique lodging payment workflow</span>
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">Payment Method</label>
+              <span className="text-[10px] text-slate-400 font-medium">Boutique lodging workflow</span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <label
-                className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                className={`flex items-start gap-2.5 p-3 rounded-2xl border text-xs cursor-pointer transition-all ${
                   draft.paymentMethod === 'pay_at_hotel'
-                    ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs'
+                    ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs ring-1 ring-[#1E3A2B]/20'
                     : 'border-[#E8E2D8] text-slate-700 hover:bg-[#FAF8F5] font-medium'
                 }`}
               >
@@ -235,13 +270,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                 />
                 <Building className="w-4 h-4 text-[#1E3A2B] shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-extrabold text-[#212529]">Pay at Front Desk</div>
-                  <div className="text-[10px] text-slate-500 font-normal mt-0.5">Cash or card upon physical check-in</div>
+                  <div className="font-extrabold text-[#212529] flex items-center gap-1.5">
+                    <span>Pay at Front Desk</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-normal mt-0.5 leading-tight">
+                    Settle with cash or card upon physical arrival
+                  </div>
                 </div>
               </label>
 
               <label
-                className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                className={`flex items-start gap-2.5 p-3 rounded-2xl border text-xs cursor-pointer transition-all ${
                   draft.paymentMethod === 'gcash'
                     ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs ring-1 ring-[#1E3A2B]/20'
                     : 'border-[#E8E2D8] text-slate-700 hover:bg-[#FAF8F5] font-medium'
@@ -256,18 +295,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                 />
                 <CreditCard className="w-4 h-4 text-[#3B5E43] shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-extrabold text-[#212529] flex items-center gap-1">
+                  <div className="font-extrabold text-[#212529] flex items-center gap-1.5">
                     <span>{payoutMethod} / E-Wallet</span>
                     <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#3B5E43]/15 text-[#1E3A2B] font-bold">Fast</span>
                   </div>
-                  <div className="text-[10px] text-slate-500 font-normal mt-0.5">Send via App & paste Ref No.</div>
+                  <div className="text-[10px] text-slate-500 font-normal mt-0.5 leading-tight">
+                    Send via app & attach transaction reference
+                  </div>
                 </div>
               </label>
             </div>
 
             {/* GCash / Transfer Instructions Card */}
             {draft.paymentMethod === 'gcash' && (
-              <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-[#1E3A2B]/5 via-[#FAF8F5] to-[#FAF8F5] border border-[#1E3A2B]/20 space-y-3 animate-in fade-in zoom-in-98 duration-200">
+              <div className="mt-2.5 p-3.5 rounded-2xl bg-gradient-to-br from-[#1E3A2B]/5 via-[#FAF8F5] to-[#FAF8F5] border border-[#1E3A2B]/20 space-y-3 animate-in fade-in zoom-in-98 duration-150">
                 <div className="flex items-center justify-between pb-2 border-b border-[#E8E2D8]/80">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-[#1E3A2B] text-white flex items-center justify-center font-black text-xs shadow-2xs">
@@ -285,16 +326,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                 </div>
 
                 {/* Account Details Box with Copy */}
-                <div className="bg-white p-3 rounded-xl border border-[#E8E2D8] flex items-center justify-between gap-3">
+                <div className="bg-white p-2.5 rounded-xl border border-[#E8E2D8] flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
-                    <div className="text-[10px] font-bold uppercase text-slate-400">Account Name & Number</div>
+                    <div className="text-[9px] font-bold uppercase text-slate-400">Account Name & Number</div>
                     <div className="text-xs font-black text-[#212529]">{payoutName}</div>
-                    <div className="text-sm font-mono font-bold text-[#1E3A2B] tracking-wide">{payoutNumber}</div>
+                    <div className="text-xs font-mono font-bold text-[#1E3A2B] tracking-wide">{payoutNumber}</div>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopyNumber}
-                    className="px-3 py-2 rounded-lg bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] border border-[#E8E2D8] text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 shrink-0"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] border border-[#E8E2D8] text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95 shrink-0"
                   >
                     {copiedNumber ? (
                       <>
@@ -316,7 +357,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                     <label className="text-[11px] font-bold text-[#212529]">
                       Enter {payoutMethod} Reference Number <span className="text-rose-500">*</span>
                     </label>
-                    <span className="text-[10px] text-slate-400 font-medium">From your receipt / SMS</span>
+                    <span className="text-[10px] text-slate-400 font-medium">From receipt / SMS</span>
                   </div>
                   <input
                     type="text"
@@ -324,11 +365,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                     placeholder="e.g. 1002 9845 1204"
                     value={draft.paymentReference || ''}
                     onChange={(e) => setDraft({ paymentReference: e.target.value })}
-                    className="w-full px-3.5 py-2.5 text-xs font-mono font-bold border border-[#1E3A2B]/30 rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-white placeholder:text-slate-400 shadow-2xs"
+                    className="w-full px-3 py-2 text-xs font-mono font-bold border border-[#1E3A2B]/30 rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-white placeholder:text-slate-400 shadow-2xs"
                   />
-                  <div className="flex items-start gap-1.5 pt-1 text-[10px] text-slate-500 leading-tight">
+                  <div className="flex items-start gap-1.5 pt-0.5 text-[10px] text-slate-500 leading-tight">
                     <Info className="w-3 h-3 text-[#3B5E43] shrink-0 mt-0.5" />
-                    <span>Hotel front desk will verify this reference in their merchant app upon reviewing your stay to immediately confirm your reservation and issue your QR pass.</span>
+                    <span>Hotel front desk will cross-reference this in their merchant app upon reviewing your stay.</span>
                   </div>
                 </div>
               </div>
@@ -337,20 +378,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
 
           {/* Special Requests */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Guest Notes & Requests <span className="text-slate-400 font-normal">(Optional)</span>
+            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+              Guest Notes & Requests <span className="text-slate-400 font-normal lowercase">(optional)</span>
             </label>
             <textarea
               rows={2}
               placeholder="e.g. Expected arrival at 2:00 PM, quiet room preference"
               value={draft.specialRequests}
               onChange={(e) => setDraft({ specialRequests: e.target.value })}
-              className="w-full px-3.5 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+              className="w-full px-3 py-2 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
             />
           </div>
 
-          {/* Price Receipt Box */}
-          <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E8E2D8] space-y-2">
+          {/* Itemized Price Receipt Card */}
+          <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E8E2D8] space-y-1.5">
             <div className="flex justify-between text-xs text-slate-600">
               <span>
                 {formatPrice(baseRate)} × {nights} {nights === 1 ? 'night' : 'nights'}
@@ -361,39 +402,53 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
               <span>Hospitality & Service Tax</span>
               <span className="text-[#3B5E43] font-bold">Included</span>
             </div>
-            <div className="pt-2 border-t border-[#E8E2D8] flex justify-between items-baseline">
-              <span className="text-xs font-black text-[#212529]">Total Rate Due</span>
-              <span className="text-xl font-black text-[#1E3A2B]">{formatPrice(totalAmount)}</span>
+          </div>
+        </form>
+
+        {/* Footer Action Bar - Fixed & Pinned */}
+        <div className="px-6 py-4 border-t border-[#E8E2D8] bg-white shrink-0 shadow-lg shadow-black/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Total Rate Due</span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-xl sm:text-2xl font-black text-[#1E3A2B] leading-none">
+                  {formatPrice(totalAmount)}
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">({nights} {nights === 1 ? 'night' : 'nights'})</span>
+              </div>
+            </div>
+
+            <div className="flex-1 sm:max-w-[270px]">
+              {user ? (
+                <button
+                  type="submit"
+                  form="booking-form"
+                  disabled={loading}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-black text-xs sm:text-sm shadow-md shadow-[#1E3A2B]/25 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                >
+                  {loading ? (
+                    <span>Securing 45-Min Hold...</span>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-[#E2AE55] shrink-0" />
+                      <span className="truncate">Lock 45-Min Hold</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onOpenAuth}
+                  className="w-full py-3 px-4 rounded-xl bg-[#212529] hover:bg-[#16191D] text-white font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Users className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Sign In to Reserve</span>
+                </button>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Submit Action */}
-          {user ? (
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-black text-xs sm:text-sm shadow-md shadow-[#1E3A2B]/25 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <span>Securing 45-Min Hold...</span>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-[#E2AE55]" />
-                  <span>Request Booking & Lock 45-Min Hold</span>
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="w-full py-3.5 rounded-xl bg-[#212529] hover:bg-[#16191D] text-white font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              <Users className="w-4 h-4" />
-              <span>Sign In to Complete Reservation</span>
-            </button>
-          )}
-        </form>
       </div>
     </div>
   );

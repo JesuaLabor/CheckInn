@@ -27,10 +27,12 @@ import {
   Map as MapIcon,
   LayoutGrid,
   Columns2,
+  Bed,
 } from 'lucide-react';
 import heroBgImage from '../assets/hero_bg.jpg';
-import { HotelMap } from '../components/HotelMap';
+import { HotelMap, MapBounds } from '../components/HotelMap';
 import { calculateDistanceKm, formatDistance, getCurrentCoordinates, Coordinates } from '../utils/geo';
+import { toast } from '../stores/toastStore';
 
 interface HotelWithDistance extends Hotel {
   distance_km?: number | null;
@@ -56,12 +58,22 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [nearestHotelId, setNearestHotelId] = useState<number | string | null>(null);
   const [hoveredHotelId, setHoveredHotelId] = useState<number | string | null>(null);
+  const [showFloatingMapBtn, setShowFloatingMapBtn] = useState(false);
 
   const { formatPrice, currency } = useCurrencyStore();
 
   useEffect(() => {
     fetchHotels();
   }, [activeCategory, selectedDestination]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowFloatingMapBtn(window.scrollY > 280);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const fetchHotels = async () => {
     setLoading(true);
@@ -182,6 +194,34 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
     }
   };
 
+  const handleSearchArea = (bounds: MapBounds) => {
+    const inBounds = hotels.filter((h) => {
+      if (
+        h.latitude === null ||
+        h.latitude === undefined ||
+        h.longitude === null ||
+        h.longitude === undefined
+      ) {
+        return false;
+      }
+      const lat = Number(h.latitude);
+      const lng = Number(h.longitude);
+      return (
+        lat >= bounds.south &&
+        lat <= bounds.north &&
+        lng >= bounds.west &&
+        lng <= bounds.east
+      );
+    });
+
+    if (inBounds.length > 0) {
+      setHotels(inBounds);
+      toast.info(`Found ${inBounds.length} stay${inBounds.length === 1 ? '' : 's'} in this map area.`);
+    } else {
+      toast.info('No stays found in this visible map area.');
+    }
+  };
+
   const getAmenityIcon = (name: string) => {
     const lower = name.toLowerCase();
     if (lower.includes('wi-fi') || lower.includes('internet')) return <Wifi className="w-3 h-3 text-[#3B5E43]" />;
@@ -226,9 +266,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
   };
 
   return (
-    <div className="min-h-screen pb-28 md:pb-20">
-      {/* Hero Section with Scenic Landscape Background Image */}
-      <section className="relative text-white pt-24 pb-24 sm:pt-32 sm:pb-36 px-4 sm:px-6 lg:px-8 overflow-hidden min-h-[580px] sm:min-h-[620px] flex items-center justify-center">
+    <div className={`min-h-screen ${viewMode === 'map' ? 'pb-2 sm:pb-6' : 'pb-8 sm:pb-16'}`}>
+      {/* Hero Section with Scenic Landscape Background Image - Excluded in Map View for immersive full-screen map experience */}
+      {viewMode !== 'map' && (
+        <section className="relative text-white pt-24 pb-20 sm:pt-28 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden flex flex-col items-center justify-center">
         {/* Background Image with Cinematic Dark Gradient Overlays */}
         <div className="absolute inset-0 z-0">
           <img
@@ -246,48 +287,74 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
           <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#D49B41_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
         </div>
 
-        <div className="relative max-w-4xl mx-auto text-center space-y-4 sm:space-y-6">
-          {/* Universal Scope Tagline Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#3B5E43]/25 text-[#E2AE55] text-xs font-bold border border-[#D49B41]/35 backdrop-blur-md animate-in fade-in duration-300 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-[#D49B41] animate-ping"></span>
-            Verified Boutique & Heritage Inns • Philippines & Abroad
-          </div>
-
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+        <div className="relative max-w-4xl mx-auto text-center space-y-4 sm:space-y-5 w-full min-w-0">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight text-white leading-[1.18] drop-shadow-sm max-w-3xl mx-auto px-1">
             Stay Authentic Across the Philippines & Beyond
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
-            Discover verified boutique hotels, mountain lodges, and coastal inns. Enjoy instant front-desk reviews, a 45-minute guaranteed soft hold, and QR check-in.
+          <p className="text-xs sm:text-sm md:text-[15px] text-slate-200/90 max-w-xl mx-auto font-normal leading-relaxed px-2">
+            Discover verified boutique hotels, mountain lodges, and coastal inns with instant front-desk soft holds and paperless QR check-in.
           </p>
 
+          {/* Curated Experience / Travel Style Segmented Glass Dock (Above Search for Intuitive Intent Filter) */}
+          <div className="pt-2 w-full max-w-full overflow-hidden flex justify-center px-1 sm:px-2">
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-black/45 backdrop-blur-xl border border-white/20 shadow-lg max-w-full overflow-x-auto no-scrollbar touch-pan-x min-w-0">
+              {[
+                { key: 'all', label: 'All Stays', icon: Compass },
+                { key: 'beach', label: 'Beach & Island', icon: Palmtree },
+                { key: 'mountain', label: 'Highlands & Peaks', icon: Mountain },
+                { key: 'heritage', label: 'Heritage & Culture', icon: Landmark },
+                { key: 'city', label: 'Urban & City', icon: Building },
+                { key: 'eco', label: 'Eco & Nature', icon: Trees },
+              ].map((cat) => {
+                const Icon = cat.icon;
+                const isActive = activeCategory === cat.key;
+                return (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setActiveCategory(cat.key as TravelCategory)}
+                    className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
+                      isActive
+                        ? 'bg-[#FAF8F5] text-[#1E3A2B] shadow-sm font-black'
+                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D49B41]' : 'text-white/60'}`} />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Floating Search Container */}
-          <div className="pt-4 max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto w-full min-w-0 px-1 sm:px-0">
             <form
               onSubmit={handleSearchSubmit}
-              className="bg-white/95 backdrop-blur-xl text-slate-800 rounded-3xl sm:rounded-full shadow-[0_20px_60px_rgba(0,0,0,0.35)] p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-stretch border border-white/60"
+              className="bg-white/95 backdrop-blur-xl text-slate-800 rounded-3xl sm:rounded-full shadow-[0_20px_60px_rgba(0,0,0,0.35)] p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-stretch border border-white/60 w-full min-w-0"
             >
               {/* Destination Search */}
-              <div className="flex-1 relative flex items-center px-3">
-                <Search className="w-5 h-5 text-slate-400 shrink-0 mr-2" />
+              <div className="flex-1 relative flex items-center px-3.5 py-1 sm:py-0 min-h-[44px] min-w-0">
+                <Search className="w-5 h-5 text-slate-400 shrink-0 mr-2.5" />
                 <input
                   type="text"
-                  placeholder="Destination, city, or hotel (e.g. Boracay, Baguio, Tokyo)..."
+                  placeholder="Where to? Search city, inn, or landmark..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full py-2.5 text-xs sm:text-sm font-medium bg-transparent border-0 focus:ring-0 focus:outline-none placeholder-slate-400"
+                  className="w-full min-w-0 py-2.5 text-xs sm:text-sm font-medium bg-transparent border-0 focus:ring-0 focus:outline-none placeholder-slate-400"
                 />
               </div>
 
               <div className="h-6 w-px bg-slate-200 hidden sm:block self-center"></div>
 
               {/* Guests Filter */}
-              <div className="flex items-center px-3 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0">
+              <div className="flex items-center px-3.5 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 min-h-[44px] min-w-0">
                 <Users className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                 <select
                   value={guestFilter}
                   onChange={(e) => setGuestFilter(e.target.value)}
-                  className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer"
+                  className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer py-2 sm:py-0"
                 >
                   <option value="">Any Guests</option>
                   <option value="1">1 Guest</option>
@@ -300,12 +367,12 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               <div className="h-6 w-px bg-slate-200 hidden sm:block self-center"></div>
 
               {/* Budget Filter */}
-              <div className="flex items-center px-3 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0">
+              <div className="flex items-center px-3.5 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 min-h-[44px] min-w-0">
                 <SlidersHorizontal className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                 <select
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
-                  className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer"
+                  className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer py-2 sm:py-0"
                 >
                   <option value="">Any Budget</option>
                   <option value="1500">{formatPrice(1500)}</option>
@@ -317,47 +384,15 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               {/* Submit CTA */}
               <button
                 type="submit"
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl sm:rounded-full bg-gradient-to-r from-[#D49B41] to-[#BF8832] hover:brightness-105 text-[#212529] font-black text-xs shadow-md shadow-[#D49B41]/30 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl sm:rounded-full bg-gradient-to-r from-[#D49B41] to-[#BF8832] hover:brightness-105 text-[#212529] font-black text-xs shadow-md shadow-[#D49B41]/30 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 min-h-[44px]"
               >
                 <span>Find Rooms</span>
                 <ChevronRight className="w-4 h-4 stroke-[2.5]" />
               </button>
             </form>
 
-            {/* Curated Experience / Travel Style Segmented Glass Dock */}
-            <div className="pt-3.5 flex justify-center px-2">
-              <div className="inline-flex items-center gap-1 p-1.5 rounded-2xl bg-[#14241B]/80 backdrop-blur-xl border border-white/20 shadow-[0_12px_36px_rgba(0,0,0,0.35)] max-w-full overflow-x-auto no-scrollbar">
-                {[
-                  { key: 'all', label: 'All Stays', icon: Compass },
-                  { key: 'beach', label: 'Beach & Island', icon: Palmtree },
-                  { key: 'mountain', label: 'Highlands & Peaks', icon: Mountain },
-                  { key: 'heritage', label: 'Heritage & Culture', icon: Landmark },
-                  { key: 'city', label: 'Urban & City', icon: Building },
-                  { key: 'eco', label: 'Eco & Nature', icon: Trees },
-                ].map((cat) => {
-                  const Icon = cat.icon;
-                  const isActive = activeCategory === cat.key;
-                  return (
-                    <button
-                      key={cat.key}
-                      type="button"
-                      onClick={() => setActiveCategory(cat.key as TravelCategory)}
-                      className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
-                        isActive
-                          ? 'bg-[#FAF8F5] text-[#1E3A2B] shadow-md shadow-black/20 font-black'
-                          : 'text-white/80 hover:text-white hover:bg-white/10'
-                      }`}
-                    >
-                      <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D49B41]' : 'text-white/60'}`} />
-                      <span>{cat.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Streamlined Trending Destinations Helper Row */}
-            <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 pt-2.5 text-xs px-2">
+            <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 pt-3 text-xs px-2 w-full min-w-0">
               <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider flex items-center gap-1 mr-0.5">
                 <Globe className="w-3 h-3 text-[#D49B41]" /> Trending:
               </span>
@@ -367,10 +402,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                 { label: 'Siargao', value: 'Siargao' },
                 { label: 'Baguio', value: 'Baguio' },
                 { label: 'Cebu', value: 'Cebu' },
-                { label: 'Manila', value: 'Manila' },
                 { label: 'Malaybalay', value: 'Malaybalay' },
                 { label: 'Tokyo', value: 'Tokyo' },
-                { label: 'Bali', value: 'Bali' },
               ].map((dest) => (
                 <button
                   key={dest.value}
@@ -403,42 +436,49 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
           </div>
         </div>
       </section>
+      )}
 
       {/* Main Content Area */}
-      <main id="listings-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 sm:-mt-12 relative z-10">
-        
-        {/* Value Trust Ribbon */}
-        <div className="bg-white rounded-2xl shadow-xl shadow-[#1E3A2B]/5 border border-[#E8E2D8] p-4 sm:p-5 mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E8E2D8]">
-          <div className="flex items-center gap-3.5 sm:px-3 pt-2 sm:pt-0">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] text-[#1E3A2B] border border-[#E8E2D8] flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5 text-[#1E3A2B]" />
+      <main
+        id="listings-section"
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full min-w-0 ${
+          viewMode === 'map' ? 'pt-20 sm:pt-24' : '-mt-8 sm:-mt-12'
+        }`}
+      >
+        {/* Value Trust Ribbon - Only visible in List/Grid view */}
+        {viewMode !== 'map' && (
+          <div className="bg-white rounded-2xl shadow-xl shadow-[#1E3A2B]/5 border border-[#E8E2D8] p-4 sm:p-5 mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-[#E8E2D8] w-full min-w-0">
+            <div className="flex items-center gap-3.5 sm:px-3 pt-2 sm:pt-0 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] text-[#1E3A2B] border border-[#E8E2D8] flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-[#1E3A2B]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xs font-bold text-[#212529] truncate">45-Minute Hold Protection</h3>
+                <p className="text-[11px] text-slate-500 leading-snug">Soft hold locks room inventory during front-desk review.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xs font-bold text-[#212529]">45-Minute Hold Protection</h3>
-              <p className="text-[11px] text-slate-500">Soft hold locks room inventory during front-desk review.</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3.5 sm:px-3 pt-3 sm:pt-0">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] text-[#D49B41] border border-[#E8E2D8] flex items-center justify-center shrink-0">
-              <Building className="w-5 h-5 text-[#D49B41]" />
+            <div className="flex items-center gap-3.5 sm:px-3 pt-3 sm:pt-0 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] text-[#D49B41] border border-[#E8E2D8] flex items-center justify-center shrink-0">
+                <Building className="w-5 h-5 text-[#D49B41]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xs font-bold text-[#212529] truncate">Verified Local Stays</h3>
+                <p className="text-[11px] text-slate-500 leading-snug">Curated independent inns, heritage lodges, & villas.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xs font-bold text-[#212529]">Verified Local Stays</h3>
-              <p className="text-[11px] text-slate-500">Curated independent inns, heritage lodges, & villas.</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3.5 sm:px-3 pt-3 sm:pt-0">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] text-[#3B5E43] border border-[#E8E2D8] flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-[#3B5E43]" />
-            </div>
-            <div>
-              <h3 className="text-xs font-bold text-[#212529]">Instant QR Mobile Pass</h3>
-              <p className="text-[11px] text-slate-500">Scan at the front desk for fast, paperless check-in.</p>
+            <div className="flex items-center gap-3.5 sm:px-3 pt-3 sm:pt-0 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#FAF8F5] text-[#3B5E43] border border-[#E8E2D8] flex items-center justify-center shrink-0">
+                <Sparkles className="w-5 h-5 text-[#3B5E43]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xs font-bold text-[#212529] truncate">Instant QR Mobile Pass</h3>
+                <p className="text-[11px] text-slate-500 leading-snug">Scan at the front desk for fast, paperless check-in.</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Header Bar with View Switcher */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
@@ -583,10 +623,12 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               hotels={hotels}
               userLocation={userLocation}
               nearestHotelId={nearestHotelId}
+              selectedHotelId={hoveredHotelId}
               onSelectHotel={onSelectHotel}
               onLocateUser={handleNearMe}
+              onSearchArea={handleSearchArea}
               isLocating={locating}
-              className="h-[600px] sm:h-[720px] w-full"
+              className="h-[calc(100dvh-185px)] min-h-[460px] sm:h-[720px] w-full"
             />
           </div>
         ) : viewMode === 'split' ? (
@@ -650,6 +692,25 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                             )}
                           </p>
                         )}
+
+                        {hotel.room_types_summary && hotel.room_types_summary.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {hotel.room_types_summary.slice(0, 2).map((rts) => (
+                              <span
+                                key={rts.id}
+                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-slate-700 border border-slate-200"
+                              >
+                                <Bed className="w-2.5 h-2.5 text-[#D49B41]" />
+                                <span>{rts.name}</span>
+                              </span>
+                            ))}
+                            {hotel.room_types_summary.length > 2 && (
+                              <span className="text-[9px] text-slate-400 self-center">
+                                +{hotel.room_types_summary.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="pt-3 mt-3 border-t border-[#E8E2D8] flex items-center justify-between">
@@ -670,7 +731,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               })}
             </div>
 
-            <div className="lg:col-span-6 sticky top-24">
+            <div className="hidden lg:block lg:col-span-6 sticky top-24">
               <HotelMap
                 hotels={hotels}
                 userLocation={userLocation}
@@ -678,6 +739,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                 selectedHotelId={hoveredHotelId}
                 onSelectHotel={onSelectHotel}
                 onLocateUser={handleNearMe}
+                onSearchArea={handleSearchArea}
                 isLocating={locating}
                 className="h-[750px] w-full"
               />
@@ -788,6 +850,31 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                           </span>
                         )}
                       </div>
+
+                      {/* Room Categories Available Preview */}
+                      {hotel.room_types_summary && hotel.room_types_summary.length > 0 && (
+                        <div className="mt-3.5 pt-3 border-t border-[#E8E2D8]/60">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                            Available Room Tiers ({hotel.room_types_summary.length})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {hotel.room_types_summary.slice(0, 3).map((rts) => (
+                              <span
+                                key={rts.id}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#1E3A2B] border border-emerald-900/10"
+                              >
+                                <Bed className="w-2.5 h-2.5 text-[#D49B41]" />
+                                <span>{rts.name}</span>
+                              </span>
+                            ))}
+                            {hotel.room_types_summary.length > 3 && (
+                              <span className="text-[10px] text-slate-400 self-center">
+                                +{hotel.room_types_summary.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Bottom Footer: Price & CTA */}
@@ -817,13 +904,17 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
         )}
       </main>
 
-      {/* Floating 1-Tap Map / List Toggle Button (Airbnb Style) */}
-      {viewMode !== 'split' && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+      {/* Mobile Floating Map / List Toggle Pill (Gold-standard Airbnb UX) - Appears when scrolled or when actively in map view */}
+      {(showFloatingMapBtn || viewMode === 'map') && (
+        <div className="lg:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
           <button
             type="button"
-            onClick={() => setViewMode(viewMode === 'map' ? 'grid' : 'map')}
-            className="bg-[#212529] hover:bg-[#1E3A2B] text-white px-5 py-2.5 rounded-full font-black text-xs shadow-2xl flex items-center gap-2 border border-white/20 active:scale-95 transition-all shadow-[0_12px_36px_rgba(0,0,0,0.35)]"
+            onClick={() => {
+              const nextMode = viewMode === 'map' ? 'grid' : 'map';
+              setViewMode(nextMode);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="px-5 py-2.5 rounded-full bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-2xl border border-white/20 flex items-center gap-2 active:scale-95 transition-all"
           >
             {viewMode === 'map' ? (
               <>
@@ -833,12 +924,13 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
             ) : (
               <>
                 <MapIcon className="w-4 h-4 text-[#D49B41]" />
-                <span>Show Interactive Map</span>
+                <span>Show Map View</span>
               </>
             )}
           </button>
         </div>
       )}
+
     </div>
   );
 };

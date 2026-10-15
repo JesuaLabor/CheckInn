@@ -351,8 +351,8 @@ export const GuestPortal: React.FC = () => {
 
       {/* Guest Service Request Modal */}
       {serviceModalBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-[#E8E2D8] p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#212529]/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-md w-full max-h-[92vh] overflow-y-auto border border-[#E8E2D8] p-6 sm:p-7 space-y-4 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 pb-safe">
             <div>
               <span className="text-[10px] font-bold text-[#1E3A2B] uppercase tracking-wider">
                 Direct to Front Desk

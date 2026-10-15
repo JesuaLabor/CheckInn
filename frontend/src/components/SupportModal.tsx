@@ -57,9 +57,9 @@ export const SupportModal: React.FC<SupportModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-2xl bg-[#FAF8F5] rounded-3xl shadow-2xl border border-[#E8E2D8] overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-[#212529]"
+        className="relative w-full max-w-2xl bg-[#FAF8F5] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-[#E8E2D8] overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 text-[#212529] pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
