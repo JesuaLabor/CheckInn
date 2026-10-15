@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/client';
 import { Hotel, PlatformStats } from '../types';
 import {
@@ -9,7 +9,6 @@ import {
   XCircle,
   AlertTriangle,
   Search,
-  Filter,
   DollarSign,
   Bed,
   CalendarCheck,
@@ -20,26 +19,67 @@ import {
   ChevronRight,
   Sparkles,
   RefreshCw,
-  Phone,
-  Mail,
   MapPin,
+  Eye,
+  Download,
+  LayoutGrid,
+  List,
+  X,
+  ChevronDown,
+  Check,
+  RotateCcw,
+  SlidersHorizontal,
 } from 'lucide-react';
 
-export const PlatformAdmin: React.FC = () => {
+export type PlatformStatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'suspended';
+
+interface PlatformAdminProps {
+  initialStatus?: PlatformStatusFilter;
+  /** Changes on every navbar deep-link so the same shortcut can be re-applied */
+  deepLinkNonce?: number;
+  onNavigate?: (tab: string, slug?: string) => void;
+}
+
+export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
+  initialStatus,
+  deepLinkNonce,
+  onNavigate,
+}) => {
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'suspended'>('pending');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<PlatformStatusFilter>(initialStatus || 'pending');
 
-  const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+  // Apply navbar deep-links during render so repeated shortcut clicks re-apply the filter
+  const [appliedDeepLink, setAppliedDeepLink] = useState(deepLinkNonce);
+  if (deepLinkNonce !== appliedDeepLink) {
+    setAppliedDeepLink(deepLinkNonce);
+    if (initialStatus) {
+      setStatusFilter(initialStatus);
+    }
+  }
+
+  // Interactive controls
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCity, setSelectedCity] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'name' | 'rooms' | 'bookings'>('newest');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+
+  // Modal & Drawer states
+  const [inspectingHotel, setInspectingHotel] = useState<Hotel | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   // Rejection modal
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectingHotelId, setRejectingHotelId] = useState<number | string | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('Business permit verification failed or incomplete lodging photos.');
+  const [rejectionReason, setRejectionReason] = useState(
+    'Business permit verification failed or incomplete lodging photos.'
+  );
 
   useEffect(() => {
     fetchData();
@@ -51,7 +91,9 @@ export const PlatformAdmin: React.FC = () => {
     try {
       const [statsRes, hotelsRes] = await Promise.all([
         api.get('/platform/stats/'),
-        api.get(`/platform/hotels/?status=${statusFilter}&search=${encodeURIComponent(searchQuery)}`),
+        api.get(
+          `/platform/hotels/?status=${statusFilter}&search=${encodeURIComponent(searchQuery)}`
+        ),
       ]);
       setStats(statsRes.data);
       setHotels(hotelsRes.data || []);
@@ -62,7 +104,11 @@ export const PlatformAdmin: React.FC = () => {
     }
   };
 
-  const handleReviewAction = async (hotelId: number | string, action: 'approve' | 'reject' | 'suspend' | 'reactivate', reason = '') => {
+  const handleReviewAction = async (
+    hotelId: number | string,
+    action: 'approve' | 'reject' | 'suspend' | 'reactivate',
+    reason = ''
+  ) => {
     setActionLoading(true);
     setFeedbackMessage(null);
     try {
@@ -74,8 +120,8 @@ export const PlatformAdmin: React.FC = () => {
       setFeedbackMessage({ type: 'success', text: res.data.message });
       setIsRejectOpen(false);
       setRejectingHotelId(null);
-      if (selectedHotel?.id === hotelId) {
-        setSelectedHotel(res.data.hotel);
+      if (inspectingHotel?.id === hotelId) {
+        setInspectingHotel(res.data.hotel);
       }
       fetchData();
     } catch (err: any) {
@@ -88,296 +134,892 @@ export const PlatformAdmin: React.FC = () => {
     }
   };
 
+  // Extract unique cities from data for quick dropdown filtering
+  const availableCities = useMemo(() => {
+    const set = new Set<string>();
+    hotels.forEach((h) => {
+      if (h.city) set.add(h.city);
+    });
+    return Array.from(set).sort();
+  }, [hotels]);
+
+  // Client-side filtering & sorting for instantaneous UI responsiveness
+  const filteredHotels = useMemo(() => {
+    return hotels
+      .filter((h) => {
+        if (
+          selectedCategory !== 'all' &&
+          h.category?.toLowerCase() !== selectedCategory.toLowerCase()
+        ) {
+          return false;
+        }
+        if (selectedCity !== 'all' && h.city?.toLowerCase() !== selectedCity.toLowerCase()) {
+          return false;
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchName = h.name.toLowerCase().includes(q);
+          const matchCity = h.city?.toLowerCase().includes(q);
+          const matchPermit = h.business_permit_number?.toLowerCase().includes(q);
+          const matchOwner =
+            h.owner_name?.toLowerCase().includes(q) ||
+            h.owner_username?.toLowerCase().includes(q);
+          const matchEmail = h.owner_email?.toLowerCase().includes(q);
+          if (!matchName && !matchCity && !matchPermit && !matchOwner && !matchEmail) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name') return a.name.localeCompare(b.name);
+        if (sortBy === 'rooms') return (b.total_rooms || 0) - (a.total_rooms || 0);
+        if (sortBy === 'bookings') return (b.total_bookings || 0) - (a.total_bookings || 0);
+        return Number(b.id) - Number(a.id);
+      });
+  }, [hotels, selectedCategory, selectedCity, searchQuery, sortBy]);
+
+  // Export filtered lodgings to CSV
+  const handleExportCSV = () => {
+    if (!filteredHotels.length) return;
+    const headers = [
+      'ID',
+      'Name',
+      'Status',
+      'Category',
+      'City',
+      'Province',
+      'Owner Name',
+      'Owner Username',
+      'Owner Email',
+      'Owner Phone',
+      'Business Permit',
+      'BIR TIN',
+      'Rooms',
+      'Bookings',
+      'Payout Method',
+      'Account Number',
+    ];
+
+    const rows = filteredHotels.map((h) => [
+      h.id,
+      `"${(h.name || '').replace(/"/g, '""')}"`,
+      h.status || 'unknown',
+      h.category || '',
+      `"${(h.city || '').replace(/"/g, '""')}"`,
+      `"${(h.province || '').replace(/"/g, '""')}"`,
+      `"${(h.owner_name || '').replace(/"/g, '""')}"`,
+      h.owner_username || '',
+      h.owner_email || '',
+      h.owner_phone || h.contact_phone || '',
+      h.business_permit_number || '',
+      h.bir_tin || '',
+      h.total_rooms || 0,
+      h.total_bookings || 0,
+      h.payout_method || '',
+      h.payout_account_number || '',
+    ]);
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute(
+      'download',
+      `localstay_lodgings_${statusFilter}_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="min-h-screen bg-[#212529] text-white pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header Title */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D49B41]/15 border border-[#D49B41]/30 text-[#D49B41] text-xs font-bold uppercase tracking-wider mb-2">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Platform Super Administrator</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              LocalStay SaaS Partner Management
-            </h1>
-            <p className="text-slate-400 text-xs sm:text-sm">
-              Review property applications, approve verified hotels, and oversee marketplace lodging.
-            </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-28 md:pb-20 space-y-6 text-[#212529]">
+      {/* Executive Header Banner */}
+      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E2D8] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#1E3A2B] bg-[#1E3A2B]/10 px-3 py-1 rounded-full border border-[#1E3A2B]/20">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#1E3A2B]" />
+              <span>Platform Partner Governance</span>
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Live Operations</span>
+            </span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#212529] tracking-tight">
+            Root Administration & Verifications
+          </h1>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1 max-w-2xl">
+            Verify lodging partner applications, audit business credentials, and oversee marketplace inventory across all registered Philippine destinations.
+          </p>
+        </div>
+
+        {/* Header Action Toolbar */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={handleExportCSV}
+            disabled={filteredHotels.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFEA] border border-[#E8E2D8] text-xs font-bold text-[#212529] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+            title="Export filtered lodgings to CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-[#D49B41]" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
 
           <button
             onClick={fetchData}
             disabled={loading}
-            className="self-start md:self-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-300 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#162B20] text-white text-xs font-extrabold transition-all active:scale-95 shadow-md shadow-[#1E3A2B]/20"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#D49B41]' : ''}`} />
-            <span>Refresh Data</span>
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-white' : 'text-[#D49B41]'}`}
+            />
+            <span>Refresh</span>
           </button>
         </div>
+      </div>
 
-        {/* Feedback Alert */}
-        {feedbackMessage && (
+      {/* Feedback Alert Toast */}
+      {feedbackMessage && (
+        <div
+          className={`p-4 rounded-2xl flex items-center justify-between text-xs font-semibold animate-in fade-in duration-200 shadow-xs ${
+            feedbackMessage.type === 'success'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+              : 'bg-rose-50 border border-rose-200 text-rose-900'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {feedbackMessage.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span>{feedbackMessage.text}</span>
+          </div>
+          <button
+            onClick={() => setFeedbackMessage(null)}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Interactive KPI Command Center (Cards double as interactive quick filters) */}
+      <div>
+        <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 px-0.5">
+          <span>Platform Overview Metrics</span>
+          <span className="text-[11px] text-slate-400 font-normal">Click card to filter lodgings</span>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          {/* Card 1: Total Properties */}
           <div
-            className={`p-4 rounded-2xl flex items-center justify-between text-xs font-semibold ${
-              feedbackMessage.type === 'success'
-                ? 'bg-[#3B5E43]/20 border border-[#3B5E43]/40 text-emerald-300'
-                : 'bg-rose-500/10 border border-rose-500/30 text-rose-300'
+            onClick={() => {
+              setStatusFilter('all');
+              setSelectedCategory('all');
+              setSelectedCity('all');
+            }}
+            className={`p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer group select-none ${
+              statusFilter === 'all'
+                ? 'bg-white border-[#D49B41] shadow-md ring-2 ring-[#D49B41]/25'
+                : 'bg-white hover:bg-[#FAF8F5]/60 border-[#E8E2D8] shadow-xs'
             }`}
           >
-            <div className="flex items-center gap-2">
-              {feedbackMessage.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
-              )}
-              <span>{feedbackMessage.text}</span>
-            </div>
-            <button
-              onClick={() => setFeedbackMessage(null)}
-              className="text-slate-400 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Platform KPI Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
               <span>Total Properties</span>
-              <Building2 className="w-4 h-4 text-slate-400" />
+              <Building2 className="w-4 h-4 text-slate-400 group-hover:text-[#1E3A2B] transition-colors" />
             </div>
-            <div className="text-2xl font-black text-white">{stats?.total_hotels ?? '—'}</div>
-            <div className="text-[11px] text-emerald-400">
-              {stats?.approved_hotels ?? 0} Live on Marketplace
+            <div className="text-2xl sm:text-3xl font-black text-[#212529] mt-1">
+              {stats?.total_hotels ?? hotels.length}
+            </div>
+            <div className="text-[11px] font-bold text-emerald-700 mt-1 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>{stats?.approved_hotels ?? 0} Live on Marketplace</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#D49B41]/10 border border-[#D49B41]/30 space-y-1 relative overflow-hidden">
-            <div className="flex items-center justify-between text-[#D49B41] text-xs font-medium">
+          {/* Card 2: Pending Review (Hero Highlight) */}
+          <div
+            onClick={() => {
+              setStatusFilter('pending');
+              setSelectedCategory('all');
+              setSelectedCity('all');
+            }}
+            className={`p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer group select-none relative overflow-hidden ${
+              statusFilter === 'pending'
+                ? 'bg-amber-50/70 border-[#D49B41] shadow-md ring-2 ring-[#D49B41]/35'
+                : (stats?.pending_hotels ?? 0) > 0
+                ? 'bg-amber-50/40 border-[#D49B41]/40 hover:border-[#D49B41] shadow-xs'
+                : 'bg-white hover:bg-[#FAF8F5]/60 border-[#E8E2D8] shadow-xs'
+            }`}
+          >
+            <div className="flex items-center justify-between text-xs font-semibold text-[#8F611A]">
               <span>Pending Review</span>
-              <Clock className="w-4 h-4 text-[#D49B41]" />
+              <Clock className="w-4 h-4 text-[#D49B41] group-hover:scale-110 transition-transform" />
             </div>
-            <div className="text-2xl font-black text-[#D49B41]">
+            <div className="text-2xl sm:text-3xl font-black text-[#8F611A] mt-1">
               {stats?.pending_hotels ?? 0}
             </div>
-            <div className="text-[11px] text-[#D49B41]/80">Requires Verification</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-              <span>Active Rooms</span>
-              <Bed className="w-4 h-4 text-slate-400" />
+            <div className="text-[11px] font-bold mt-1">
+              {(stats?.pending_hotels ?? 0) > 0 ? (
+                <span className="text-[#8F611A] flex items-center gap-1 animate-pulse font-extrabold">
+                  <span>⚡ Requires Verification</span>
+                </span>
+              ) : (
+                <span className="text-emerald-700 flex items-center gap-1 font-bold">
+                  <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                  <span>Inbox Zero • All Caught Up</span>
+                </span>
+              )}
             </div>
-            <div className="text-2xl font-black text-white">{stats?.total_rooms ?? '—'}</div>
-            <div className="text-[11px] text-slate-400">Total Physical Rooms</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+          {/* Card 3: Active Rooms */}
+          <div
+            onClick={() => setStatusFilter('approved')}
+            className={`p-4 sm:p-5 rounded-3xl border transition-all cursor-pointer group select-none ${
+              statusFilter === 'approved'
+                ? 'bg-white border-emerald-600 shadow-md ring-2 ring-emerald-600/20'
+                : 'bg-white hover:bg-[#FAF8F5]/60 border-[#E8E2D8] shadow-xs'
+            }`}
+          >
+            <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+              <span>Active Rooms</span>
+              <Bed className="w-4 h-4 text-slate-400 group-hover:text-[#1E3A2B] transition-colors" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-[#212529] mt-1">
+              {stats?.total_rooms ?? '—'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1 font-medium">
+              Total Physical Lodging Units
+            </div>
+          </div>
+
+          {/* Card 4: Platform Reservations */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-white border border-[#E8E2D8] space-y-1 select-none shadow-xs">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
               <span>Reservations</span>
               <CalendarCheck className="w-4 h-4 text-slate-400" />
             </div>
-            <div className="text-2xl font-black text-white">{stats?.total_bookings ?? '—'}</div>
-            <div className="text-[11px] text-slate-400">Platform Bookings</div>
+            <div className="text-2xl sm:text-3xl font-black text-[#212529] mt-1">
+              {stats?.total_bookings ?? '—'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1 font-medium">
+              {stats?.confirmed_bookings ?? 0} Confirmed Stays
+            </div>
           </div>
 
-          <div className="col-span-2 lg:col-span-1 p-4 rounded-2xl bg-gradient-to-br from-[#1E3A2B] to-[#212529] border border-[#3B5E43]/40 space-y-1">
-            <div className="flex items-center justify-between text-[#D49B41] text-xs font-medium">
+          {/* Card 5: Commission Revenue Est. */}
+          <div className="col-span-2 lg:col-span-1 p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-[#1E3A2B] to-[#2B523D] text-white border border-[#1E3A2B] shadow-sm space-y-1 select-none">
+            <div className="flex items-center justify-between text-amber-200 text-xs font-semibold">
               <span>Commission Est.</span>
               <DollarSign className="w-4 h-4 text-[#D49B41]" />
             </div>
-            <div className="text-2xl font-black text-white">
+            <div className="text-2xl sm:text-3xl font-black text-white mt-1">
               ₱{(stats?.estimated_commission ?? 0).toLocaleString()}
             </div>
-            <div className="text-[11px] text-white/70">10% SaaS Service Rate</div>
+            <div className="text-[11px] text-emerald-100/90 mt-1 font-medium">
+              10% of ₱{(stats?.total_gmv ?? 0).toLocaleString()} GMV
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Filter Controls & Search */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white/5 p-3 rounded-2xl border border-white/10">
-          {/* Status Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+      {/* Filter Controls Toolbar */}
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E8E2D8] space-y-3.5 shadow-xs">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          {/* Status Segmented Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             <button
               onClick={() => setStatusFilter('pending')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                 statusFilter === 'pending'
-                  ? 'bg-[#D49B41] text-[#212529] shadow-md shadow-[#D49B41]/20'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-[#D49B41] text-white font-extrabold shadow-sm'
+                  : 'text-slate-600 hover:text-[#212529] hover:bg-[#FAF8F5]'
               }`}
             >
               <span>Pending Approval</span>
-              {(stats?.pending_hotels ?? 0) > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[#212529] text-[#D49B41] text-[10px] flex items-center justify-center font-black">
-                  {stats?.pending_hotels}
-                </span>
-              )}
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  statusFilter === 'pending'
+                    ? 'bg-black/20 text-white'
+                    : 'bg-amber-100 text-[#8F611A]'
+                }`}
+              >
+                {stats?.pending_hotels ?? 0}
+              </span>
             </button>
 
             <button
               onClick={() => setStatusFilter('approved')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                 statusFilter === 'approved'
-                  ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20 border border-[#3B5E43]/40'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-[#1E3A2B] text-white font-extrabold shadow-sm'
+                  : 'text-slate-600 hover:text-[#212529] hover:bg-[#FAF8F5]'
               }`}
             >
-              Approved & Live
+              <span>Approved & Live</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  statusFilter === 'approved'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}
+              >
+                {stats?.approved_hotels ?? 0}
+              </span>
             </button>
 
             <button
               onClick={() => setStatusFilter('rejected')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                 statusFilter === 'rejected'
-                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-rose-600 text-white font-extrabold shadow-sm'
+                  : 'text-slate-600 hover:text-[#212529] hover:bg-[#FAF8F5]'
               }`}
             >
-              Rejected
+              <span>Rejected</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  statusFilter === 'rejected'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-rose-100 text-rose-800'
+                }`}
+              >
+                {stats?.rejected_hotels ?? 0}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setStatusFilter('suspended')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                statusFilter === 'suspended'
+                  ? 'bg-slate-700 text-white font-extrabold shadow-sm'
+                  : 'text-slate-600 hover:text-[#212529] hover:bg-[#FAF8F5]'
+              }`}
+            >
+              <span>Suspended</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  statusFilter === 'suspended'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-200 text-slate-700'
+                }`}
+              >
+                {stats?.suspended_hotels ?? 0}
+              </span>
             </button>
 
             <button
               onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                 statusFilter === 'all'
-                  ? 'bg-white/15 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-[#212529] text-white font-extrabold shadow-sm'
+                  : 'text-slate-600 hover:text-[#212529] hover:bg-[#FAF8F5]'
               }`}
             >
-              All
+              <span>All</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  statusFilter === 'all'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {stats?.total_hotels ?? hotels.length}
+              </span>
             </button>
           </div>
 
-          {/* Search Box */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              fetchData();
-            }}
-            className="relative"
-          >
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search property or permit..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-[#212529] border border-white/15 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#D49B41] w-full sm:w-64"
-            />
-          </form>
+          {/* Right: View Mode Toggle & Clear Button */}
+          <div className="flex items-center gap-2 self-end lg:self-auto">
+            {(selectedCategory !== 'all' || selectedCity !== 'all' || searchQuery) && (
+              <button
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSelectedCity('all');
+                  setSearchQuery('');
+                }}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-[#212529] hover:bg-[#FAF8F5] transition-colors flex items-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset Filters</span>
+              </button>
+            )}
+
+            {/* View Toggle */}
+            <div className="flex items-center p-0.5 rounded-xl bg-[#FAF8F5] border border-[#E8E2D8]">
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'cards'
+                    ? 'bg-white text-[#212529] shadow-2xs border border-[#E8E2D8]'
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+                title="Card Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-white text-[#212529] shadow-2xs border border-[#E8E2D8]'
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+                title="Dense Data Table View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Properties Directory */}
-        <div className="space-y-4">
-          {loading ? (
-            <div className="py-20 text-center text-slate-500 text-xs">
-              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[#D49B41]" />
-              <span>Loading applications...</span>
-            </div>
-          ) : hotels.length === 0 ? (
-            <div className="py-16 text-center rounded-3xl bg-white/5 border border-white/10 p-8">
-              <CheckCircle2 className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-              <h3 className="text-sm font-bold text-slate-200">No properties in this category</h3>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                {statusFilter === 'pending'
-                  ? 'Great job! There are no pending hotel applications waiting for review.'
-                  : 'No properties matched your current filter.'}
-              </p>
+        {/* Secondary Filter Line: Live Search, City Dropdown, Category Dropdown, Sort */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-3 border-t border-[#E8E2D8]">
+          {/* Live Search */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search name, permit, owner, email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl pl-9 pr-8 py-2 text-xs text-[#212529] placeholder-slate-400 focus:outline-none focus:border-[#D49B41] focus:bg-white"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* City Dropdown */}
+          <div className="relative">
+            <MapPin className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              className="w-full appearance-none bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl pl-9 pr-8 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#D49B41] focus:bg-white cursor-pointer"
+            >
+              <option value="all">All Destinations ({hotels.length})</option>
+              {availableCities.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* Category Dropdown */}
+          <div className="relative">
+            <SlidersHorizontal className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full appearance-none bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl pl-9 pr-8 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#D49B41] focus:bg-white cursor-pointer"
+            >
+              <option value="all">All Stay Types</option>
+              <option value="boutique">Boutique Stay</option>
+              <option value="beach">Beach & Coastal</option>
+              <option value="mountain">Highland & Mountain</option>
+              <option value="heritage">Heritage & Villa</option>
+              <option value="resort">Resort & Spa</option>
+              <option value="eco">Eco Retreat</option>
+              <option value="city">Urban Hotel</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* Sort Order */}
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full appearance-none bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#D49B41] focus:bg-white cursor-pointer"
+            >
+              <option value="newest">Sort: Newest Applications</option>
+              <option value="name">Sort: Name (A to Z)</option>
+              <option value="rooms">Sort: Room Capacity (High-Low)</option>
+              <option value="bookings">Sort: Total Bookings (High-Low)</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+        </div>
+      </div>
+
+      {/* Directory Content Area */}
+      <div>
+        {loading ? (
+          <div className="py-24 text-center rounded-3xl bg-white border border-[#E8E2D8] p-8 shadow-xs">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-[#1E3A2B]" />
+            <h3 className="text-sm font-bold text-[#212529]">Querying Platform Database...</h3>
+            <p className="text-xs text-slate-500 mt-1">Fetching property verification dossiers.</p>
+          </div>
+        ) : filteredHotels.length === 0 ? (
+          /* Empty States */
+          statusFilter === 'pending' ? (
+            /* Executive Inbox Zero Delight */
+            <div className="py-20 text-center rounded-3xl bg-gradient-to-b from-white to-[#FAF8F5] border border-[#E8E2D8] p-8 space-y-4 shadow-xs">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto text-emerald-600 shadow-sm">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1.5">
+                <h3 className="text-lg font-black text-[#212529]">All Caught Up • Inbox Zero</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  There are currently no partner onboarding applications pending verification. Every submitted lodging application has been reviewed.
+                </p>
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={() => setStatusFilter('approved')}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#162B20] text-white text-xs font-black shadow-md shadow-[#1E3A2B]/20 transition-all active:scale-95"
+                >
+                  <span>Browse {stats?.approved_hotels ?? 12} Active Marketplace Stays</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {hotels.map((hotel) => (
-                <div
-                  key={hotel.id}
-                  className="rounded-3xl bg-white/5 border border-white/10 p-5 sm:p-6 hover:border-white/20 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
-                >
-                  {/* Left: Hotel Summary & Thumbnail */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <img
-                      src={hotel.image_url}
-                      alt={hotel.name}
-                      className="w-full sm:w-28 h-24 sm:h-24 rounded-2xl object-cover border border-white/10 shrink-0"
-                    />
+            /* Filter empty state */
+            <div className="py-20 text-center rounded-3xl bg-white border border-[#E8E2D8] p-8 space-y-3 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#FAF8F5] border border-[#E8E2D8] flex items-center justify-center mx-auto text-slate-400">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-[#212529]">No properties matched your criteria</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Try adjusting your search terms, changing the status tab, or clearing city/category filters.
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('all');
+                  setSelectedCity('all');
+                }}
+                className="px-4 py-2 rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFEA] border border-[#E8E2D8] text-xs font-bold text-[#212529] transition-colors"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          )
+        ) : viewMode === 'table' ? (
+          /* DENSE DATA TABLE VIEW */
+          <div className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#FAF8F5] text-slate-500 uppercase font-black tracking-wider text-[10px] border-b border-[#E8E2D8]">
+                  <tr>
+                    <th className="py-3.5 px-4 sm:px-6">Property</th>
+                    <th className="py-3.5 px-4">Location</th>
+                    <th className="py-3.5 px-4">Host Credentials</th>
+                    <th className="py-3.5 px-4">Permit & Tax</th>
+                    <th className="py-3.5 px-4">Rooms</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right pr-6">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E8E2D8]/70">
+                  {filteredHotels.map((hotel) => (
+                    <tr
+                      key={hotel.id}
+                      className="hover:bg-[#FAF8F5]/80 transition-colors group cursor-pointer"
+                      onClick={() => setInspectingHotel(hotel)}
+                    >
+                      {/* Property Column */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={
+                              hotel.image_url ||
+                              'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=300&q=80'
+                            }
+                            alt={hotel.name}
+                            className="w-12 h-12 rounded-xl object-cover shrink-0 border border-[#E8E2D8]"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-[#212529] text-xs truncate group-hover:text-[#1E3A2B] transition-colors">
+                              {hotel.name}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] font-bold text-slate-400">
+                                {hotel.category || 'Boutique'}
+                              </span>
+                              {hotel.rating && (
+                                <span className="text-[10px] text-[#D49B41] font-bold">
+                                  ★ {Number(hotel.rating).toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
 
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-bold text-white">{hotel.name}</h3>
+                      {/* Location */}
+                      <td className="py-3.5 px-4 text-slate-600">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[130px] font-medium text-[#212529]">
+                            {hotel.city || 'Philippines'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 block truncate max-w-[130px]">
+                          {hotel.province || ''}
+                        </span>
+                      </td>
 
-                        {/* Status Badge */}
+                      {/* Host Credentials */}
+                      <td className="py-3.5 px-4">
+                        <div className="text-[#212529] font-bold truncate max-w-[140px]">
+                          {hotel.owner_name}
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono truncate max-w-[140px]">
+                          {hotel.owner_email || `@${hotel.owner_username}`}
+                        </div>
+                      </td>
+
+                      {/* Compliance (Permit & TIN) */}
+                      <td className="py-3.5 px-4">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-amber-50 text-[#8F611A] border border-[#D49B41]/30 font-mono text-[10px] font-bold">
+                          {hotel.business_permit_number || 'No Permit'}
+                        </span>
+                        {hotel.bir_tin && (
+                          <span className="block text-[9px] text-slate-400 font-mono mt-0.5">
+                            TIN: {hotel.bir_tin}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Rooms */}
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1 text-[#212529] font-extrabold text-xs">
+                          <Bed className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{hotel.total_rooms || 0}</span>
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                             hotel.status === 'approved'
-                              ? 'bg-[#1E3A2B]/40 text-emerald-300 border border-[#3B5E43]/40'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                               : hotel.status === 'pending'
-                              ? 'bg-[#D49B41]/20 text-[#D49B41] border border-[#D49B41]/30 animate-pulse'
+                              ? 'bg-amber-50 text-[#8F611A] border border-[#D49B41]/40 animate-pulse'
                               : hotel.status === 'rejected'
-                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                              : 'bg-white/10 text-slate-300'
+                              ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
                           }`}
                         >
-                          {hotel.status === 'approved'
-                            ? 'Approved / Live'
-                            : hotel.status === 'pending'
-                            ? 'Pending Review'
-                            : hotel.status === 'rejected'
-                            ? 'Rejected'
-                            : 'Suspended'}
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              hotel.status === 'approved'
+                                ? 'bg-emerald-500'
+                                : hotel.status === 'pending'
+                                ? 'bg-[#D49B41]'
+                                : hotel.status === 'rejected'
+                                ? 'bg-rose-500'
+                                : 'bg-slate-400'
+                            }`}
+                          />
+                          <span>{hotel.status}</span>
                         </span>
-                      </div>
+                      </td>
 
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span>{hotel.address}</span>
-                      </div>
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setInspectingHotel(hotel)}
+                            className="px-2.5 py-1.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFEA] border border-[#E8E2D8] text-[#212529] hover:text-[#1E3A2B] font-bold text-[11px] transition-colors flex items-center gap-1"
+                            title="Inspect Full Verification Dossier"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-[#D49B41]" />
+                            <span>Inspect</span>
+                          </button>
 
-                      {/* Permit & Owner Credentials */}
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 pt-1">
-                        <span className="flex items-center gap-1 font-mono text-[#D49B41]">
-                          <FileText className="w-3 h-3" />
-                          Permit: {hotel.business_permit_number || 'Under Review'}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3 text-slate-500" />
-                          Owner: <strong className="text-white">{hotel.owner_name}</strong> ({hotel.owner_username})
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1 text-white/80 font-mono">
-                          <CreditCard className="w-3 h-3 text-[#3B5E43]" />
-                          {hotel.payout_method}: {hotel.payout_account_number || '—'}
-                        </span>
-                      </div>
+                          {hotel.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleReviewAction(hotel.id, 'approve')}
+                                disabled={actionLoading}
+                                className="p-1.5 rounded-xl bg-[#1E3A2B] hover:bg-[#162B20] text-white font-black transition-all active:scale-95 shadow-2xs"
+                                title="Approve Property"
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRejectingHotelId(hotel.id);
+                                  setIsRejectOpen(true);
+                                }}
+                                disabled={actionLoading}
+                                className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
+                                title="Reject Application"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
 
-                      {hotel.rejection_reason && (
-                        <div className="text-[11px] text-rose-400 bg-rose-500/10 px-3 py-1 rounded-xl mt-1">
-                          Rejection Note: {hotel.rejection_reason}
+                          {hotel.status === 'approved' && (
+                            <button
+                              onClick={() => handleReviewAction(hotel.id, 'suspend')}
+                              disabled={actionLoading}
+                              className="px-2 py-1 rounded-lg bg-[#FAF8F5] hover:bg-rose-50 border border-[#E8E2D8] text-slate-600 hover:text-rose-700 text-[10px] font-bold transition-colors"
+                            >
+                              Suspend
+                            </button>
+                          )}
+
+                          {(hotel.status === 'rejected' || hotel.status === 'suspended') && (
+                            <button
+                              onClick={() => handleReviewAction(hotel.id, 'reactivate')}
+                              disabled={actionLoading}
+                              className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[10px] font-bold transition-colors"
+                            >
+                              Reactivate
+                            </button>
+                          )}
                         </div>
-                      )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          /* VISUAL CARD GRID VIEW */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredHotels.map((hotel) => (
+              <div
+                key={hotel.id}
+                onClick={() => setInspectingHotel(hotel)}
+                className="rounded-3xl bg-white border border-[#E8E2D8] hover:border-[#D49B41]/60 overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 hover:-translate-y-1 flex flex-col justify-between group cursor-pointer"
+              >
+                {/* Photo Header */}
+                <div>
+                  <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+                    <img
+                      src={
+                        hotel.image_url ||
+                        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80'
+                      }
+                      alt={hotel.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+
+                    {/* Top Badges */}
+                    <div className="absolute top-3 inset-x-3 flex items-center justify-between">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-black/60 backdrop-blur-md text-white border border-white/20">
+                        {hotel.category || 'Boutique Stay'}
+                      </span>
+
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md ${
+                          hotel.status === 'approved'
+                            ? 'bg-emerald-600 text-white'
+                            : hotel.status === 'pending'
+                            ? 'bg-[#D49B41] text-white font-black'
+                            : hotel.status === 'rejected'
+                            ? 'bg-rose-600 text-white'
+                            : 'bg-slate-700 text-white'
+                        }`}
+                      >
+                        {hotel.status}
+                      </span>
+                    </div>
+
+                    {/* Bottom Image Info */}
+                    <div className="absolute bottom-2.5 inset-x-3 flex items-center justify-between text-white text-xs">
+                      <span className="flex items-center gap-1 font-bold">
+                        <MapPin className="w-3.5 h-3.5 text-[#D49B41]" />
+                        <span className="truncate max-w-[180px]">
+                          {hotel.city || 'Philippines'}
+                        </span>
+                      </span>
+
+                      <span className="bg-black/60 backdrop-blur-xs px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                        {hotel.total_rooms || 0} rooms
+                      </span>
                     </div>
                   </div>
 
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-2 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-white/10">
+                  {/* Card Content */}
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <h3 className="font-black text-base text-[#212529] group-hover:text-[#1E3A2B] transition-colors truncate">
+                        {hotel.name}
+                      </h3>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{hotel.address}</p>
+                    </div>
+
+                    {/* Legal Credentials Chips */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                      <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-[#8F611A] border border-[#D49B41]/30 font-bold">
+                        Permit: {hotel.business_permit_number || 'Pending'}
+                      </span>
+                      {hotel.bir_tin && (
+                        <span className="px-2 py-0.5 rounded-lg bg-[#FAF8F5] text-slate-500 border border-[#E8E2D8]">
+                          TIN: {hotel.bir_tin}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Owner Info */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-[#E8E2D8] text-xs text-slate-500">
+                      <div className="w-6 h-6 rounded-full bg-[#1E3A2B]/10 text-[#1E3A2B] text-[10px] font-black flex items-center justify-center uppercase shrink-0">
+                        {hotel.owner_name?.charAt(0) || 'H'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-[#212529] truncate">
+                          {hotel.owner_name}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {hotel.owner_email || `@${hotel.owner_username}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Bottom Actions */}
+                <div
+                  className="p-3 bg-[#FAF8F5] border-t border-[#E8E2D8] flex items-center justify-between gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => setInspectingHotel(hotel)}
+                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F4EFEA] border border-[#E8E2D8] text-[#212529] font-bold text-xs transition-colors flex items-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-[#D49B41]" />
+                    <span>Inspect Dossier</span>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
                     {hotel.status === 'pending' && (
                       <>
                         <button
                           onClick={() => handleReviewAction(hotel.id, 'approve')}
                           disabled={actionLoading}
-                          className="px-4 py-2 rounded-xl bg-[#D49B41] hover:bg-[#BF8832] text-[#212529] font-black text-xs shadow-lg shadow-[#D49B41]/20 transition-all flex items-center gap-1.5 active:scale-95"
+                          className="px-3 py-1.5 rounded-xl bg-[#1E3A2B] hover:bg-[#162B20] text-white font-black text-xs shadow-xs transition-all active:scale-95"
                         >
-                          <CheckCircle2 className="w-4 h-4 text-[#212529]" />
-                          <span>Approve Property</span>
+                          Approve
                         </button>
-
                         <button
                           onClick={() => {
                             setRejectingHotelId(hotel.id);
                             setIsRejectOpen(true);
                           }}
                           disabled={actionLoading}
-                          className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-bold text-xs transition-colors"
+                          className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors"
                         >
                           Reject
                         </button>
@@ -388,9 +1030,9 @@ export const PlatformAdmin: React.FC = () => {
                       <button
                         onClick={() => handleReviewAction(hotel.id, 'suspend')}
                         disabled={actionLoading}
-                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 font-bold text-xs transition-colors"
+                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-rose-50 border border-[#E8E2D8] text-slate-600 hover:text-rose-700 text-xs font-bold transition-colors"
                       >
-                        Suspend Listing
+                        Suspend
                       </button>
                     )}
 
@@ -398,71 +1040,381 @@ export const PlatformAdmin: React.FC = () => {
                       <button
                         onClick={() => handleReviewAction(hotel.id, 'reactivate')}
                         disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] border border-[#3B5E43]/40 text-white font-bold text-xs transition-colors flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition-colors"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-[#D49B41]" />
-                        <span>Reactivate & Approve</span>
+                        Reactivate
                       </button>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Rejection Modal */}
-        {isRejectOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/80 backdrop-blur-md">
-            <div className="bg-[#212529] border border-white/15 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                  <XCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white">Reject Property Application</h3>
-                  <p className="text-xs text-slate-400">
-                    Provide clear feedback so the hotel owner can reapply.
-                  </p>
-                </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Reason for Rejection *
-                </label>
-                <textarea
-                  rows={3}
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl p-3 text-xs text-[#212529] focus:outline-none focus:border-rose-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsRejectOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    rejectingHotelId &&
-                    handleReviewAction(rejectingHotelId, 'reject', rejectionReason)
-                  }
-                  disabled={actionLoading}
-                  className="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs shadow-lg shadow-rose-500/20"
-                >
-                  Confirm Rejection
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
-    </div>
-  );
-};
+
+      {/* PROPERTY VERIFICATION DOSSIER DRAWER / MODAL */}
+      {inspectingHotel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0 -z-10"
+            onClick={() => setInspectingHotel(null)}
+          />
+
+          <div className="bg-white border border-[#E8E2D8] rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-hidden flex flex-col text-[#212529] animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+            {/* Header Hero Banner */}
+            <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden shrink-0">
+              <img
+                src={
+                  inspectingHotel.image_url ||
+                  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+                }
+                alt={inspectingHotel.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
+
+              <button
+                onClick={() => setInspectingHotel(null)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all shadow-md"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="absolute top-3 left-3 flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-black bg-[#D49B41] text-white shadow-md uppercase tracking-wider">
+                  {inspectingHotel.category || 'Boutique Stay'}
+                </span>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                    inspectingHotel.status === 'approved'
+                      ? 'bg-emerald-600 text-white'
+                      : inspectingHotel.status === 'pending'
+                      ? 'bg-[#D49B41] text-white font-black'
+                      : 'bg-rose-600 text-white'
+                  }`}
+                >
+                  {inspectingHotel.status}
+                </span>
+              </div>
+
+              <div className="absolute bottom-3 inset-x-4">
+                <h2 className="text-xl sm:text-2xl font-black text-white truncate">
+                  {inspectingHotel.name}
+                </h2>
+                <p className="text-xs text-amber-200 font-semibold truncate">
+                  {inspectingHotel.tagline || inspectingHotel.city}
+                </p>
+              </div>
+            </div>
+
+            {/* Dossier Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+              {/* Rejection Note Alert if rejected */}
+              {inspectingHotel.rejection_reason && (
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs">
+                  <span className="font-bold uppercase tracking-wider text-[10px] block text-rose-700">
+                    Rejection Reason on Record:
+                  </span>
+                  <p className="mt-0.5">{inspectingHotel.rejection_reason}</p>
+                </div>
+              )}
+
+              {/* Section 1: Legal Compliance & Tax Checklist */}
+              <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 space-y-3">
+                <div className="text-xs font-black text-[#1E3A2B] uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#1E3A2B]" />
+                  <span>Legal Compliance & Tax Verification</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-white border border-[#E8E2D8]">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                      LGU Business Permit No.
+                    </span>
+                    <span className="text-xs font-mono font-bold text-[#212529] mt-0.5 block">
+                      {inspectingHotel.business_permit_number || '⚠️ Under Submission'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white border border-[#E8E2D8]">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                      BIR Tax Identification (TIN)
+                    </span>
+                    <span className="text-xs font-mono font-bold text-[#212529] mt-0.5 block">
+                      {inspectingHotel.bir_tin || '⚠️ Under Submission'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Physical Location & GPS Coordinates */}
+              <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 space-y-3">
+                <div className="text-xs font-black text-[#1E3A2B] uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>Physical Location & GPS Pin</span>
+                </div>
+
+                <div className="text-xs text-slate-700 space-y-1">
+                  <p className="font-bold text-[#212529]">{inspectingHotel.address}</p>
+                  <p className="text-slate-500">
+                    {[inspectingHotel.city, inspectingHotel.province, inspectingHotel.country_name]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </p>
+                </div>
+
+                {inspectingHotel.latitude && inspectingHotel.longitude && (
+                  <div className="pt-2 border-t border-[#E8E2D8] flex items-center justify-between">
+                    <span className="text-[11px] font-mono text-slate-500">
+                      GPS: {Number(inspectingHotel.latitude).toFixed(5)},{' '}
+                      {Number(inspectingHotel.longitude).toFixed(5)}
+                    </span>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${inspectingHotel.latitude},${inspectingHotel.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1E3A2B] hover:underline"
+                    >
+                      <span>Open in Google Maps</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 3: Host Identity & Payout Settlement */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Host Identity */}
+                <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 space-y-2.5">
+                  <div className="text-xs font-black text-[#1E3A2B] uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Host Identity</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <p className="font-bold text-[#212529]">{inspectingHotel.owner_name}</p>
+                    <p className="text-slate-500 font-mono text-[11px]">
+                      Username: @{inspectingHotel.owner_username}
+                    </p>
+                    {inspectingHotel.owner_email && (
+                      <a
+                        href={`mailto:${inspectingHotel.owner_email}`}
+                        className="text-[#8F611A] hover:underline block text-[11px] truncate font-medium"
+                      >
+                        {inspectingHotel.owner_email}
+                      </a>
+                    )}
+                    {(inspectingHotel.owner_phone || inspectingHotel.contact_phone) && (
+                      <a
+                        href={`tel:${inspectingHotel.owner_phone || inspectingHotel.contact_phone}`}
+                        className="text-slate-600 hover:text-[#212529] block text-[11px]"
+                      >
+                        📞 {inspectingHotel.owner_phone || inspectingHotel.contact_phone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Financial Settlement Account */}
+                <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 space-y-2.5">
+                  <div className="text-xs font-black text-[#1E3A2B] uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-[#1E3A2B]" />
+                    <span>Payout Settlement</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                      {inspectingHotel.payout_method || 'Bank Transfer'}
+                    </span>
+                    <p className="font-bold text-[#212529] mt-1">
+                      Acct: {inspectingHotel.payout_account_number || '—'}
+                    </p>
+                    <p className="text-slate-500 text-[11px]">
+                      Name: {inspectingHotel.payout_account_name || inspectingHotel.owner_name}
+                    </p>
+                    <p className="text-[11px] text-slate-400 pt-1 border-t border-[#E8E2D8]">
+                      SaaS Commission Rate: 10%
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Physical Inventory */}
+              <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 flex items-center justify-around text-center">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                    Physical Rooms
+                  </span>
+                  <span className="text-xl font-black text-[#212529]">
+                    {inspectingHotel.total_rooms || 0}
+                  </span>
+                </div>
+                <div className="w-px h-8 bg-[#E8E2D8]" />
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                    Room Types
+                  </span>
+                  <span className="text-xl font-black text-[#212529]">
+                    {inspectingHotel.total_room_types || 0}
+                  </span>
+                </div>
+                <div className="w-px h-8 bg-[#E8E2D8]" />
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                    Platform Bookings
+                  </span>
+                  <span className="text-xl font-black text-[#212529]">
+                    {inspectingHotel.total_bookings || 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Dossier Footer Action Bar */}
+            <div className="p-4 sm:p-5 bg-[#FAF8F5] border-t border-[#E8E2D8] flex items-center justify-between gap-3 shrink-0">
+              <div>
+                {onNavigate && inspectingHotel.status === 'approved' && (
+                  <button
+                    onClick={() => {
+                      setInspectingHotel(null);
+                      onNavigate('inn_detail', inspectingHotel.slug);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-[#F4EFEA] text-[#212529] text-xs font-bold border border-[#E8E2D8] transition-all"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-[#D49B41]" />
+                    <span>View Live Listing</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {inspectingHotel.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setRejectingHotelId(inspectingHotel.id);
+                        setIsRejectOpen(true);
+                      }}
+                      disabled={actionLoading}
+                      className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all"
+                    >
+                      Reject Application
+                    </button>
+                    <button
+                      onClick={() => handleReviewAction(inspectingHotel.id, 'approve')}
+                      disabled={actionLoading}
+                      className="px-5 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#162B20] text-white text-xs font-black shadow-md shadow-[#1E3A2B]/20 transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>Approve & Publish Live</span>
+                    </button>
+                  </>
+                )}
+
+                {inspectingHotel.status === 'approved' && (
+                  <button
+                    onClick={() => handleReviewAction(inspectingHotel.id, 'suspend')}
+                    disabled={actionLoading}
+                    className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-50 border border-[#E8E2D8] text-slate-600 hover:text-rose-700 text-xs font-bold transition-all"
+                  >
+                    Suspend Listing
+                  </button>
+                )}
+
+                {(inspectingHotel.status === 'rejected' || inspectingHotel.status === 'suspended') && (
+                  <button
+                    onClick={() => handleReviewAction(inspectingHotel.id, 'reactivate')}
+                    disabled={actionLoading}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-4 h-4 text-[#D49B41]" />
+                    <span>Reactivate & Approve Property</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REJECTION REASON MODAL */}
+      {isRejectOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white border border-[#E8E2D8] rounded-t-3xl sm:rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 text-[#212529]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <XCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#212529]">Reject Property Application</h3>
+                <p className="text-xs text-slate-500">
+                  Provide clear feedback to help the hotel owner reapply.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Preset Selector */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Quick Presets
+              </label>
+              <div className="space-y-1.5">
+                {[
+                  'Business permit verification failed or expired.',
+                  'Missing BIR TIN or invalid tax identification document.',
+                  'Incomplete lodging photos or poor image resolution.',
+                  'Invalid or unreachable front desk contact number.',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setRejectionReason(preset)}
+                    className={`w-full text-left p-2 rounded-xl text-xs transition-colors border ${
+                      rejectionReason === preset
+                        ? 'bg-rose-50 border-rose-300 text-rose-800 font-bold'
+                        : 'bg-[#FAF8F5] border border-[#E8E2D8] text-slate-600 hover:text-[#212529] hover:bg-[#F4EFEA]'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Custom Rejection Feedback *
+              </label>
+              <textarea
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="w-full bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl p-3 text-xs text-[#212529] placeholder-slate-400 focus:outline-none focus:border-rose-500 focus:bg-white"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRejectOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-[#212529]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  rejectingHotelId &&
+                  handleReviewAction(rejectingHotelId, 'reject', rejectionReason)
+                }
+                disabled={actionLoading}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/25 active:scale-95 transition-all"
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+    );
+  };
