@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { toast } from '../stores/toastStore';
 import { Room } from '../types';
 import { X, UserPlus, Check, Building2, CreditCard, Banknote, Calendar, Users, Sparkles } from 'lucide-react';
 
@@ -13,7 +14,6 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
 
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -47,7 +47,7 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
         setFormData((prev) => ({ ...prev, room_id: String(availableOnly[0].id) }));
       }
     } catch {
-      setErrorMsg('Failed to load available rooms.');
+      toast.error('Failed to load available rooms.');
     } finally {
       setLoadingRooms(false);
     }
@@ -58,7 +58,6 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setErrorMsg('');
 
     try {
       const payload = {
@@ -66,30 +65,31 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
         room_id: Number(formData.room_id),
       };
       const res = await api.post('/bookings/walkin/', payload);
+      toast.success('Walk-in guest registered successfully!');
       onSuccess(res.data.booking.booking_reference);
       onClose();
     } catch (err: any) {
       const data = err.response?.data;
+      let msg = 'Failed to process walk-in registration.';
       if (typeof data === 'object') {
         const first = Object.values(data)[0];
-        setErrorMsg(Array.isArray(first) ? first[0] : String(first));
-      } else {
-        setErrorMsg('Failed to process walk-in registration.');
+        msg = Array.isArray(first) ? first[0] : String(first);
       }
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 my-8 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-100 my-0 sm:my-8 animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 pb-safe">
         
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#212529] via-[#1E3A2B] to-[#3B5E43] text-white p-6 relative">
+        <div className="bg-gradient-to-br from-[#212529] via-[#1E3A2B] to-[#3B5E43] text-white p-5 sm:p-6 relative shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+            className="absolute top-3.5 right-3.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
             aria-label="Close"
           >
             <X className="w-5 h-5" />
@@ -100,20 +100,14 @@ export const WalkInModal: React.FC<WalkInModalProps> = ({ isOpen, onClose, onSuc
             <span>Front Desk Direct Check-In</span>
           </div>
 
-          <h3 className="text-xl font-black text-white">Manual Walk-in Registration</h3>
+          <h3 className="text-lg sm:text-xl font-black text-white">Manual Walk-in Registration</h3>
           <p className="text-xs text-white/80 mt-0.5 font-medium">
             Immediate check-in for arriving walk-in guests • Skips marketplace approval
           </p>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-7 space-y-4">
-          {errorMsg && (
-            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold animate-shake">
-              {errorMsg}
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit} className="p-5 sm:p-7 space-y-4 overflow-y-auto flex-1">
           {/* Room Selector */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Select Available Room</label>

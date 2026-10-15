@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
+import { toast } from '../stores/toastStore';
 import { WalkInModal } from '../components/WalkInModal';
+import { LocationPickerMap } from '../components/LocationPickerMap';
 import {
   Building2,
   Clock,
@@ -26,21 +28,69 @@ import {
   Settings,
   Plus,
   Trash2,
+  Pencil,
   DollarSign,
   FileText,
   CreditCard,
   Copy,
   Building,
+  Image as ImageIcon,
+  UploadCloud,
+  Camera,
+  X,
 } from 'lucide-react';
 import { Booking, Room, GuestRequest, Hotel, StaffMember, RoomType } from '../types';
 
-export const StaffDashboard: React.FC = () => {
+const COMMON_ROOM_AMENITIES = [
+  'King Bed',
+  'Queen Bed',
+  'Air Conditioning',
+  'En-suite Hot Shower',
+  'High-Speed Wi-Fi',
+  'Private Balcony',
+  'Scenic View',
+  'Smart TV / Netflix',
+  'Breakfast Included',
+];
+
+export type StaffSubTab =
+  | 'pending'
+  | 'rooms'
+  | 'checkin'
+  | 'requests'
+  | 'reports'
+  | 'staff_manage'
+  | 'inventory_manage'
+  | 'hotel_settings';
+
+interface StaffDashboardProps {
+  initialSubTab?: StaffSubTab;
+  /** Changes on every navbar deep-link so the same shortcut can be re-applied */
+  deepLinkNonce?: number;
+  isWalkInOpenExternal?: boolean;
+  onCloseWalkInExternal?: () => void;
+}
+
+export const StaffDashboard: React.FC<StaffDashboardProps> = ({
+  initialSubTab,
+  deepLinkNonce,
+  isWalkInOpenExternal,
+  onCloseWalkInExternal,
+}) => {
   const { user } = useAuthStore();
   const isHotelAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
 
-  const [activeTab, setActiveTab] = useState<
-    'pending' | 'rooms' | 'checkin' | 'requests' | 'reports' | 'staff_manage' | 'inventory_manage' | 'hotel_settings'
-  >('pending');
+  const [activeTab, setActiveTab] = useState<StaffSubTab>(initialSubTab || 'pending');
+
+  // Apply navbar deep-links (profile shortcuts) during render instead of in an effect,
+  // so repeated clicks on the same shortcut (new nonce) re-select the target sub-tab.
+  const [appliedDeepLink, setAppliedDeepLink] = useState(deepLinkNonce);
+  if (deepLinkNonce !== appliedDeepLink) {
+    setAppliedDeepLink(deepLinkNonce);
+    if (initialSubTab) {
+      setActiveTab(initialSubTab);
+    }
+  }
 
   const [pendingRequests, setPendingRequests] = useState<Booking[]>([]);
   const [roomBoard, setRoomBoard] = useState<{ rooms: Room[]; summary: any } | null>(null);
@@ -68,9 +118,61 @@ export const StaffDashboard: React.FC = () => {
     name: '',
     base_rate: '',
     capacity: 2,
-    amenities: 'Wi-Fi, Air Conditioning, Hot Shower',
+    amenities: 'King Bed, Air Conditioning, En-suite Hot Shower, High-Speed Wi-Fi',
     description: '',
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [roomImageFile, setRoomImageFile] = useState<File | null>(null);
+  const [roomImagePreview, setRoomImagePreview] = useState<string>('');
+
+  const handleRoomImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (PNG, JPG, JPEG, WEBP).', 'Invalid File Type');
+      return;
+    }
+
+    if (file.size > 12 * 1024 * 1024) {
+      toast.error('Image size must be less than 12MB.', 'File Too Large');
+      return;
+    }
+
+    setRoomImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRoomImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveRoomImage = () => {
+    setRoomImageFile(null);
+    setRoomImagePreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const toggleRoomAmenity = (amenity: string) => {
+    const current = newRoomTypeData.amenities
+      .split(',')
+      .map((a) => a.trim())
+      .filter(Boolean);
+    if (current.includes(amenity)) {
+      setNewRoomTypeData({
+        ...newRoomTypeData,
+        amenities: current.filter((a) => a !== amenity).join(', '),
+      });
+    } else {
+      setNewRoomTypeData({
+        ...newRoomTypeData,
+        amenities: [...current, amenity].join(', '),
+      });
+    }
+  };
 
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [newRoomData, setNewRoomData] = useState({
@@ -79,8 +181,42 @@ export const StaffDashboard: React.FC = () => {
     room_type_id: '',
   });
 
+  // Edit Room Category State
+  const [isEditRoomTypeOpen, setIsEditRoomTypeOpen] = useState(false);
+  const [editingRoomType, setEditingRoomType] = useState<RoomType | null>(null);
+  const [editRoomTypeData, setEditRoomTypeData] = useState({
+    name: '',
+    base_rate: '',
+    capacity: 2,
+    amenities: '',
+    description: '',
+  });
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const [editRoomImageFile, setEditRoomImageFile] = useState<File | null>(null);
+  const [editRoomImagePreview, setEditRoomImagePreview] = useState<string>('');
+
+  // Edit Physical Room State
+  const [isEditRoomOpen, setIsEditRoomOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [editRoomData, setEditRoomData] = useState({
+    room_number: '',
+    floor: '1st Floor',
+    room_type_id: '',
+    status: 'available',
+  });
+
   const [profileSaving, setProfileSaving] = useState(false);
-  const [profileForm, setProfileForm] = useState({
+  const [profileForm, setProfileForm] = useState<{
+    tagline: string;
+    description: string;
+    contact_phone: string;
+    contact_email: string;
+    payout_method: string;
+    payout_account_name: string;
+    payout_account_number: string;
+    latitude: number | null;
+    longitude: number | null;
+  }>({
     tagline: '',
     description: '',
     contact_phone: '',
@@ -88,6 +224,8 @@ export const StaffDashboard: React.FC = () => {
     payout_method: 'GCash',
     payout_account_name: '',
     payout_account_number: '',
+    latitude: null,
+    longitude: null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -156,6 +294,8 @@ export const StaffDashboard: React.FC = () => {
             payout_method: profileRes.value.data.payout_method || 'GCash',
             payout_account_name: profileRes.value.data.payout_account_name || '',
             payout_account_number: profileRes.value.data.payout_account_number || '',
+            latitude: profileRes.value.data.latitude !== null && profileRes.value.data.latitude !== undefined ? Number(profileRes.value.data.latitude) : null,
+            longitude: profileRes.value.data.longitude !== null && profileRes.value.data.longitude !== undefined ? Number(profileRes.value.data.longitude) : null,
           });
         }
         if (staffRes.status === 'fulfilled') {
@@ -200,20 +340,57 @@ export const StaffDashboard: React.FC = () => {
   const handleAddRoomType = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionError('');
+
+    if (!newRoomTypeData.name.trim()) {
+      toast.error('Please enter a room category name.', 'Category Name Required');
+      return;
+    }
+
+    if (!newRoomTypeData.base_rate || Number(newRoomTypeData.base_rate) <= 0) {
+      toast.error('Please enter a valid nightly rate in Philippine Peso (₱).', 'Nightly Rate Required');
+      return;
+    }
+
+    if (!roomImageFile && !roomImagePreview) {
+      toast.error('Please attach a photo of this room from your device.', 'Room Photo Required');
+      return;
+    }
+
     try {
-      await api.post('/hotel-manage/room-types/', newRoomTypeData);
+      const formData = new FormData();
+      formData.append('name', newRoomTypeData.name.trim());
+      formData.append('base_rate', newRoomTypeData.base_rate);
+      formData.append('capacity', String(newRoomTypeData.capacity));
+      formData.append('description', newRoomTypeData.description.trim());
+      formData.append('amenities', newRoomTypeData.amenities);
+
+      if (roomImageFile) {
+        formData.append('photo', roomImageFile);
+      } else if (roomImagePreview) {
+        formData.append('photos', roomImagePreview);
+      }
+
+      await api.post('/hotel-manage/room-types/', formData);
+      toast.success(`Room category "${newRoomTypeData.name}" created with your attached photo!`, 'Category Added');
       setActionSuccess(`Room category "${newRoomTypeData.name}" created!`);
       setIsAddRoomTypeOpen(false);
       setNewRoomTypeData({
         name: '',
         base_rate: '',
         capacity: 2,
-        amenities: 'Wi-Fi, Air Conditioning, Hot Shower',
+        amenities: 'King Bed, Air Conditioning, En-suite Hot Shower, High-Speed Wi-Fi',
         description: '',
       });
+      setRoomImageFile(null);
+      setRoomImagePreview('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       fetchDashboardData();
     } catch (err: any) {
-      setActionError(err.response?.data?.error || 'Failed to create room category.');
+      const errorMsg = err.response?.data?.error || 'Failed to create room category.';
+      toast.error(errorMsg, 'Creation Failed');
+      setActionError(errorMsg);
     }
   };
 
@@ -228,6 +405,161 @@ export const StaffDashboard: React.FC = () => {
       fetchDashboardData();
     } catch (err: any) {
       setActionError(err.response?.data?.error || 'Failed to add physical room.');
+    }
+  };
+
+  const handleOpenEditRoomType = (rt: RoomType) => {
+    setEditingRoomType(rt);
+    setEditRoomTypeData({
+      name: rt.name,
+      base_rate: String(rt.base_rate),
+      capacity: rt.capacity || 2,
+      amenities: Array.isArray(rt.amenities) ? rt.amenities.join(', ') : '',
+      description: rt.description || '',
+    });
+    setEditRoomImageFile(null);
+    setEditRoomImagePreview(rt.photos && rt.photos.length > 0 ? rt.photos[0] : '');
+    setIsEditRoomTypeOpen(true);
+  };
+
+  const handleEditRoomImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (PNG, JPG, JPEG, WEBP).', 'Invalid File Type');
+      return;
+    }
+
+    if (file.size > 12 * 1024 * 1024) {
+      toast.error('Image size must be less than 12MB.', 'File Too Large');
+      return;
+    }
+
+    setEditRoomImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setEditRoomImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const toggleEditRoomAmenity = (amenity: string) => {
+    const current = editRoomTypeData.amenities
+      .split(',')
+      .map((a) => a.trim())
+      .filter(Boolean);
+    if (current.includes(amenity)) {
+      setEditRoomTypeData({
+        ...editRoomTypeData,
+        amenities: current.filter((a) => a !== amenity).join(', '),
+      });
+    } else {
+      setEditRoomTypeData({
+        ...editRoomTypeData,
+        amenities: [...current, amenity].join(', '),
+      });
+    }
+  };
+
+  const handleUpdateRoomType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRoomType) return;
+    if (!editRoomTypeData.name.trim()) {
+      toast.error('Please enter a room category name.', 'Name Required');
+      return;
+    }
+    if (!editRoomTypeData.base_rate || Number(editRoomTypeData.base_rate) <= 0) {
+      toast.error('Please enter a valid nightly rate in Philippine Peso (₱).', 'Nightly Rate Required');
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('name', editRoomTypeData.name.trim());
+      formData.append('base_rate', editRoomTypeData.base_rate);
+      formData.append('capacity', String(editRoomTypeData.capacity));
+      formData.append('description', editRoomTypeData.description.trim());
+      formData.append('amenities', editRoomTypeData.amenities);
+
+      if (editRoomImageFile) {
+        formData.append('photo', editRoomImageFile);
+      }
+
+      await api.patch(`/hotel-manage/room-types/${editingRoomType.id}/`, formData);
+      toast.success(`Room category "${editRoomTypeData.name}" updated successfully!`, 'Category Updated');
+      setIsEditRoomTypeOpen(false);
+      setEditingRoomType(null);
+      fetchDashboardData();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to update room category.';
+      toast.error(errorMsg, 'Update Failed');
+    }
+  };
+
+  const handleDeleteRoomType = async (rt: RoomType) => {
+    if (!window.confirm(`Are you sure you want to delete room category "${rt.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/hotel-manage/room-types/${rt.id}/`);
+      toast.success(`Room category "${rt.name}" deleted.`, 'Category Deleted');
+      if (editingRoomType?.id === rt.id) {
+        setIsEditRoomTypeOpen(false);
+        setEditingRoomType(null);
+      }
+      fetchDashboardData();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to delete room category.';
+      toast.error(errorMsg, 'Deletion Failed');
+    }
+  };
+
+  const handleOpenEditRoom = (rm: Room) => {
+    setEditingRoom(rm);
+    setEditRoomData({
+      room_number: rm.room_number,
+      floor: rm.floor || '1st Floor',
+      room_type_id: String(rm.room_type),
+      status: rm.status || 'available',
+    });
+    setIsEditRoomOpen(true);
+  };
+
+  const handleUpdateRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRoom) return;
+    if (!editRoomData.room_number.trim()) {
+      toast.error('Please enter a room number.', 'Room Number Required');
+      return;
+    }
+    try {
+      await api.patch(`/hotel-manage/rooms/${editingRoom.id}/`, editRoomData);
+      toast.success(`Room "${editRoomData.room_number}" updated successfully!`, 'Room Updated');
+      setIsEditRoomOpen(false);
+      setEditingRoom(null);
+      fetchDashboardData();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to update physical room.';
+      toast.error(errorMsg, 'Update Failed');
+    }
+  };
+
+  const handleDeleteRoom = async (rm: Room) => {
+    if (!window.confirm(`Are you sure you want to delete Room "${rm.room_number}"?`)) {
+      return;
+    }
+    try {
+      await api.delete(`/hotel-manage/rooms/${rm.id}/`);
+      toast.success(`Room "${rm.room_number}" deleted from inventory.`, 'Room Deleted');
+      if (editingRoom?.id === rm.id) {
+        setIsEditRoomOpen(false);
+        setEditingRoom(null);
+      }
+      fetchDashboardData();
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to delete room.';
+      toast.error(errorMsg, 'Deletion Failed');
     }
   };
 
@@ -1116,47 +1448,90 @@ export const StaffDashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {roomTypes.map((rt) => (
                 <div
                   key={rt.id}
-                  className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-2xs space-y-3"
+                  className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-2xs space-y-3 overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm font-black text-[#212529]">{rt.name}</h3>
-                      <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{rt.description}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-sm font-black text-[#1E3A2B]">₱{Number(rt.base_rate).toLocaleString()}</span>
-                      <span className="text-[10px] text-slate-400 block">/ night</span>
-                    </div>
-                  </div>
+                  <div>
+                    {rt.photos && rt.photos.length > 0 && rt.photos[0] && (
+                      <div className="h-40 w-full -mx-5 -mt-5 mb-3.5 overflow-hidden relative bg-slate-100 group">
+                        <img
+                          src={rt.photos[0]}
+                          alt={rt.name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80';
+                          }}
+                        />
+                        <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
+                          {rt.rooms?.length || 0} Physical Rooms
+                        </div>
+                      </div>
+                    )}
 
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Up to {rt.capacity} Guests</span>
-                    <span>•</span>
-                    <span>{rt.rooms?.length || 0} Physical Rooms</span>
-                  </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-black text-[#212529]">{rt.name}</h3>
+                        <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{rt.description}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-sm font-black text-[#1E3A2B]">₱{Number(rt.base_rate).toLocaleString()}</span>
+                        <span className="text-[10px] text-slate-400 block">/ night</span>
+                      </div>
+                    </div>
 
-                  {rt.amenities && rt.amenities.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {rt.amenities.slice(0, 3).map((amenity, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[10px] font-bold text-slate-700 border border-slate-200/60"
-                        >
-                          {amenity}
-                        </span>
-                      ))}
-                      {rt.amenities.length > 3 && (
-                        <span className="text-[10px] text-slate-400 self-center">
-                          +{rt.amenities.length - 3} more
-                        </span>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-2.5">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Up to {rt.capacity} Guests</span>
+                      {(!rt.photos || rt.photos.length === 0) && (
+                        <>
+                          <span>•</span>
+                          <span>{rt.rooms?.length || 0} Physical Rooms</span>
+                        </>
                       )}
                     </div>
-                  )}
+
+                    {rt.amenities && rt.amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-2">
+                        {rt.amenities.slice(0, 3).map((amenity, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[10px] font-bold text-slate-700 border border-slate-200/60"
+                          >
+                            {amenity}
+                          </span>
+                        ))}
+                        {rt.amenities.length > 3 && (
+                          <span className="text-[10px] text-slate-400 self-center">
+                            +{rt.amenities.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditRoomType(rt)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF8F5] hover:bg-[#1E3A2B] text-slate-700 hover:text-white border border-[#E8E2D8] hover:border-[#1E3A2B] text-[11px] font-bold transition-all shadow-2xs"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-[#D49B41]" />
+                        <span>Edit Category</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRoomType(rt)}
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                        title="Delete Room Category"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1164,22 +1539,30 @@ export const StaffDashboard: React.FC = () => {
 
           {/* Physical Rooms Grid */}
           <div className="space-y-4">
-            <h3 className="text-sm font-black text-[#212529]">Physical Rooms On Property</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-[#212529]">Physical Rooms On Property</h3>
+              <span className="text-[11px] text-slate-400">Click any room to edit details or change status</span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {(roomBoard?.rooms || []).map((rm) => (
                 <div
                   key={rm.id}
-                  className={`p-3 rounded-2xl border text-center space-y-1 ${
+                  onClick={() => handleOpenEditRoom(rm)}
+                  className={`group relative p-3 rounded-2xl border text-center space-y-1 cursor-pointer transition-all hover:scale-105 hover:shadow-md ${
                     rm.status === 'available'
-                      ? 'bg-white border-[#3B5E43]/30 text-[#1E3A2B]'
+                      ? 'bg-white border-[#3B5E43]/30 text-[#1E3A2B] hover:border-[#3B5E43]'
                       : rm.status === 'occupied'
-                      ? 'bg-[#FAF8F5] border-[#D49B41]/40 text-[#212529]'
+                      ? 'bg-[#FAF8F5] border-[#D49B41]/40 text-[#212529] hover:border-[#D49B41]'
                       : rm.status === 'cleaning'
-                      ? 'bg-[#FAF8F5] border-slate-200 text-[#3B5E43]'
+                      ? 'bg-[#FAF8F5] border-slate-200 text-[#3B5E43] hover:border-[#3B5E43]'
                       : 'bg-slate-100 border-slate-200 text-slate-700'
                   }`}
+                  title="Click to edit room details or status"
                 >
-                  <div className="text-sm font-black">{rm.room_number}</div>
+                  <div className="text-sm font-black flex items-center justify-center gap-1">
+                    <span>{rm.room_number}</span>
+                    <Pencil className="w-2.5 h-2.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                   <div className="text-[10px] font-bold text-slate-500 capitalize">{rm.status}</div>
                   <div className="text-[9px] text-slate-400 truncate">{rm.room_type_name}</div>
                 </div>
@@ -1242,6 +1625,20 @@ export const StaffDashboard: React.FC = () => {
                   value={profileForm.contact_email}
                   onChange={(e) => setProfileForm({ ...profileForm, contact_email: e.target.value })}
                   className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                />
+              </div>
+
+              {/* Hotel Map Pinning Section */}
+              <div className="sm:col-span-2 pt-3 border-t border-slate-100">
+                <LocationPickerMap
+                  latitude={profileForm.latitude}
+                  longitude={profileForm.longitude}
+                  onChange={(lat, lng) =>
+                    setProfileForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))
+                  }
+                  defaultCity={hotelProfile?.city || 'Malaybalay City, Bukidnon'}
+                  label="Hotel Map Location & GPS Coordinates"
+                  height="h-72 sm:h-80"
                 />
               </div>
 
@@ -1343,8 +1740,11 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Walk-in Modal */}
       <WalkInModal
-        isOpen={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
+        isOpen={isWalkInOpen || !!isWalkInOpenExternal}
+        onClose={() => {
+          setIsWalkInOpen(false);
+          if (onCloseWalkInExternal) onCloseWalkInExternal();
+        }}
         onSuccess={(ref) => {
           setActionSuccess(`Walk-in guest registered with reference ${ref}!`);
           fetchDashboardData();
@@ -1458,91 +1858,280 @@ export const StaffDashboard: React.FC = () => {
 
       {/* Add Room Type Modal */}
       {isAddRoomTypeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center">
-                <Layers className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#12161A]/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full flex flex-col max-h-[92vh] border border-slate-200/80 animate-in zoom-in-95 duration-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-[#FAF8F5]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#1E3A2B]/10 text-[#1E3A2B] border border-[#1E3A2B]/20 flex items-center justify-center shadow-xs">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#212529]">Add Room Category</h3>
+                  <p className="text-xs text-slate-500">Configure tier pricing, amenities & guest photo showcase.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-extrabold text-[#212529]">Add Room Category</h3>
-                <p className="text-xs text-slate-400">Configure accommodation tier and pricing.</p>
-              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAddRoomTypeOpen(false)}
+                className="w-8 h-8 rounded-full bg-white hover:bg-slate-200/70 border border-slate-200/80 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <form onSubmit={handleAddRoomType} className="space-y-3.5">
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleAddRoomType} className="overflow-y-auto p-5 sm:p-6 space-y-4 flex-1">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Category Name *</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Category Name <span className="text-[#D49B41]">*</span></span>
+                  <span className="text-[11px] text-slate-400 font-normal">Shown to guests on booking</span>
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Deluxe Balcony Suite"
+                  placeholder="e.g. Deluxe Balcony Suite / Executive Chalet"
                   value={newRoomTypeData.name}
                   onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, name: e.target.value })}
-                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                  className="w-full bg-[#FAF8F5] border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B] font-medium transition-all"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Pricing & Occupancy */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Rate (₱ / night) *</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="2500"
-                    value={newRoomTypeData.base_rate}
-                    onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, base_rate: e.target.value })}
-                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
-                  />
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Rate (₱ / night) <span className="text-[#D49B41]">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs font-black text-slate-400">₱</span>
+                    <input
+                      type="number"
+                      required
+                      min={100}
+                      placeholder="2500"
+                      value={newRoomTypeData.base_rate}
+                      onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, base_rate: e.target.value })}
+                      className="w-full bg-[#FAF8F5] border border-slate-200/90 rounded-xl pl-7 pr-3 py-2.5 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B] font-bold"
+                    />
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Max Guests *</label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={newRoomTypeData.capacity}
-                    onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, capacity: parseInt(e.target.value) || 2 })}
-                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
-                  />
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Max Capacity <span className="text-[#D49B41]">*</span>
+                  </label>
+                  <div className="relative">
+                    <Users className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={20}
+                      value={newRoomTypeData.capacity}
+                      onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, capacity: parseInt(e.target.value) || 1 })}
+                      className="w-full bg-[#FAF8F5] border border-slate-200/90 rounded-xl pl-8 pr-3 py-2.5 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B] font-bold"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Amenities (comma-separated)</label>
+              {/* Room Photography from Local Device */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-[#D49B41]" />
+                    <span>Attach Room Photo from Device <span className="text-[#D49B41]">*</span></span>
+                  </label>
+                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Local Device Upload
+                  </span>
+                </div>
+
+                {/* Hidden File Input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleRoomImageChange}
+                  className="hidden"
+                />
+
+                <div className="space-y-3">
+                  {!roomImagePreview ? (
+                    /* Dropzone Button */
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="group border-2 border-dashed border-slate-300 hover:border-[#1E3A2B] bg-[#FAF8F5] hover:bg-[#F3EDE3]/60 rounded-2xl p-5 text-center cursor-pointer transition-all duration-200"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-[#1E3A2B]/10 text-[#1E3A2B] group-hover:bg-[#1E3A2B] group-hover:text-white transition-all flex items-center justify-center mx-auto mb-2 shadow-2xs">
+                        <UploadCloud className="w-6 h-6 transition-transform group-hover:-translate-y-0.5" />
+                      </div>
+                      <p className="text-xs font-black text-[#212529]">
+                        Click to attach room photo from your device
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Select a clear photo from your files or gallery (PNG, JPG, or WEBP up to 12MB)
+                      </p>
+                    </div>
+                  ) : (
+                    /* Attached File Control Bar */
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 shadow-2xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <Check className="w-4 h-4 stroke-[3]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-emerald-950 truncate">
+                            {roomImageFile?.name || 'Attached Room Image'}
+                          </p>
+                          <p className="text-[10px] text-emerald-700 font-medium">
+                            {roomImageFile ? `${(roomImageFile.size / (1024 * 1024)).toFixed(2)} MB • Ready to save` : 'Attached from device'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-[#1E3A2B] border border-slate-200 text-xs font-bold transition-all shadow-2xs active:scale-95"
+                        >
+                          Change Photo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveRoomImage}
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Remove attached photo"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live Interactive Preview Card */}
+                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-md aspect-[16/9] group">
+                    {roomImagePreview ? (
+                      <img
+                        src={roomImagePreview}
+                        alt="Room Preview"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-full bg-slate-900 flex flex-col items-center justify-center text-slate-400 cursor-pointer p-4 text-center hover:bg-slate-850 transition-colors"
+                      >
+                        <Camera className="w-8 h-8 mb-2 opacity-40 text-slate-400" />
+                        <span className="text-xs font-bold text-slate-300">No room photo attached yet</span>
+                        <span className="text-[11px] text-slate-500 mt-0.5">Click to choose a photo from your local device</span>
+                      </div>
+                    )}
+
+                    {roomImagePreview && (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex flex-col justify-end p-4">
+                          <div className="flex items-center justify-between text-white">
+                            <div>
+                              <span className="px-2 py-0.5 rounded-full bg-[#1E3A2B]/90 border border-[#D49B41]/50 text-[#E2AE55] text-[10px] font-black uppercase">
+                                Attached Device Photo
+                              </span>
+                              <h4 className="text-sm font-black mt-1 drop-shadow-md">
+                                {newRoomTypeData.name || 'Category Name'}
+                              </h4>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-black text-[#E2AE55]">
+                                ₱{Number(newRoomTypeData.base_rate || 0).toLocaleString()}
+                              </span>
+                              <span className="text-[10px] text-slate-300 block">/ night</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-300 mt-1">
+                            <Users className="w-3 h-3 text-[#D49B41]" />
+                            <span>Up to {newRoomTypeData.capacity} Guests</span>
+                          </div>
+                        </div>
+
+                        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-white flex items-center gap-1.5 border border-white/20">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Live Marketplace View</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Room Amenities Quick Select & Custom Input */}
+              <div className="pt-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Room Amenities & Highlights
+                </label>
+
+                {/* Quick Toggle Chips */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {COMMON_ROOM_AMENITIES.map((amenity) => {
+                    const isSelected = newRoomTypeData.amenities.toLowerCase().includes(amenity.toLowerCase());
+                    return (
+                      <button
+                        key={amenity}
+                        type="button"
+                        onClick={() => toggleRoomAmenity(amenity)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all border flex items-center gap-1 ${
+                          isSelected
+                            ? 'bg-[#1E3A2B] text-white border-[#1E3A2B] shadow-xs'
+                            : 'bg-[#FAF8F5] text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3 h-3 text-[#D49B41] stroke-[3]" />}
+                        <span>{amenity}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <input
                   type="text"
-                  placeholder="1 Queen Bed, Hot Shower, High-Speed Wi-Fi"
+                  placeholder="Custom amenities (e.g. Mountain Balcony, Marble Bath, Coffee Maker)"
                   value={newRoomTypeData.amenities}
                   onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, amenities: e.target.value })}
-                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                  className="w-full bg-[#FAF8F5] border border-slate-200/90 rounded-xl px-3.5 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
                 />
               </div>
 
+              {/* Short Description */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Guest-Facing Description
+                </label>
                 <textarea
                   rows={2}
-                  placeholder="Cozy room with mountain breeze and private bathroom."
+                  placeholder="Describe the ambiance, bedding comfort, natural light, and unique view guests will enjoy..."
                   value={newRoomTypeData.description}
                   onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, description: e.target.value })}
-                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                  className="w-full bg-[#FAF8F5] border border-slate-200/90 rounded-xl px-3.5 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B] resize-none"
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              {/* Pinned Modal Footer Actions */}
+              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsAddRoomTypeOpen(false)}
-                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                  className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-xs font-extrabold text-white bg-[#1E3A2B] hover:bg-[#3B5E43] rounded-xl shadow-md active:scale-95 transition-all"
+                  className="flex-1 py-2.5 text-xs font-black text-white bg-gradient-to-r from-[#1E3A2B] to-[#162C20] hover:brightness-110 rounded-xl shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
-                  Create Category
+                  <Sparkles className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>Create Room Category</span>
                 </button>
               </div>
             </form>
@@ -1619,6 +2208,319 @@ export const StaffDashboard: React.FC = () => {
                 >
                   Add Room
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Room Category Modal */}
+      {isEditRoomTypeOpen && editingRoomType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-[#FAF8F5]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#1E3A2B] text-white flex items-center justify-center shadow-xs">
+                  <Pencil className="w-5 h-5 text-[#D49B41]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-[#212529]">Edit Room Category</h3>
+                  <p className="text-xs text-slate-400">Update rates, photos, amenities, or capacity.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditRoomTypeOpen(false);
+                  setEditingRoomType(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleUpdateRoomType} className="p-6 overflow-y-auto space-y-4 flex-1">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Category Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editRoomTypeData.name}
+                  onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, name: e.target.value })}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Nightly Rate (₱) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editRoomTypeData.base_rate}
+                    onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, base_rate: e.target.value })}
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Guest Capacity</label>
+                  <select
+                    value={editRoomTypeData.capacity}
+                    onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, capacity: Number(e.target.value) })}
+                    className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 8, 10].map((num) => (
+                      <option key={num} value={num}>
+                        {num} Guest{num > 1 ? 's' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Photo Attachment Section */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">Room Photo</label>
+                  <button
+                    type="button"
+                    onClick={() => editFileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#FAF8F5] hover:bg-[#1E3A2B] text-slate-700 hover:text-white border border-[#E8E2D8] text-[11px] font-bold transition-all"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 text-[#D49B41]" />
+                    <span>Upload New Photo</span>
+                  </button>
+                </div>
+
+                <input
+                  ref={editFileInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  className="hidden"
+                  onChange={handleEditRoomImageChange}
+                />
+
+                <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-[16/9]">
+                  {editRoomImagePreview ? (
+                    <img
+                      src={editRoomImagePreview}
+                      alt="Room Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80';
+                      }}
+                    />
+                  ) : (
+                    <div
+                      onClick={() => editFileInputRef.current?.click()}
+                      className="w-full h-full flex flex-col items-center justify-center text-slate-400 cursor-pointer p-4 text-center hover:bg-slate-800 transition-colors"
+                    >
+                      <Camera className="w-8 h-8 mb-2 opacity-40" />
+                      <span className="text-xs font-bold text-slate-300">Click to attach photo from device</span>
+                    </div>
+                  )}
+
+                  {editRoomImagePreview && (
+                    <div className="absolute top-2.5 right-2.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold">
+                      {editRoomImageFile ? 'New Photo Selected' : 'Current Photo'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Amenities */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Room Amenities</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {COMMON_ROOM_AMENITIES.map((amenity) => {
+                    const isSelected = editRoomTypeData.amenities
+                      .split(',')
+                      .map((a) => a.trim().toLowerCase())
+                      .includes(amenity.toLowerCase());
+                    return (
+                      <button
+                        key={amenity}
+                        type="button"
+                        onClick={() => toggleEditRoomAmenity(amenity)}
+                        className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
+                          isSelected
+                            ? 'bg-[#1E3A2B] text-white border-[#1E3A2B]'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : '+ '}
+                        {amenity}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="text"
+                  value={editRoomTypeData.amenities}
+                  onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, amenities: e.target.value })}
+                  placeholder="Comma-separated amenities"
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  value={editRoomTypeData.description}
+                  onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, description: e.target.value })}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B] resize-none"
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRoomType(editingRoomType)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Category</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditRoomTypeOpen(false);
+                      setEditingRoomType(null);
+                    }}
+                    className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 text-xs font-black text-white bg-gradient-to-r from-[#1E3A2B] to-[#162C20] hover:brightness-110 rounded-xl shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#D49B41]" />
+                    <span>Save Changes</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Physical Room Modal */}
+      {isEditRoomOpen && editingRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#FAF8F5] text-[#212529] border border-slate-200 flex items-center justify-center">
+                  <Bed className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#212529]">Edit Physical Room</h3>
+                  <p className="text-xs text-slate-400">Update room number, floor, or category.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditRoomOpen(false);
+                  setEditingRoom(null);
+                }}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateRoom} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Room Number *</label>
+                <input
+                  type="text"
+                  required
+                  value={editRoomData.room_number}
+                  onChange={(e) => setEditRoomData({ ...editRoomData, room_number: e.target.value })}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Floor</label>
+                <input
+                  type="text"
+                  value={editRoomData.floor}
+                  onChange={(e) => setEditRoomData({ ...editRoomData, floor: e.target.value })}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Room Category *</label>
+                <select
+                  required
+                  value={editRoomData.room_type_id}
+                  onChange={(e) => setEditRoomData({ ...editRoomData, room_type_id: e.target.value })}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                >
+                  {roomTypes.map((rt) => (
+                    <option key={rt.id} value={rt.id}>
+                      {rt.name} (₱{rt.base_rate})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Status</label>
+                <select
+                  value={editRoomData.status}
+                  onChange={(e) => setEditRoomData({ ...editRoomData, status: e.target.value })}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                >
+                  <option value="available">Available</option>
+                  <option value="occupied">Occupied</option>
+                  <option value="cleaning">Cleaning</option>
+                  <option value="maintenance">Maintenance</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRoom(editingRoom)}
+                  className="inline-flex items-center gap-1 px-2.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditRoomOpen(false);
+                      setEditingRoom(null);
+                    }}
+                    className="px-3 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-extrabold text-white bg-[#1E3A2B] hover:bg-[#3B5E43] rounded-xl shadow-md active:scale-95 transition-all"
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
             </form>
           </div>
