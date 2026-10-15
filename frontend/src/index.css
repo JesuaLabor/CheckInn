@@ -35,6 +35,13 @@
     border-color: #E8E2D8;
   }
 
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
@@ -46,7 +53,6 @@
     background-color: #FAF8F5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
   }
 }
 
@@ -115,4 +121,53 @@
 .no-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
+}
+
+/* Toast Countdown Progress Bar Animation */
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Custom Leaflet Map Hotel Popup Styling */
+.leaflet-popup.custom-hotel-leaflet-popup .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 1.25rem !important;
+  background: white !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.35) !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(232, 226, 216, 0.8) !important;
+}
+.leaflet-popup.custom-hotel-leaflet-popup .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: inherit !important;
+  width: auto !important;
+}
+.leaflet-popup.custom-hotel-leaflet-popup .leaflet-popup-tip-container {
+  overflow: visible !important;
+  margin-top: -1px !important;
+}
+.leaflet-popup.custom-hotel-leaflet-popup .leaflet-popup-tip {
+  background: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+.leaflet-popup.custom-hotel-leaflet-popup .leaflet-popup-close-button {
+  display: none !important;
+}
+
+/* UI/UX Best Practice: Prevent automatic viewport zoom on iOS Safari when focusing inputs */
+@media screen and (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Safe-area utility helpers for mobile devices with home indicator bars / notches */
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.mb-safe {
+  margin-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }

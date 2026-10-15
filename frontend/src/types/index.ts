@@ -42,6 +42,13 @@ export interface Hotel {
   room_types_count?: number;
   available_rooms_count?: number;
   room_types?: RoomType[];
+  room_types_summary?: Array<{
+    id: number | string;
+    name: string;
+    base_rate: number | string;
+    capacity: number;
+    photo?: string | null;
+  }>;
   status?: HotelStatus;
   rejection_reason?: string;
   business_permit_number?: string;
