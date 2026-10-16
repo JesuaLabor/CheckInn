@@ -288,16 +288,16 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-1 gap-2.5 sm:gap-6">
           {(hotel.room_types || []).map((rt) => {
             const totalPrice = Number(rt.base_rate) * nights;
             return (
               <div
                 key={rt.id}
-                className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#3B5E43] card-hover-lift transition-all duration-300 flex flex-col md:flex-row"
+                className="bg-white rounded-2xl sm:rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#3B5E43] card-hover-lift transition-all duration-300 flex flex-col md:flex-row active:scale-[0.98]"
               >
                 {/* Room Image */}
-                <div className="w-full md:w-72 lg:w-80 h-52 sm:h-60 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
+                <div className="w-full md:w-72 lg:w-80 h-36 sm:h-52 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
                   <img
                     src={
                       rt.photos && rt.photos.length > 0
@@ -311,40 +311,41 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                         'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80';
                     }}
                   />
-                  <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[11px] font-bold flex items-center gap-1 border border-white/10">
-                    <Users className="w-3 h-3 text-[#D49B41]" />
-                    Up to {rt.capacity} guests
+                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[9px] sm:text-[11px] font-bold flex items-center gap-1 border border-white/10">
+                    <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#D49B41]" />
+                    <span><span className="hidden sm:inline">Up to </span>{rt.capacity} guests</span>
                   </div>
                 </div>
 
                 {/* Room Details & Pricing */}
-                <div className="p-5 sm:p-7 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                      <div>
-                        <h3 className="text-lg sm:text-xl font-extrabold text-[#212529]">
+                <div className="p-2.5 sm:p-5 md:p-7 flex-1 flex flex-col justify-between space-y-2 sm:space-y-4 min-w-0">
+                  <div className="min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-2">
+                      <div className="min-w-0">
+                        <h3 className="text-xs sm:text-lg md:text-xl font-extrabold text-[#212529] leading-tight line-clamp-2 sm:line-clamp-none">
                           {rt.name}
                         </h3>
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                        <p className="hidden sm:block text-xs text-slate-600 mt-1 leading-relaxed">
                           {rt.description}
                         </p>
                       </div>
 
-                      <div className="text-left sm:text-right shrink-0">
-                        <div className="text-xl sm:text-2xl font-black text-[#1E3A2B]">
+                      <div className="text-left sm:text-right shrink-0 mt-0.5 sm:mt-0">
+                        <div className="text-xs sm:text-xl md:text-2xl font-black text-[#1E3A2B] leading-none">
                           {formatPrice(Number(rt.base_rate))}
-                          <span className="text-xs font-normal text-slate-500"> / night</span>
+                          <span className="text-[9px] sm:text-xs font-normal text-slate-500"> /nt</span>
                         </div>
                         {nights > 1 && (
-                          <div className="text-[11px] font-bold text-[#D49B41]">
-                            Total: {formatPrice(totalPrice)} for {nights} nights
+                          <div className="text-[9px] sm:text-[11px] font-bold text-[#D49B41] mt-0.5">
+                            <span className="sm:hidden">{nights}n: {formatPrice(totalPrice)}</span>
+                            <span className="hidden sm:inline">Total: {formatPrice(totalPrice)} for {nights} nights</span>
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Room Amenities */}
-                    <div className="flex flex-wrap gap-1.5 mt-3.5">
+                    <div className="hidden sm:flex flex-wrap gap-1.5 mt-3.5">
                       {(rt.amenities || []).map((a, i) => (
                         <span
                           key={i}
@@ -357,19 +358,19 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                   </div>
 
                   {/* Guarantee & Reserve Action */}
-                  <div className="pt-4 border-t border-[#E8E2D8]/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-1.5 text-xs text-[#1E3A2B] font-semibold">
+                  <div className="pt-2 sm:pt-4 border-t border-[#E8E2D8]/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 mt-auto">
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#1E3A2B] font-semibold">
                       <ShieldCheck className="w-4 h-4 text-[#3B5E43] shrink-0" />
                       <span>Instant 45-min hold locks room inventory</span>
                     </div>
 
                     <button
                       onClick={() => handleReserve(rt)}
-                      className="w-full sm:w-auto px-6 py-3 min-h-[44px] rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/25 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto px-3 sm:px-6 py-2 sm:py-3 min-h-[36px] sm:min-h-[44px] rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-[10px] sm:text-xs shadow-xs sm:shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Reserve This Room</span>
-                      <ChevronRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <span>Reserve</span>
+                      <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
                     </button>
                   </div>
                 </div>
