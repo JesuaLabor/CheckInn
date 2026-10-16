@@ -33,7 +33,6 @@ import {
   HelpCircle,
   UploadCloud,
   Trash2,
-  Link2,
 } from 'lucide-react';
 
 interface PartnerRegisterProps {
@@ -162,7 +161,6 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
   const coverFileInputRef = useRef<HTMLInputElement | null>(null);
   const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
 
   const processCoverPhotoFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -789,14 +787,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                       <ImageIcon className="w-4 h-4 text-[#D49B41]" />
                       <span>Property Showcase Cover Photo</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowUrlInput(!showUrlInput)}
-                      className="text-[11px] text-[#D49B41] hover:text-[#E2AE55] font-semibold flex items-center gap-1 transition-colors"
-                    >
-                      <Link2 className="w-3.5 h-3.5" />
-                      <span>{showUrlInput ? 'Switch to File Upload' : 'Or paste image URL'}</span>
-                    </button>
+                    <span className="text-[11px] text-slate-400 font-medium">PNG, JPG, WEBP (up to 15MB)</span>
                   </div>
 
                   <div className="space-y-3">
@@ -809,84 +800,65 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                       onChange={handleCoverFileChange}
                     />
 
-                    {!showUrlInput ? (
-                      !coverPhotoFile ? (
-                        /* Drag & Drop Upload Zone */
-                        <div
-                          onClick={() => coverFileInputRef.current?.click()}
-                          onDragOver={handleCoverDragOver}
-                          onDragLeave={handleCoverDragLeave}
-                          onDrop={handleCoverDrop}
-                          className={`group border-2 border-dashed rounded-2xl p-5 sm:p-6 text-center cursor-pointer transition-all duration-200 ${
-                            isDragging
-                              ? 'border-[#D49B41] bg-[#1E3A2B]/40 ring-2 ring-[#D49B41]/30'
-                              : 'border-white/15 hover:border-[#D49B41]/70 bg-[#111418] hover:bg-[#15191E]'
-                          }`}
-                        >
-                          <div className="w-12 h-12 rounded-2xl bg-[#1E3A2B]/40 border border-[#D49B41]/30 text-[#E2AE55] group-hover:bg-[#1E3A2B] group-hover:scale-105 transition-all flex items-center justify-center mx-auto mb-2.5 shadow-md">
-                            <UploadCloud className="w-6 h-6 transition-transform group-hover:-translate-y-0.5" />
-                          </div>
-                          <p className="text-sm font-bold text-white group-hover:text-[#E2AE55] transition-colors">
-                            Click to attach property photo or drag & drop
-                          </p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            Choose a high-resolution photo from your phone or computer (PNG, JPG, or WEBP up to 15MB)
-                          </p>
+                    {!coverPhotoFile ? (
+                      /* Drag & Drop Upload Zone */
+                      <div
+                        onClick={() => coverFileInputRef.current?.click()}
+                        onDragOver={handleCoverDragOver}
+                        onDragLeave={handleCoverDragLeave}
+                        onDrop={handleCoverDrop}
+                        className={`group border-2 border-dashed rounded-2xl p-5 sm:p-6 text-center cursor-pointer transition-all duration-200 ${
+                          isDragging
+                            ? 'border-[#D49B41] bg-[#1E3A2B]/40 ring-2 ring-[#D49B41]/30'
+                            : 'border-white/15 hover:border-[#D49B41]/70 bg-[#111418] hover:bg-[#15191E]'
+                        }`}
+                      >
+                        <div className="w-12 h-12 rounded-2xl bg-[#1E3A2B]/40 border border-[#D49B41]/30 text-[#E2AE55] group-hover:bg-[#1E3A2B] group-hover:scale-105 transition-all flex items-center justify-center mx-auto mb-2.5 shadow-md">
+                          <UploadCloud className="w-6 h-6 transition-transform group-hover:-translate-y-0.5" />
                         </div>
-                      ) : (
-                        /* Attached File Control Bar */
-                        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#1E3A2B]/50 border border-[#D49B41]/40 shadow-md">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-xl bg-[#1E3A2B] border border-[#D49B41]/50 text-[#E2AE55] flex items-center justify-center shrink-0 shadow-inner">
-                              <Check className="w-4 h-4 stroke-[3]" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-white truncate">
-                                {coverPhotoFile.name}
-                              </p>
-                              <p className="text-[11px] text-[#E2AE55] font-medium flex items-center gap-1.5 mt-0.5">
-                                <span>{(coverPhotoFile.size / (1024 * 1024)).toFixed(2)} MB</span>
-                                <span>•</span>
-                                <span className="text-emerald-400">Attached from your device</span>
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => coverFileInputRef.current?.click()}
-                              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold transition-all active:scale-95"
-                            >
-                              Change Photo
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleRemoveCoverPhoto}
-                              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                              title="Remove attached photo"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    ) : (
-                      /* URL Input Fallback */
-                      <div className="space-y-1.5">
-                        <input
-                          type="url"
-                          placeholder="https://images.unsplash.com/photo-..."
-                          value={formData.image_url}
-                          onChange={(e) => {
-                            setCoverPhotoFile(null);
-                            setFormData({ ...formData, image_url: e.target.value });
-                          }}
-                          className="w-full bg-[#111418] border border-white/10 hover:border-white/20 focus:border-[#D49B41] focus:ring-2 focus:ring-[#D49B41]/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 transition-all outline-none font-mono text-xs"
-                        />
-                        <p className="text-[11px] text-slate-400">
-                          Paste a direct web image URL, or click "Switch to File Upload" above to attach a local photo.
+                        <p className="text-sm font-bold text-white group-hover:text-[#E2AE55] transition-colors">
+                          Click to attach property photo or drag & drop
                         </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Choose a high-resolution photo from your phone or computer (PNG, JPG, or WEBP up to 15MB)
+                        </p>
+                      </div>
+                    ) : (
+                      /* Attached File Control Bar */
+                      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#1E3A2B]/50 border border-[#D49B41]/40 shadow-md">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-[#1E3A2B] border border-[#D49B41]/50 text-[#E2AE55] flex items-center justify-center shrink-0 shadow-inner">
+                            <Check className="w-4 h-4 stroke-[3]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-white truncate">
+                              {coverPhotoFile.name}
+                            </p>
+                            <p className="text-[11px] text-[#E2AE55] font-medium flex items-center gap-1.5 mt-0.5">
+                              <span>{(coverPhotoFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                              <span>•</span>
+                              <span className="text-emerald-400">Attached from your device</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => coverFileInputRef.current?.click()}
+                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold transition-all active:scale-95"
+                          >
+                            Change Photo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveCoverPhoto}
+                            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                            title="Remove attached photo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     )}
 
