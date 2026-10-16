@@ -19,6 +19,8 @@ import {
   ChevronRight,
   Wifi,
   Bed,
+  Wind,
+  Coffee,
 } from 'lucide-react';
 
 interface InnDetailProps {
@@ -38,6 +40,23 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
   const [checkIn, setCheckIn] = useState(today);
   const [checkOut, setCheckOut] = useState(tomorrow);
   const [guests, setGuests] = useState(2);
+
+  const getAmenityIcon = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('wi-fi') || lower.includes('wifi') || lower.includes('internet')) {
+      return <Wifi className="w-2.5 h-2.5 text-[#3B5E43]" />;
+    }
+    if (lower.includes('air') || lower.includes('ac') || lower.includes('condition')) {
+      return <Wind className="w-2.5 h-2.5 text-[#3B5E43]" />;
+    }
+    if (lower.includes('coffee') || lower.includes('breakfast')) {
+      return <Coffee className="w-2.5 h-2.5 text-[#D49B41]" />;
+    }
+    if (lower.includes('bed') || lower.includes('kama')) {
+      return <Bed className="w-2.5 h-2.5 text-[#D49B41]" />;
+    }
+    return <Sparkles className="w-2.5 h-2.5 text-[#3B5E43]" />;
+  };
 
   const { openBookingModal } = useBookingDraftStore();
   const { formatPrice } = useCurrencyStore();
@@ -344,14 +363,35 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                       </div>
                     </div>
 
-                    {/* Room Amenities */}
+                    {/* Mobile Compact Amenities Preview */}
+                    {rt.amenities && rt.amenities.length > 0 && (
+                      <div className="sm:hidden flex flex-wrap gap-1 mt-1.5 mb-0.5">
+                        {rt.amenities.slice(0, 2).map((a, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-slate-700 border border-[#E8E2D8] max-w-[85px] truncate"
+                          >
+                            {getAmenityIcon(a)}
+                            <span className="truncate">{a}</span>
+                          </span>
+                        ))}
+                        {rt.amenities.length > 2 && (
+                          <span className="text-[9px] font-bold text-slate-400 self-center px-0.5">
+                            +{rt.amenities.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Desktop Room Amenities (Full List) */}
                     <div className="hidden sm:flex flex-wrap gap-1.5 mt-3.5">
                       {(rt.amenities || []).map((a, i) => (
                         <span
                           key={i}
-                          className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#FAF8F5] text-[#212529] border border-[#E8E2D8]"
+                          className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#FAF8F5] text-[#212529] border border-[#E8E2D8]"
                         >
-                          {a}
+                          {getAmenityIcon(a)}
+                          <span>{a}</span>
                         </span>
                       ))}
                     </div>
