@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toastStore';
@@ -31,6 +31,9 @@ import {
   Building,
   Sprout,
   HelpCircle,
+  UploadCloud,
+  Trash2,
+  Link2,
 } from 'lucide-react';
 
 interface PartnerRegisterProps {
@@ -154,6 +157,66 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
     password: '',
     confirm_password: '',
   });
+
+  // Cover Photo Attachment State
+  const coverFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [coverPhotoFile, setCoverPhotoFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+
+  const processCoverPhotoFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (PNG, JPG, JPEG, WEBP, AVIF).', 'Invalid File Type');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('Image size must be less than 15MB.', 'File Too Large');
+      return;
+    }
+    setCoverPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFormData((prev) => ({ ...prev, image_url: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processCoverPhotoFile(file);
+    }
+  };
+
+  const handleCoverDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleCoverDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleCoverDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processCoverPhotoFile(file);
+    }
+  };
+
+  const handleRemoveCoverPhoto = () => {
+    setCoverPhotoFile(null);
+    setFormData((prev) => ({ ...prev, image_url: PRESET_PHOTOS[0].url }));
+    if (coverFileInputRef.current) {
+      coverFileInputRef.current.value = '';
+    }
+  };
 
   const toggleAmenity = (amenity: string) => {
     if (formData.amenities.includes(amenity)) {
@@ -719,24 +782,113 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                   </div>
                 </div>
 
-                {/* Cover Photo with Live Preview & Presets */}
+                {/* Cover Photo with Local Attachment, Drag-and-Drop, Presets & Live Preview */}
                 <div className="pt-2">
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
                       <ImageIcon className="w-4 h-4 text-[#D49B41]" />
                       <span>Property Showcase Cover Photo</span>
                     </label>
-                    <span className="text-[11px] text-slate-400">High-resolution banner</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowUrlInput(!showUrlInput)}
+                      className="text-[11px] text-[#D49B41] hover:text-[#E2AE55] font-semibold flex items-center gap-1 transition-colors"
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      <span>{showUrlInput ? 'Switch to File Upload' : 'Or paste image URL'}</span>
+                    </button>
                   </div>
 
                   <div className="space-y-3">
+                    {/* Hidden file input */}
                     <input
-                      type="url"
-                      placeholder="https://images.unsplash.com/photo-..."
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      className="w-full bg-[#111418] border border-white/10 hover:border-white/20 focus:border-[#D49B41] focus:ring-2 focus:ring-[#D49B41]/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 transition-all outline-none font-mono text-xs"
+                      ref={coverFileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
+                      className="hidden"
+                      onChange={handleCoverFileChange}
                     />
+
+                    {!showUrlInput ? (
+                      !coverPhotoFile ? (
+                        /* Drag & Drop Upload Zone */
+                        <div
+                          onClick={() => coverFileInputRef.current?.click()}
+                          onDragOver={handleCoverDragOver}
+                          onDragLeave={handleCoverDragLeave}
+                          onDrop={handleCoverDrop}
+                          className={`group border-2 border-dashed rounded-2xl p-5 sm:p-6 text-center cursor-pointer transition-all duration-200 ${
+                            isDragging
+                              ? 'border-[#D49B41] bg-[#1E3A2B]/40 ring-2 ring-[#D49B41]/30'
+                              : 'border-white/15 hover:border-[#D49B41]/70 bg-[#111418] hover:bg-[#15191E]'
+                          }`}
+                        >
+                          <div className="w-12 h-12 rounded-2xl bg-[#1E3A2B]/40 border border-[#D49B41]/30 text-[#E2AE55] group-hover:bg-[#1E3A2B] group-hover:scale-105 transition-all flex items-center justify-center mx-auto mb-2.5 shadow-md">
+                            <UploadCloud className="w-6 h-6 transition-transform group-hover:-translate-y-0.5" />
+                          </div>
+                          <p className="text-sm font-bold text-white group-hover:text-[#E2AE55] transition-colors">
+                            Click to attach property photo or drag & drop
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1">
+                            Choose a high-resolution photo from your phone or computer (PNG, JPG, or WEBP up to 15MB)
+                          </p>
+                        </div>
+                      ) : (
+                        /* Attached File Control Bar */
+                        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#1E3A2B]/50 border border-[#D49B41]/40 shadow-md">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-[#1E3A2B] border border-[#D49B41]/50 text-[#E2AE55] flex items-center justify-center shrink-0 shadow-inner">
+                              <Check className="w-4 h-4 stroke-[3]" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-white truncate">
+                                {coverPhotoFile.name}
+                              </p>
+                              <p className="text-[11px] text-[#E2AE55] font-medium flex items-center gap-1.5 mt-0.5">
+                                <span>{(coverPhotoFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                                <span>•</span>
+                                <span className="text-emerald-400">Attached from your device</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => coverFileInputRef.current?.click()}
+                              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 text-xs font-semibold transition-all active:scale-95"
+                            >
+                              Change Photo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveCoverPhoto}
+                              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                              title="Remove attached photo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      /* URL Input Fallback */
+                      <div className="space-y-1.5">
+                        <input
+                          type="url"
+                          placeholder="https://images.unsplash.com/photo-..."
+                          value={formData.image_url}
+                          onChange={(e) => {
+                            setCoverPhotoFile(null);
+                            setFormData({ ...formData, image_url: e.target.value });
+                          }}
+                          className="w-full bg-[#111418] border border-white/10 hover:border-white/20 focus:border-[#D49B41] focus:ring-2 focus:ring-[#D49B41]/20 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 transition-all outline-none font-mono text-xs"
+                        />
+                        <p className="text-[11px] text-slate-400">
+                          Paste a direct web image URL, or click "Switch to File Upload" above to attach a local photo.
+                        </p>
+                      </div>
+                    )}
 
                     {/* Quick Photo Presets */}
                     <div className="flex flex-wrap items-center gap-2">
@@ -744,20 +896,26 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                         <Sparkles className="w-3 h-3 text-[#D49B41]" />
                         Presets:
                       </span>
-                      {PRESET_PHOTOS.map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => setFormData({ ...formData, image_url: preset.url })}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                            formData.image_url === preset.url
-                              ? 'bg-[#1E3A2B] text-[#E2AE55] border-[#D49B41]/60'
-                              : 'bg-white/5 text-slate-300 border-white/10 hover:border-white/20 hover:bg-white/10'
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
+                      {PRESET_PHOTOS.map((preset) => {
+                        const isPresetActive = !coverPhotoFile && formData.image_url === preset.url;
+                        return (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => {
+                              setCoverPhotoFile(null);
+                              setFormData({ ...formData, image_url: preset.url });
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                              isPresetActive
+                                ? 'bg-[#1E3A2B] text-[#E2AE55] border-[#D49B41]/60'
+                                : 'bg-white/5 text-slate-300 border-white/10 hover:border-white/20 hover:bg-white/10'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     {/* Live Marketplace Preview Card */}
@@ -780,10 +938,17 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                           <span className="px-2.5 py-0.5 rounded-full bg-[#1E3A2B]/90 border border-[#D49B41]/40 text-[#E2AE55] text-[11px] font-bold">
                             {selectedCategoryObj.name}
                           </span>
-                          <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-white text-[11px] font-semibold flex items-center gap-1 backdrop-blur-md">
-                            <Star className="w-3 h-3 fill-[#D49B41] text-[#D49B41]" />
-                            <span>5.0 (New Partner)</span>
-                          </span>
+                          {coverPhotoFile ? (
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-semibold flex items-center gap-1 backdrop-blur-md">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              <span>Attached Photo</span>
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-white text-[11px] font-semibold flex items-center gap-1 backdrop-blur-md">
+                              <Star className="w-3 h-3 fill-[#D49B41] text-[#D49B41]" />
+                              <span>5.0 (New Partner)</span>
+                            </span>
+                          )}
                         </div>
                         <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight drop-shadow-md">
                           {formData.hotel_name || 'Your Property Name Here'}

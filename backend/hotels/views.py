@@ -302,7 +302,36 @@ class PartnerRegisterView(APIView):
             lat = None
             lng = None
 
-        # 4. Create Hotel Entity with pending status
+        # 4. Process Cover Photo (supports attached file, base64 data URI, or preset/external URL)
+        default_cover = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+        final_image_url = default_cover
+
+        uploaded_image = request.FILES.get('image') or request.FILES.get('cover_photo') or request.FILES.get('image_url')
+        if uploaded_image:
+            ext = os.path.splitext(uploaded_image.name)[1].lower() or '.jpg'
+            if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
+                ext = '.jpg'
+            filename = f"hotels/{uuid.uuid4().hex}{ext}"
+            file_path = default_storage.save(filename, uploaded_image)
+            final_image_url = f"/media/{file_path}"
+        else:
+            raw_image = data.get('image_url', '')
+            if isinstance(raw_image, str) and raw_image.strip():
+                raw_image = raw_image.strip()
+                if raw_image.startswith('data:image/') and ';base64,' in raw_image:
+                    try:
+                        header, b64data = raw_image.split(';base64,', 1)
+                        mime = header.split(';')[0].replace('data:image/', '')
+                        ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
+                        filename = f"hotels/{uuid.uuid4().hex}.{ext}"
+                        file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
+                        final_image_url = f"/media/{file_path}"
+                    except Exception:
+                        final_image_url = default_cover
+                else:
+                    final_image_url = raw_image
+
+        # 5. Create Hotel Entity with pending status
         hotel = Hotel.objects.create(
             name=hotel_name,
             tagline=data.get('tagline', '').strip(),
@@ -320,7 +349,7 @@ class PartnerRegisterView(APIView):
             category=category,
             contact_phone=data.get('contact_phone', phone_number),
             contact_email=data.get('contact_email', email),
-            image_url=data.get('image_url', '').strip() or 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
+            image_url=final_image_url,
             amenities=data.get('amenities', ['Wi-Fi', 'Air Conditioning', 'Hot Shower']),
             business_permit_number=data.get('business_permit_number', '').strip(),
             bir_tin=data.get('bir_tin', '').strip(),
@@ -465,7 +494,30 @@ class HotelManageProfileView(APIView):
         hotel = request.user.hotel
         if not hotel:
             return Response({'error': 'No hotel assigned to this account.'}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = HotelManageSerializer(hotel, data=request.data, partial=True)
+
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        uploaded_image = request.FILES.get('image') or request.FILES.get('cover_photo') or request.FILES.get('image_url')
+        if uploaded_image:
+            ext = os.path.splitext(uploaded_image.name)[1].lower() or '.jpg'
+            if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
+                ext = '.jpg'
+            filename = f"hotels/{uuid.uuid4().hex}{ext}"
+            file_path = default_storage.save(filename, uploaded_image)
+            data['image_url'] = f"/media/{file_path}"
+        elif 'image_url' in data and isinstance(data['image_url'], str):
+            raw_image = data['image_url'].strip()
+            if raw_image.startswith('data:image/') and ';base64,' in raw_image:
+                try:
+                    header, b64data = raw_image.split(';base64,', 1)
+                    mime = header.split(';')[0].replace('data:image/', '')
+                    ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
+                    filename = f"hotels/{uuid.uuid4().hex}.{ext}"
+                    file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
+                    data['image_url'] = f"/media/{file_path}"
+                except Exception:
+                    pass
+
+        serializer = HotelManageSerializer(hotel, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({
