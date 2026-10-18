@@ -493,3 +493,45 @@ class LocalStayCoreTests(TestCase):
         b.payment.refresh_from_db()
         self.assertEqual(b.payment.status, 'paid')
         self.assertIsNotNone(b.payment.paid_at)
+
+    def test_assigned_room_is_occupied_on_approval_and_reflected_on_board(self):
+        """When staff assigns a guest to a room upon approval, the room status must be occupied."""
+        today = date.today()
+        b = Booking.objects.create(
+            hotel=self.hotel_a,
+            room_type=self.rt_a,
+            guest=self.guest,
+            guest_name='Assigned Guest',
+            guest_email='assigned@test.com',
+            guest_phone='09179998888',
+            check_in=today,
+            check_out=today + timedelta(days=2),
+            total_amount=2400,
+            status='pending_approval',
+            hold_expires_at=timezone.now() + timedelta(minutes=45)
+        )
+
+        self.assertEqual(self.room_a1.status, 'available')
+
+        # Staff approves and assigns room_a1
+        self.client.force_authenticate(user=self.staff_a)
+        res = self.client.post(f'/api/v1/staff/requests/{b.id}/approve/', {
+            'room_id': self.room_a1.id
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Room must now be occupied
+        self.room_a1.refresh_from_db()
+        self.assertEqual(self.room_a1.status, 'occupied')
+
+        # Room Status Board must show the room as occupied with occupant details
+        board_res = self.client.get('/api/v1/staff/rooms/status/')
+        self.assertEqual(board_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(board_res.data['summary']['occupied'], 1)
+        self.assertEqual(board_res.data['summary']['available'], 0)
+
+        room_entry = next(r for r in board_res.data['rooms'] if r['id'] == self.room_a1.id)
+        self.assertEqual(room_entry['status'], 'occupied')
+        self.assertIsNotNone(room_entry['occupant'])
+        self.assertEqual(room_entry['occupant']['guest_name'], 'Assigned Guest')
+        self.assertEqual(room_entry['occupant']['status'], 'confirmed')

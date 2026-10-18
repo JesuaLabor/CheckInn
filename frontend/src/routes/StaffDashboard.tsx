@@ -659,6 +659,18 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
+  const handleDirectCheckIn = async (bookingId: number | string) => {
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await api.post(`/bookings/${bookingId}/checkin/`);
+      setActionSuccess(res.data.message || 'Guest checked in successfully!');
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.detail || 'Check-in failed.');
+    }
+  };
+
   const handleCheckOut = async (bookingId: number | string) => {
     if (!window.confirm('Confirm checkout for this guest? Room will be flagged for cleaning.')) return;
     setActionError('');
@@ -943,7 +955,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 const holdCountdown = calculateRemainingHold(b.hold_expires_at);
 
                 const matchingRooms = (roomBoard?.rooms || []).filter(
-                  (r) => r.room_type === b.room_type && r.status === 'available'
+                  (r) =>
+                    (Number(r.room_type) === Number(b.room_type) ||
+                      Number((r as any).room_type_id) === Number(b.room_type)) &&
+                    r.status === 'available'
                 );
 
                 return (
@@ -1200,19 +1215,42 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
                   {r.occupant ? (
                     <div className="mt-3 pt-2.5 border-t border-[#D49B41]/30 text-xs space-y-1">
-                      <div className="font-extrabold text-[#212529]">{r.occupant.guest_name}</div>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-extrabold text-[#212529] truncate">{r.occupant.guest_name}</span>
+                        {(r.occupant as any).status === 'confirmed' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 shrink-0">
+                            Assigned
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 shrink-0">
+                            Checked In
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[11px] text-slate-600 font-medium">{r.occupant.guest_phone || 'No phone'}</div>
                       <div className="text-[10px] text-[#1E3A2B] font-bold">
                         Checkout: {r.occupant.check_out}
                       </div>
 
-                      <button
-                        onClick={() => handleCheckOut(r.occupant!.booking_id)}
-                        className="mt-2.5 w-full py-1.5 rounded-xl bg-[#212529] hover:bg-[#1E3A2B] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Check Out Guest</span>
-                      </button>
+                      <div className="flex items-center gap-1.5 mt-2.5">
+                        {(r.occupant as any).status === 'confirmed' && (
+                          <button
+                            onClick={() => handleDirectCheckIn(r.occupant!.booking_id)}
+                            className="flex-1 py-1.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs"
+                            title="Complete Arrival Check-in"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#D49B41]" />
+                            <span>Check In</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleCheckOut(r.occupant!.booking_id)}
+                          className="flex-1 py-1.5 rounded-xl bg-[#212529] hover:bg-[#1E3A2B] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>{(r.occupant as any).status === 'confirmed' ? 'Release Room' : 'Check Out'}</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="mt-3 pt-2.5 border-t border-slate-200/70">

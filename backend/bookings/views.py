@@ -1,6 +1,6 @@
 from datetime import date
 from django.db import transaction
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum, Q, Case, When, IntegerField
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -170,6 +170,10 @@ class StaffApproveRequestView(APIView):
             booking.generate_qr_token()
             booking.save()
 
+            if assigned_room:
+                assigned_room.status = 'occupied'
+                assigned_room.save(update_fields=['status'])
+
             # If payment is via GCash with reference number or staff marks paid, update payment record
             if hasattr(booking, 'payment') and booking.payment:
                 mark_paid = request.data.get(
@@ -210,6 +214,16 @@ class StaffRejectRequestView(APIView):
         booking.reviewed_by = request.user
         booking.reviewed_at = timezone.now()
         booking.save()
+
+        if booking.room:
+            old_room = booking.room
+            other_active = Booking.objects.filter(
+                room=old_room,
+                status__in=['confirmed', 'checked_in']
+            ).exclude(id=booking.id).exists()
+            if not other_active:
+                old_room.status = 'available'
+                old_room.save(update_fields=['status'])
 
         serializer = BookingSerializer(booking)
         return Response({
@@ -289,9 +303,9 @@ class CheckOutBookingView(APIView):
         except Booking.DoesNotExist:
             return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if booking.status != 'checked_in':
+        if booking.status not in ['checked_in', 'confirmed']:
             return Response(
-                {'detail': f'Cannot check out booking with status "{booking.get_status_display()}". Must be checked in.'},
+                {'detail': f'Cannot check out booking with status "{booking.get_status_display()}". Must be checked in or confirmed.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -325,23 +339,39 @@ class StaffRoomStatusBoardView(APIView):
         rooms = Room.objects.filter(hotel=hotel, is_active=True).select_related('room_type').order_by('room_number')
 
         today = date.today()
-        # Find active occupants for each room
+        # Find active occupants for each room (checked_in takes priority over confirmed)
         active_bookings = Booking.objects.filter(
             hotel=hotel,
-            status='checked_in'
-        ).select_related('guest', 'room')
+            status__in=['checked_in', 'confirmed']
+        ).exclude(room=None).select_related('guest', 'room').order_by(
+            Case(
+                When(status='checked_in', then=0),
+                default=1,
+                output_field=IntegerField(),
+            ),
+            '-check_in'
+        )
 
-        occupants_by_room = {b.room_id: b for b in active_bookings if b.room_id}
+        occupants_by_room = {}
+        for b in active_bookings:
+            if b.room_id and b.room_id not in occupants_by_room:
+                occupants_by_room[b.room_id] = b
 
         room_data = []
         for r in rooms:
             occ = occupants_by_room.get(r.id)
+            # If guest is assigned to the room, physical room status must be occupied
+            if occ and r.status == 'available':
+                r.status = 'occupied'
+                r.save(update_fields=['status'])
+
             room_data.append({
                 'id': r.id,
                 'room_number': r.room_number,
                 'floor': r.floor,
                 'status': r.status,
                 'room_type_id': r.room_type.id,
+                'room_type': r.room_type.id,
                 'room_type_name': r.room_type.name,
                 'base_rate': r.room_type.base_rate,
                 'occupant': {
@@ -351,6 +381,8 @@ class StaffRoomStatusBoardView(APIView):
                     'guest_phone': occ.guest_phone,
                     'check_in': occ.check_in,
                     'check_out': occ.check_out,
+                    'status': occ.status,
+                    'status_display': occ.get_status_display(),
                 } if occ else None
             })
 
