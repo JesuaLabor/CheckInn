@@ -153,6 +153,7 @@ export type BookingStatus =
   | 'checked_out'
   | 'rejected'
   | 'cancelled'
+  | 'no_show'
   | 'expired';
 
 export interface Payment {

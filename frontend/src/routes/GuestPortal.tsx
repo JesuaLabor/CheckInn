@@ -20,6 +20,8 @@ import {
   ChevronRight,
   Bed,
   Check,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 
 export const GuestPortal: React.FC = () => {
@@ -27,6 +29,11 @@ export const GuestPortal: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBookingForQR, setSelectedBookingForQR] = useState<Booking | null>(null);
+
+  // Cancellation state
+  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   // In-Stay Service Request state
   const [serviceModalBooking, setServiceModalBooking] = useState<Booking | null>(null);
@@ -125,6 +132,20 @@ export const GuestPortal: React.FC = () => {
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-900 border border-rose-300">
             <XCircle className="w-3.5 h-3.5 text-rose-600" />
             Declined
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
+            <XCircle className="w-3.5 h-3.5 text-rose-600" />
+            Cancelled (Deposit Forfeited)
+          </span>
+        );
+      case 'no_show':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+            <XCircle className="w-3.5 h-3.5 text-slate-500" />
+            No-Show (Deposit Forfeited)
           </span>
         );
       case 'expired':
@@ -306,7 +327,7 @@ export const GuestPortal: React.FC = () => {
                       </div>
 
                       {/* Status-specific action buttons */}
-                      <div className="w-full sm:w-auto">
+                      <div className="w-full sm:w-auto space-y-2">
                         {booking.status === 'pending_approval' && (
                           <div className="bg-emerald-50/90 p-3.5 rounded-2xl border border-emerald-200 text-left md:text-right space-y-1">
                             <div className="text-xs text-emerald-900 font-extrabold flex items-center md:justify-end gap-1.5">
@@ -319,15 +340,27 @@ export const GuestPortal: React.FC = () => {
                           </div>
                         )}
 
-                        {(booking.status === 'confirmed' || booking.status === 'checked_in') && (
-                          <button
-                            onClick={() => setSelectedBookingForQR(booking)}
-                            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                          >
-                            <QrCode className="w-4 h-4 text-[#D49B41]" />
-                            <span>Digital QR Pass</span>
-                          </button>
-                        )}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:justify-end">
+                          {(booking.status === 'confirmed' || booking.status === 'checked_in') && (
+                            <button
+                              onClick={() => setSelectedBookingForQR(booking)}
+                              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                              <QrCode className="w-4 h-4 text-[#D49B41]" />
+                              <span>Digital QR Pass</span>
+                            </button>
+                          )}
+
+                          {(booking.status === 'confirmed' || booking.status === 'pending_approval') && (
+                            <button
+                              onClick={() => setCancellingBooking(booking)}
+                              className="w-full sm:w-auto px-3.5 py-2 rounded-xl text-rose-700 hover:text-rose-900 hover:bg-rose-50 border border-rose-200 text-xs font-bold transition-all active:scale-95 cursor-pointer text-center"
+                              title="Cancel this reservation (deposit is non-refundable)"
+                            >
+                              Cancel Booking
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -450,6 +483,95 @@ export const GuestPortal: React.FC = () => {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Guest Cancellation Confirmation Modal */}
+      {cancellingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2 text-rose-600">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <h3 className="text-base font-extrabold text-[#212529]">Cancel Reservation</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCancellingBooking(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 space-y-2 text-xs">
+              <div className="font-bold text-rose-950 flex items-center gap-1.5">
+                <span>Non-Refundable Deposit Forfeiture Notice</span>
+              </div>
+              <p className="text-rose-900 leading-relaxed font-medium">
+                As agreed during booking, your reservation deposit of{' '}
+                <strong className="font-black text-rose-950">
+                  ₱{Number(cancellingBooking.deposit_amount || Number(cancellingBooking.total_amount) * 0.5).toLocaleString()}
+                </strong>{' '}
+                is <span className="font-black underline">strictly non-refundable</span> and will be forfeited to the hotel.
+              </p>
+              <div className="text-slate-600 text-[11px] pt-1 border-t border-rose-200/60">
+                <span>Property: </span>
+                <strong className="text-slate-800">{cancellingBooking.hotel_name}</strong> ({cancellingBooking.room_type_name})
+              </div>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setCancelLoading(true);
+                try {
+                  const res = await api.post(`/bookings/${cancellingBooking.id}/cancel/`, {
+                    reason: cancelReason || 'Personal cancellation by guest.',
+                  });
+                  alert(res.data.message || 'Reservation cancelled.');
+                  setCancellingBooking(null);
+                  setCancelReason('');
+                  fetchMyBookings();
+                } catch (err: any) {
+                  alert(err.response?.data?.detail || 'Failed to cancel reservation.');
+                } finally {
+                  setCancelLoading(false);
+                }
+              }}
+              className="space-y-3.5"
+            >
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Reason for cancellation <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Schedule change, unexpected emergency"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none bg-[#FAF8F5]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCancellingBooking(null)}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  Keep Reservation
+                </button>
+                <button
+                  type="submit"
+                  disabled={cancelLoading}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md shadow-rose-600/25 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75"
+                >
+                  {cancelLoading ? 'Cancelling...' : 'Confirm & Forfeit Deposit'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

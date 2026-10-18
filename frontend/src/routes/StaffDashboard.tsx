@@ -276,6 +276,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const [rejectingBookingId, setRejectingBookingId] = useState<number | string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('No rooms available for requested dates.');
 
+  // No-Show modal state
+  const [noShowBooking, setNoShowBooking] = useState<{ id: number | string; name: string; room?: string } | null>(null);
+  const [noShowReason, setNoShowReason] = useState('Guest failed to arrive by check-in window.');
+  const [noShowLoading, setNoShowLoading] = useState(false);
+
   const [now, setNow] = useState(Date.now());
 
   // Audit Trail State (Hotel Owner Exclusive)
@@ -763,6 +768,27 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       fetchDashboardData();
     } catch (err: any) {
       setActionError(err.response?.data?.detail || 'Rejection failed.');
+    }
+  };
+
+  const handleNoShow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noShowBooking) return;
+    setNoShowLoading(true);
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const res = await api.post(`/staff/bookings/${noShowBooking.id}/noshow/`, {
+        reason: noShowReason,
+      });
+      setActionSuccess(res.data.message || 'Booking marked as No-Show. Room inventory freed.');
+      setNoShowBooking(null);
+      setNoShowReason('Guest failed to arrive by check-in window.');
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.detail || 'Failed to mark as No-Show.');
+    } finally {
+      setNoShowLoading(false);
     }
   };
 
@@ -1433,14 +1459,23 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
                       <div className="flex items-center gap-1.5 mt-2.5">
                         {(r.occupant as any).status === 'confirmed' && (
-                          <button
-                            onClick={() => handleDirectCheckIn(r.occupant!.booking_id)}
-                            className="flex-1 py-1.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs"
-                            title="Complete Arrival Check-in"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-[#D49B41]" />
-                            <span>Check In</span>
-                          </button>
+                          <div className="flex items-center gap-1.5 w-full">
+                            <button
+                              onClick={() => handleDirectCheckIn(r.occupant!.booking_id)}
+                              className="flex-1 py-1.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
+                              title="Complete Arrival Check-in"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#D49B41]" />
+                              <span>Check In</span>
+                            </button>
+                            <button
+                              onClick={() => setNoShowBooking({ id: r.occupant!.booking_id, name: r.occupant!.guest_name, room: r.room_number })}
+                              className="px-2 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-[10px] font-bold transition-all active:scale-95 border border-slate-200 hover:border-rose-300 cursor-pointer shrink-0"
+                              title="Mark as No-Show (frees room & retains deposit)"
+                            >
+                              No-Show
+                            </button>
+                          </div>
                         )}
                         {r.occupant.stay_type === 'hourly' && (r.occupant as any).status === 'checked_in' && (
                           <button
@@ -2379,6 +2414,53 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   className="flex-1 py-2.5 text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-md active:scale-95 transition-all"
                 >
                   Confirm Decline
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Mark No-Show Modal */}
+      {noShowBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <h3 className="text-base font-extrabold text-[#212529]">Mark Guest as No-Show</h3>
+            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1">
+              <p className="font-bold">
+                Guest: {noShowBooking.name} {noShowBooking.room && `(Room ${noShowBooking.room})`}
+              </p>
+              <p className="text-amber-800 text-[11px] leading-relaxed">
+                The physical room will immediately be released to <strong>Available</strong> on the marketplace. The non-refundable reservation deposit will be retained by the hotel.
+              </p>
+            </div>
+
+            <form onSubmit={handleNoShow} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Audit Trail Reason / Note</label>
+                <textarea
+                  rows={2}
+                  required
+                  value={noShowReason}
+                  onChange={(e) => setNoShowReason(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setNoShowBooking(null)}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={noShowLoading}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-75"
+                >
+                  {noShowLoading ? 'Processing...' : 'Confirm No-Show'}
                 </button>
               </div>
             </form>
