@@ -115,6 +115,14 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ booking, isOpen, onClo
                 </span>
               </div>
             )}
+            {Number(booking.balance_due) > 0 && (
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+                <span className="text-slate-500 font-medium">Balance Due at Desk:</span>
+                <span className="font-black text-[#8F611A]">
+                  ₱{Number(booking.balance_due).toLocaleString()}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="text-[11px] text-slate-500 font-medium flex items-center justify-center gap-1.5">
