@@ -22,6 +22,7 @@ import {
   Check,
   AlertCircle,
   X,
+  Star,
 } from 'lucide-react';
 
 export const GuestPortal: React.FC = () => {
@@ -41,6 +42,52 @@ export const GuestPortal: React.FC = () => {
   const [requestMessage, setRequestMessage] = useState('');
   const [submittingService, setSubmittingService] = useState(false);
   const [serviceSuccessMsg, setServiceSuccessMsg] = useState('');
+
+  // Post-Checkout Hotel Rating Modal state (0-5 stars, optional)
+  const [ratingModalBooking, setRatingModalBooking] = useState<Booking | null>(null);
+  const [ratingScore, setRatingScore] = useState<number>(5);
+  const [ratingComment, setRatingComment] = useState<string>('');
+  const [submittingRating, setSubmittingRating] = useState<boolean>(false);
+  const [ratingSuccessMsg, setRatingSuccessMsg] = useState<string>('');
+
+  const ratingDescriptors: Record<number, string> = {
+    0: '0 / 5 — Unsatisfactory / Disappointing',
+    1: '1 / 5 — Poor',
+    2: '2 / 5 — Fair',
+    3: '3 / 5 — Good',
+    4: '4 / 5 — Very Good',
+    5: '5 / 5 — Exceptional / Outstanding!',
+  };
+
+  const handleOpenRatingModal = (b: Booking) => {
+    setRatingModalBooking(b);
+    setRatingScore(b.review?.rating ?? 5);
+    setRatingComment(b.review?.comment ?? '');
+    setRatingSuccessMsg('');
+  };
+
+  const handleSubmitRating = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ratingModalBooking) return;
+
+    setSubmittingRating(true);
+    try {
+      await api.post(`/bookings/${ratingModalBooking.id}/review/`, {
+        rating: ratingScore,
+        comment: ratingComment.trim(),
+      });
+      setRatingSuccessMsg('Thank you for rating your stay! Your feedback helps other travelers.');
+      setTimeout(() => {
+        setRatingModalBooking(null);
+        setRatingSuccessMsg('');
+        fetchMyBookings();
+      }, 1500);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to submit rating.');
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
 
   // Ticking state for countdowns
   const [now, setNow] = useState(Date.now());
@@ -351,6 +398,16 @@ export const GuestPortal: React.FC = () => {
                             </button>
                           )}
 
+                          {booking.status === 'checked_out' && (
+                            <button
+                              onClick={() => handleOpenRatingModal(booking)}
+                              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#D49B41] hover:bg-[#b8822f] text-[#212529] font-black text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Star className="w-4 h-4 fill-[#212529]" />
+                              <span>{booking.review ? 'Edit Review' : 'Rate Stay'}</span>
+                            </button>
+                          )}
+
                           {(booking.status === 'confirmed' || booking.status === 'pending_approval') && (
                             <button
                               onClick={() => setCancellingBooking(booking)}
@@ -379,6 +436,68 @@ export const GuestPortal: React.FC = () => {
                         <MessageSquarePlus className="w-3.5 h-3.5" />
                         <span>Request Service</span>
                       </button>
+                    </div>
+                  )}
+
+                  {/* Post-Checkout Verified Rating Banner (0-5 Stars, Optional) */}
+                  {booking.status === 'checked_out' && (
+                    <div className="pt-4 border-t border-[#E8E2D8]">
+                      {booking.review ? (
+                        <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center text-amber-500">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${star <= (booking.review?.rating || 0) ? 'fill-amber-400 text-amber-500' : 'text-slate-300'}`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-xs font-black text-amber-950">
+                                {booking.review.rating} / 5 Stars
+                              </span>
+                              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900">
+                                Verified Stay Review
+                              </span>
+                            </div>
+                            {booking.review.comment ? (
+                              <p className="text-xs text-slate-700 italic">"{booking.review.comment}"</p>
+                            ) : (
+                              <p className="text-[11px] text-slate-500">No written feedback provided.</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleOpenRatingModal(booking)}
+                            className="px-3.5 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-100/50 text-amber-900 text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+                          >
+                            Edit Review
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-[#D49B41]/15 border border-[#D49B41]/30 flex items-center justify-center shrink-0">
+                              <Star className="w-5 h-5 text-[#8F611A] fill-[#D49B41]" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-[#1E3A2B]">
+                                How was your stay at {booking.hotel_name}? (Optional)
+                              </h4>
+                              <p className="text-[11px] text-slate-500">
+                                Rate your experience from 0 to 5 stars to help future travelers.
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleOpenRatingModal(booking)}
+                            className="px-4 py-2 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-[#D49B41]" />
+                            <span>Rate Stay</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -572,6 +691,111 @@ export const GuestPortal: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Optional Hotel Rating & Review Modal (0 to 5 Stars) */}
+      {ratingModalBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full border border-[#E8E2D8] p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8F611A] bg-[#D49B41]/15 px-2.5 py-0.5 rounded-full">
+                  Post-Stay Feedback (Optional)
+                </span>
+                <h3 className="text-lg font-black text-[#212529] mt-1">Rate Your Hotel Experience</h3>
+                <p className="text-xs text-slate-500 mt-0.5">{ratingModalBooking.hotel_name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRatingModalBooking(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {ratingSuccessMsg ? (
+              <div className="p-4 bg-[#3B5E43]/15 border border-[#3B5E43]/30 text-[#1E3A2B] text-xs font-bold rounded-2xl text-center space-y-1">
+                <Check className="w-6 h-6 text-[#3B5E43] mx-auto" />
+                <p>{ratingSuccessMsg}</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitRating} className="space-y-4">
+                {/* Star Rating Selector (0 to 5) */}
+                <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E8E2D8] text-center space-y-2">
+                  <label className="block text-xs font-bold text-slate-700">Select Rating (0 to 5 Stars)</label>
+                  <div className="flex items-center justify-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRatingScore(star)}
+                        className="p-1 rounded-lg hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                        title={`${star} Stars`}
+                      >
+                        <Star
+                          className={`w-7 h-7 ${
+                            star <= ratingScore
+                              ? 'fill-amber-400 text-amber-500'
+                              : 'text-slate-300 hover:text-amber-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setRatingScore(0)}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                        ratingScore === 0
+                          ? 'bg-rose-100 text-rose-800 border-rose-300 font-extrabold'
+                          : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      0 Stars (No Stars)
+                    </button>
+                    <span className="text-xs font-black text-[#1E3A2B]">
+                      {ratingDescriptors[ratingScore]}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Optional Comment Textarea */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">Feedback / Review</label>
+                    <span className="text-[10px] text-slate-400 font-medium">Optional</span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    placeholder="Tell other travelers about your stay (e.g. cleanliness, front desk hospitality, room comfort)..."
+                    value={ratingComment}
+                    onChange={(e) => setRatingComment(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs font-medium border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setRatingModalBooking(null)}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    Skip / Maybe Later
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingRating}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-75"
+                  >
+                    {submittingRating ? 'Submitting...' : 'Submit Rating'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

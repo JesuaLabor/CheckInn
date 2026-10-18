@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { Hotel, RoomType } from '../types';
+import { Hotel, RoomType, Review } from '../types';
 import { useBookingDraftStore } from '../stores/bookingDraftStore';
 import { useCurrencyStore } from '../stores/currencyStore';
 import {
@@ -58,6 +58,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
     return <Sparkles className="w-2.5 h-2.5 text-[#3B5E43]" />;
   };
 
+  const [reviews, setReviews] = useState<Review[]>([]);
   const { openBookingModal } = useBookingDraftStore();
   const { formatPrice } = useCurrencyStore();
 
@@ -69,8 +70,12 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get(`/inns/${slug}/`);
-      setHotel(res.data);
+      const [resHotel, resReviews] = await Promise.all([
+        api.get(`/inns/${slug}/`),
+        api.get(`/inns/${slug}/reviews/`).catch(() => ({ data: { reviews: [] } })),
+      ]);
+      setHotel(resHotel.data);
+      setReviews(resReviews.data?.reviews || []);
     } catch {
       setError('Failed to load lodging details.');
     } finally {
@@ -438,6 +443,101 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
             );
           })}
         </div>
+      </section>
+
+      {/* Verified Guest Reviews & Ratings Section */}
+      <section className="space-y-6 pt-4 border-t border-[#E8E2D8]">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-[#1E3A2B] text-xs font-extrabold uppercase tracking-wider mb-1">
+              <Star className="w-3.5 h-3.5 fill-[#D49B41] text-[#D49B41]" />
+              <span>Verified Guest Ratings</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-[#212529]">
+              Reviews & Experiences
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Authentic reviews submitted by verified guests after completed checkouts.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 bg-white p-3.5 rounded-2xl border border-[#E8E2D8] shadow-xs">
+            <div className="text-3xl font-black text-[#1E3A2B]">{hotel.rating}</div>
+            <div>
+              <div className="flex items-center text-amber-500">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-3.5 h-3.5 ${
+                      star <= Math.round(Number(hotel.rating))
+                        ? 'fill-amber-400 text-amber-500'
+                        : 'text-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-[11px] text-slate-500 font-bold block mt-0.5">
+                {hotel.review_count} verified {hotel.review_count === 1 ? 'review' : 'reviews'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {reviews.length === 0 ? (
+          <div className="p-8 rounded-3xl bg-white border border-[#E8E2D8] text-center space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/80 mx-auto flex items-center justify-center">
+              <Star className="w-6 h-6 fill-amber-300 text-amber-500" />
+            </div>
+            <h4 className="text-sm font-bold text-[#212529]">No Guest Reviews Yet</h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Be among the first guests to reserve a stay at {hotel.name} and share your experience!
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {reviews.map((rev) => (
+              <div
+                key={rev.id}
+                className="bg-white p-5 rounded-2xl border border-[#E8E2D8] shadow-2xs space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-extrabold text-xs text-[#212529] block">
+                      {rev.guest_name || 'Verified Traveler'}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Stayed {new Date(rev.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/80 px-2.5 py-1 rounded-full">
+                    <div className="flex items-center text-amber-500">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-3 h-3 ${star <= rev.rating ? 'fill-amber-400 text-amber-500' : 'text-slate-200'}`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs font-black text-amber-950">{rev.rating}/5</span>
+                  </div>
+                </div>
+
+                {rev.comment ? (
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium italic">
+                    "{rev.comment}"
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-400 italic">Rated without written feedback.</p>
+                )}
+
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[10px] text-emerald-800 font-bold">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Verified Stay • Checkout Completed</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

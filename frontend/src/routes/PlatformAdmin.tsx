@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/client';
-import { Hotel, PlatformStats } from '../types';
+import { Hotel, PlatformStats, HotelAuditLog } from '../types';
+import { toast } from '../stores/toastStore';
 import {
   ShieldCheck,
   Building2,
@@ -26,38 +27,129 @@ import {
   List,
   X,
   ChevronDown,
+  ChevronUp,
   Check,
   RotateCcw,
   SlidersHorizontal,
+  History,
+  ShieldAlert,
 } from 'lucide-react';
 
 export type PlatformStatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'suspended';
+export type PlatformAdminView = 'verifications' | 'audit_trail';
 
 interface PlatformAdminProps {
-  initialStatus?: PlatformStatusFilter;
+  initialStatus?: PlatformStatusFilter | 'audit_trail';
   /** Changes on every navbar deep-link so the same shortcut can be re-applied */
   deepLinkNonce?: number;
   onNavigate?: (tab: string, slug?: string) => void;
+  onTabChange?: (tab: PlatformStatusFilter | 'audit_trail') => void;
 }
 
 export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
   initialStatus,
   deepLinkNonce,
   onNavigate,
+  onTabChange,
 }) => {
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<PlatformStatusFilter>(initialStatus || 'pending');
+  const [adminView, setAdminView] = useState<PlatformAdminView>(
+    initialStatus === 'audit_trail' ? 'audit_trail' : 'verifications'
+  );
+  const [statusFilter, setStatusFilter] = useState<PlatformStatusFilter>(
+    initialStatus && initialStatus !== 'audit_trail' ? initialStatus : 'pending'
+  );
+
+  useEffect(() => {
+    if (adminView === 'audit_trail') {
+      onTabChange?.('audit_trail');
+    } else {
+      onTabChange?.(statusFilter);
+    }
+  }, [adminView, statusFilter, onTabChange]);
 
   // Apply navbar deep-links during render so repeated shortcut clicks re-apply the filter
   const [appliedDeepLink, setAppliedDeepLink] = useState(deepLinkNonce);
   if (deepLinkNonce !== appliedDeepLink) {
     setAppliedDeepLink(deepLinkNonce);
     if (initialStatus) {
-      setStatusFilter(initialStatus);
+      if (initialStatus === 'audit_trail') {
+        setAdminView('audit_trail');
+      } else {
+        setAdminView('verifications');
+        setStatusFilter(initialStatus);
+      }
     }
   }
+
+  // Global Platform Audit Trail State
+  const [globalLogs, setGlobalLogs] = useState<HotelAuditLog[]>([]);
+  const [globalLogsLoading, setGlobalLogsLoading] = useState(false);
+  const [globalHotelFilter, setGlobalHotelFilter] = useState<string>('all');
+  const [globalCategoryFilter, setGlobalCategoryFilter] = useState<string>('all');
+  const [globalSeverityFilter, setGlobalSeverityFilter] = useState<string>('all');
+  const [globalSearch, setGlobalSearch] = useState<string>('');
+  const [globalExpandedLogId, setGlobalExpandedLogId] = useState<number | string | null>(null);
+
+  const fetchGlobalAuditLogs = async (
+    hotelId = globalHotelFilter,
+    cat = globalCategoryFilter,
+    sev = globalSeverityFilter,
+    search = globalSearch
+  ) => {
+    setGlobalLogsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (hotelId !== 'all') params.append('hotel_id', hotelId);
+      if (cat !== 'all') params.append('category', cat);
+      if (sev !== 'all') params.append('severity', sev);
+      if (search.trim()) params.append('search', search.trim());
+
+      const res = await api.get(`/hotel-manage/audit-logs/?${params.toString()}`);
+      setGlobalLogs(res.data || []);
+    } catch (err: any) {
+      console.error('Failed to load platform audit logs:', err);
+    } finally {
+      setGlobalLogsLoading(false);
+    }
+  };
+
+  const handleExportGlobalAuditCSV = () => {
+    if (!globalLogs.length) {
+      toast.error('No audit logs available to export.', 'Export Failed');
+      return;
+    }
+    const headers = ['Timestamp', 'Property Name', 'Category', 'Action', 'Severity', 'Actor', 'Role', 'Summary', 'IP Address', 'Details'];
+    const rows = globalLogs.map((log) => [
+      `"${new Date(log.created_at).toLocaleString()}"`,
+      `"${(log.hotel_name || 'N/A').replace(/"/g, '""')}"`,
+      `"${log.category}"`,
+      `"${log.action}"`,
+      `"${log.severity}"`,
+      `"${(log.actor_name || 'System').replace(/"/g, '""')}"`,
+      `"${log.actor_role || 'system'}"`,
+      `"${(log.summary || '').replace(/"/g, '""')}"`,
+      `"${log.ip_address || 'N/A'}"`,
+      `"${JSON.stringify(log.details || {}).replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `localstay_platform_audit_trail_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Platform audit trail exported to CSV.', 'Export Complete');
+  };
+
+  useEffect(() => {
+    if (adminView === 'audit_trail') {
+      fetchGlobalAuditLogs(globalHotelFilter, globalCategoryFilter, globalSeverityFilter, globalSearch);
+    }
+  }, [adminView, globalHotelFilter, globalCategoryFilter, globalSeverityFilter, globalSearch]);
 
   // Interactive controls
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,6 +172,23 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
   const [rejectionReason, setRejectionReason] = useState(
     'Business permit verification failed or incomplete lodging photos.'
   );
+
+  // Superadmin Hotel Audit Log Inspection
+  const [dossierLogs, setDossierLogs] = useState<HotelAuditLog[]>([]);
+  const [dossierLogsLoading, setDossierLogsLoading] = useState(false);
+
+  useEffect(() => {
+    if (inspectingHotel) {
+      setDossierLogsLoading(true);
+      api
+        .get(`/hotel-manage/audit-logs/?hotel_id=${inspectingHotel.id}`)
+        .then((res) => setDossierLogs(res.data || []))
+        .catch(() => setDossierLogs([]))
+        .finally(() => setDossierLogsLoading(false));
+    } else {
+      setDossierLogs([]);
+    }
+  }, [inspectingHotel]);
 
   useEffect(() => {
     fetchData();
@@ -280,8 +389,59 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
         </div>
       </div>
 
-      {/* Feedback Alert Toast */}
-      {feedbackMessage && (
+      {/* Primary Administration View Switcher */}
+      <div className="flex items-center gap-2 p-1.5 bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl w-fit">
+        <button
+          onClick={() => setAdminView('verifications')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+            adminView === 'verifications'
+              ? 'bg-[#1E3A2B] text-white shadow-xs'
+              : 'text-slate-600 hover:text-[#212529] hover:bg-white/60'
+          }`}
+        >
+          <ShieldCheck
+            className={`w-4 h-4 ${
+              adminView === 'verifications' ? 'text-[#D49B41]' : 'text-slate-400'
+            }`}
+          />
+          <span>Lodgings & Verifications</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              adminView === 'verifications' ? 'bg-white/20 text-white' : 'bg-[#E8E2D8] text-slate-700'
+            }`}
+          >
+            {hotels.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setAdminView('audit_trail')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+            adminView === 'audit_trail'
+              ? 'bg-[#1E3A2B] text-white shadow-xs'
+              : 'text-slate-600 hover:text-[#212529] hover:bg-white/60'
+          }`}
+        >
+          <History
+            className={`w-4 h-4 ${
+              adminView === 'audit_trail' ? 'text-[#D49B41]' : 'text-[#D49B41]'
+            }`}
+          />
+          <span>Platform Audit Trail</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+              adminView === 'audit_trail' ? 'bg-white/20 text-white' : 'bg-[#E8E2D8] text-slate-700'
+            }`}
+          >
+            {globalLogs.length}
+          </span>
+        </button>
+      </div>
+
+      {adminView === 'verifications' && (
+        <div className="space-y-6">
+          {/* Feedback Alert Toast */}
+          {feedbackMessage && (
         <div
           className={`p-4 rounded-2xl flex items-center justify-between text-xs font-semibold animate-in fade-in duration-200 shadow-xs ${
             feedbackMessage.type === 'success'
@@ -1052,8 +1212,362 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
           </div>
         )}
       </div>
+    </div>
+  )}
 
-      {/* PROPERTY VERIFICATION DOSSIER DRAWER / MODAL */}
+      {/* Primary Administration View 2: Platform Audit Trail */}
+      {adminView === 'audit_trail' && (
+        <div className="space-y-6">
+          {/* Header & Controls */}
+          <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E2D8] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 rounded-xl bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center">
+                  <History className="w-4 h-4 text-[#D49B41]" />
+                </div>
+                <h2 className="text-xl font-black text-[#212529]">
+                  Platform Audit Trail & Security Oversight
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 max-w-2xl">
+                Real-time governance timeline recording operational decisions, room inventory changes, staff management, and disbursement payout updates across all partner hotels.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                onClick={handleExportGlobalAuditCSV}
+                disabled={globalLogs.length === 0}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5] hover:bg-[#F4EFEA] border border-[#E8E2D8] text-xs font-bold text-[#212529] transition-all active:scale-95 disabled:opacity-50 shadow-2xs"
+              >
+                <Download className="w-3.5 h-3.5 text-[#D49B41]" />
+                <span>Export CSV</span>
+              </button>
+
+              <button
+                onClick={() => fetchGlobalAuditLogs()}
+                disabled={globalLogsLoading}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#162B20] text-white text-xs font-extrabold transition-all active:scale-95 shadow-md shadow-[#1E3A2B]/20"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${globalLogsLoading ? 'animate-spin text-white' : 'text-[#D49B41]'}`}
+                />
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-[#E8E2D8] shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                Total Platform Events
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-[#212529]">
+                  {globalLogs.length}
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-[#FAF8F5] text-slate-600 flex items-center justify-center">
+                  <FileText className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-[#E8E2D8] shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-rose-500 tracking-wider block">
+                Critical Security Events
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-rose-600">
+                  {globalLogs.filter((l) => l.severity === 'critical').length}
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-[#E8E2D8] shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-amber-500 tracking-wider block">
+                Operational Warnings
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-amber-600">
+                  {globalLogs.filter((l) => l.severity === 'warning').length}
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-[#E8E2D8] shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider block">
+                Logged Today
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-emerald-700">
+                  {
+                    globalLogs.filter(
+                      (l) => new Date(l.created_at).toDateString() === new Date().toDateString()
+                    ).length
+                  }
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Filter Toolbar */}
+          <div className="bg-white rounded-3xl border border-[#E8E2D8] p-4 sm:p-5 shadow-2xs space-y-3.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Live Search */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search logs by keyword, hotel name, action, or IP..."
+                  value={globalSearch}
+                  onChange={(e) => setGlobalSearch(e.target.value)}
+                  className="w-full bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl pl-9 pr-9 py-2 text-xs text-[#212529] font-medium focus:outline-none focus:border-[#1E3A2B]"
+                />
+                {globalSearch && (
+                  <button
+                    onClick={() => setGlobalSearch('')}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Property Selector */}
+              <div className="sm:w-56">
+                <select
+                  value={globalHotelFilter}
+                  onChange={(e) => setGlobalHotelFilter(e.target.value)}
+                  className="w-full bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl px-3 py-2 text-xs text-[#212529] font-bold focus:outline-none focus:border-[#1E3A2B]"
+                >
+                  <option value="all">All Registered Hotels ({hotels.length})</option>
+                  {hotels.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Severity Selector */}
+              <div className="sm:w-40">
+                <select
+                  value={globalSeverityFilter}
+                  onChange={(e) => setGlobalSeverityFilter(e.target.value)}
+                  className="w-full bg-[#FAF8F5] border border-[#E8E2D8] rounded-xl px-3 py-2 text-xs text-[#212529] font-bold focus:outline-none focus:border-[#1E3A2B]"
+                >
+                  <option value="all">All Severities</option>
+                  <option value="info">Info / Normal</option>
+                  <option value="warning">Warnings</option>
+                  <option value="critical">Critical Security</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Category Segmented Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              <span className="text-[11px] font-bold text-slate-400 mr-1 shrink-0">Category:</span>
+              {[
+                { id: 'all', label: 'All Events' },
+                { id: 'booking', label: 'Bookings & Front Desk' },
+                { id: 'inventory', label: 'Rooms & Rates' },
+                { id: 'housekeeping', label: 'Housekeeping' },
+                { id: 'staff', label: 'Staff Team' },
+                { id: 'settings', label: 'Settings & Payout' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setGlobalCategoryFilter(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 text-xs ${
+                    globalCategoryFilter === cat.id
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'bg-[#FAF8F5] text-slate-600 hover:bg-[#F4EFEA] border border-[#E8E2D8]'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Timeline Feed */}
+          <div className="space-y-3">
+            {globalLogsLoading && globalLogs.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-[#E8E2D8] space-y-3">
+                <RefreshCw className="w-6 h-6 text-[#1E3A2B] animate-spin mx-auto" />
+                <p className="text-xs font-bold text-slate-500">Loading platform audit logs...</p>
+              </div>
+            ) : globalLogs.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-[#E8E2D8] space-y-2">
+                <History className="w-8 h-8 text-slate-300 mx-auto" />
+                <h4 className="text-sm font-bold text-[#212529]">No audit events found</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  No activity log entries match your selected criteria.
+                </p>
+                {(globalHotelFilter !== 'all' || globalCategoryFilter !== 'all' || globalSeverityFilter !== 'all' || globalSearch) && (
+                  <button
+                    onClick={() => {
+                      setGlobalHotelFilter('all');
+                      setGlobalCategoryFilter('all');
+                      setGlobalSeverityFilter('all');
+                      setGlobalSearch('');
+                    }}
+                    className="mt-2 text-xs font-bold text-[#1E3A2B] underline"
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              globalLogs.map((log) => {
+                const isExpanded = globalExpandedLogId === log.id;
+                const hasDetails = log.details && Object.keys(log.details).length > 0;
+                const logDate = new Date(log.created_at);
+                const timeAgo = (() => {
+                  const diff = Date.now() - logDate.getTime();
+                  if (diff < 60000) return 'Just now';
+                  const mins = Math.floor(diff / 60000);
+                  if (mins < 60) return `${mins}m ago`;
+                  const hrs = Math.floor(mins / 60);
+                  if (hrs < 24) return `${hrs}h ago`;
+                  const days = Math.floor(hrs / 24);
+                  return `${days}d ago`;
+                })();
+
+                const severityStyles = {
+                  critical: 'bg-rose-50 text-rose-700 border-rose-200',
+                  warning: 'bg-amber-50 text-amber-700 border-amber-200',
+                  info: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                }[log.severity] || 'bg-slate-50 text-slate-700 border-slate-200';
+
+                return (
+                  <div
+                    key={log.id}
+                    className="bg-white rounded-2xl border border-[#E8E2D8] hover:border-slate-300 shadow-2xs transition-all overflow-hidden"
+                  >
+                    <div className="p-4 sm:p-5 flex items-start gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#FAF8F5] border border-[#E8E2D8] flex items-center justify-center shrink-0 mt-0.5">
+                        <History className="w-4 h-4 text-[#D49B41]" />
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Property Name Badge */}
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#1E3A2B]/10 text-[#1E3A2B] border border-[#1E3A2B]/20">
+                            {log.hotel_name || 'System'}
+                          </span>
+
+                          {/* Severity Pill */}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${severityStyles}`}>
+                            {log.severity}
+                          </span>
+
+                          {/* Category Tag */}
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF8F5] text-slate-600 border border-[#E8E2D8] capitalize">
+                            {log.category}
+                          </span>
+
+                          {/* Action Code */}
+                          <span className="text-[11px] font-mono font-medium text-slate-400">
+                            {log.action}
+                          </span>
+
+                          <span className="text-slate-300 text-xs ml-auto hidden sm:inline">•</span>
+
+                          {/* Timestamp */}
+                          <span className="text-xs text-slate-400 ml-auto sm:ml-0 font-medium" title={logDate.toLocaleString()}>
+                            {timeAgo}
+                          </span>
+                        </div>
+
+                        {/* Summary */}
+                        <p className="text-xs sm:text-sm font-bold text-[#212529] leading-snug">
+                          {log.summary}
+                        </p>
+
+                        {/* Actor & Metadata Footer */}
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 pt-0.5">
+                          <span className="font-semibold text-slate-700">
+                            Actor: <span className="text-[#1E3A2B] font-bold">{log.actor_name || 'System'}</span>
+                          </span>
+
+                          <span className="px-1.5 py-0.2 rounded text-[10px] bg-slate-100 text-slate-600 font-bold uppercase">
+                            {log.actor_role || 'system'}
+                          </span>
+
+                          {log.ip_address && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="font-mono text-[10px] text-slate-400">
+                                IP: {log.ip_address}
+                              </span>
+                            </>
+                          )}
+
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-400 text-[10px]">
+                            {logDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {hasDetails && (
+                        <button
+                          type="button"
+                          onClick={() => setGlobalExpandedLogId(isExpanded ? null : log.id)}
+                          className={`p-1.5 rounded-xl border transition-all text-xs shrink-0 flex items-center gap-1 ${
+                            isExpanded
+                              ? 'bg-[#FAF8F5] text-[#1E3A2B] border-slate-300'
+                              : 'bg-white text-slate-500 hover:bg-[#FAF8F5] border-[#E8E2D8]'
+                          }`}
+                          title="Inspect structured parameters"
+                        >
+                          <span className="text-[11px] font-bold hidden sm:inline">Details</span>
+                          {isExpanded ? (
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    {isExpanded && hasDetails && (
+                      <div className="bg-[#FAF8F5] border-t border-[#E8E2D8] p-4 sm:px-5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-2">
+                          Structured Event Payload & Changes
+                        </span>
+                        <div className="bg-white rounded-xl p-3 border border-[#E8E2D8] text-xs font-mono text-slate-800 overflow-x-auto space-y-1">
+                          {Object.entries(log.details).map(([key, val]) => (
+                            <div key={key} className="flex items-start gap-2">
+                              <span className="text-[#1E3A2B] font-bold shrink-0">{key}:</span>
+                              <span className="text-slate-700 break-all">
+                                {typeof val === 'object' && val !== null
+                                  ? JSON.stringify(val)
+                                  : String(val)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
       {inspectingHotel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div
@@ -1266,6 +1780,73 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
                     {inspectingHotel.total_bookings || 0}
                   </span>
                 </div>
+              </div>
+
+              {/* Section 5: Property Audit Trail & Activity Log (Dispute & Fraud Investigation) */}
+              <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-black text-[#1E3A2B] uppercase tracking-wider flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5 text-[#D49B41]" />
+                    <span>Audit Trail & Activity Log ({dossierLogs.length})</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    Dispute & Fraud Resolution
+                  </span>
+                </div>
+
+                {dossierLogsLoading ? (
+                  <div className="p-4 text-center text-xs font-bold text-slate-500 bg-white rounded-xl border border-[#E8E2D8]">
+                    <RefreshCw className="w-4 h-4 animate-spin inline-block mr-1 text-[#1E3A2B]" />
+                    Fetching property audit history...
+                  </div>
+                ) : dossierLogs.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-500 bg-white rounded-xl border border-[#E8E2D8]">
+                    No activity logs recorded for this hotel yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {dossierLogs.slice(0, 15).map((log) => {
+                      const sevClass = {
+                        critical: 'bg-rose-50 text-rose-700 border-rose-200',
+                        warning: 'bg-amber-50 text-amber-700 border-amber-200',
+                        info: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                      }[log.severity] || 'bg-slate-50 text-slate-700 border-slate-200';
+
+                      return (
+                        <div
+                          key={log.id}
+                          className="p-2.5 rounded-xl bg-white border border-[#E8E2D8] space-y-1 text-xs"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase border ${sevClass}`}>
+                              {log.severity}
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-slate-400">
+                              {log.category}
+                            </span>
+                            <span className="text-[10px] text-slate-400 ml-auto">
+                              {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="font-bold text-[#212529] text-[11px] leading-tight">
+                            {log.summary}
+                          </p>
+                          <div className="text-[10px] text-slate-500 flex items-center gap-1.5 pt-0.5">
+                            <span>Actor: <strong className="text-slate-700">{log.actor_name || 'System'}</strong></span>
+                            <span>•</span>
+                            <span className="uppercase font-bold text-[9px]">{log.actor_role}</span>
+                            {log.ip_address && (
+                              <>
+                                <span>•</span>
+                                <span className="font-mono text-slate-400">IP: {log.ip_address}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

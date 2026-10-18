@@ -143,6 +143,11 @@ export interface Room {
     check_out_datetime?: string;
     remaining_seconds?: number | null;
     is_expired?: boolean;
+    total_amount?: number | string;
+    deposit_amount?: number | string;
+    balance_due?: number | string;
+    deposit_type?: 'fifty_percent' | 'full';
+    payment_status?: string;
   } | null;
 }
 
@@ -164,6 +169,20 @@ export interface Payment {
   reference_number?: string;
   paid_at?: string | null;
   created_at: string;
+}
+
+export interface Review {
+  id: number | string;
+  hotel?: number | string;
+  hotel_name?: string;
+  booking?: number | string;
+  booking_reference?: string;
+  guest?: number | string;
+  guest_name?: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface GuestRequest {
@@ -224,6 +243,7 @@ export interface Booking {
   created_at: string;
   payment?: Payment;
   service_requests?: GuestRequest[];
+  review?: Review | null;
 }
 
 export type AuditLogCategory = 'all' | 'booking' | 'inventory' | 'housekeeping' | 'staff' | 'settings';

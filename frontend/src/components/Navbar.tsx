@@ -23,6 +23,7 @@ import {
   Clock,
   Ticket,
   X,
+  History,
 } from 'lucide-react';
 import { useCurrencyStore, CurrencyCode } from '../stores/currencyStore';
 import { toast } from '../stores/toastStore';
@@ -37,6 +38,7 @@ export type NavTab =
 
 interface NavbarProps {
   currentTab: NavTab;
+  currentSubTab?: string;
   onNavigate: (tab: NavTab, hotelSlug?: string, subTab?: string) => void;
   onOpenAuth: () => void;
   onOpenSupport?: () => void;
@@ -44,19 +46,18 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentTab,
+  currentSubTab,
   onNavigate,
   onOpenAuth,
   onOpenSupport,
 }) => {
   const { user, logout } = useAuthStore();
   const { currency, setCurrency, symbols, fetchRates } = useCurrencyStore();
-  const [showBrowseMenu, setShowBrowseMenu] = useState(false);
   const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   // Dropdown container refs for robust click-outside detection
-  const browseMenuRef = useRef<HTMLDivElement>(null);
   const currencyMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const mobileDockRef = useRef<HTMLElement>(null);
@@ -66,14 +67,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node;
-
-      if (
-        showBrowseMenu &&
-        browseMenuRef.current &&
-        !browseMenuRef.current.contains(target)
-      ) {
-        setShowBrowseMenu(false);
-      }
 
       if (
         showCurrencyMenu &&
@@ -96,13 +89,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setShowBrowseMenu(false);
         setShowCurrencyMenu(false);
         setShowUserMenu(false);
       }
     };
 
-    if (showBrowseMenu || showCurrencyMenu || showUserMenu) {
+    if (showCurrencyMenu || showUserMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside);
       document.addEventListener('keydown', handleKeyDown);
@@ -113,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       document.removeEventListener('touchstart', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showBrowseMenu, showCurrencyMenu, showUserMenu]);
+  }, [showCurrencyMenu, showUserMenu]);
 
   useEffect(() => {
     fetchRates();
@@ -134,16 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isGuestOrPublic = !user || user.role === 'guest';
   const isDarkConsole = false;
 
-  const quickDestinations = [
-    { name: 'Boracay', badge: 'Island' },
-    { name: 'Siargao', badge: 'Surfing' },
-    { name: 'Baguio', badge: 'Highlands' },
-    { name: 'Cebu', badge: 'Heritage' },
-    { name: 'Manila', badge: 'Urban' },
-    { name: 'Malaybalay', badge: 'Pine Hills' },
-    { name: 'Tokyo', badge: 'Intl' },
-    { name: 'Bali', badge: 'Intl' },
-  ];
+
 
   const handleLogoClick = () => {
     if (isSuperAdmin) {
@@ -274,13 +257,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   onClick={() => onNavigate('staff_dashboard')}
                   className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
-                    currentTab === 'staff_dashboard'
+                    currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail'
                       ? 'bg-[#1E3A2B] text-white shadow-xs'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
                   }`}
                 >
-                  <Building2 className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <Building2 className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail' ? 'text-[#D49B41]' : 'text-[#D49B41]'}`} />
                   <span>Management Portal</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'audit_trail')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                    currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                  title="View operational audit logs and activity history"
+                >
+                  <History className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail' ? 'text-white' : 'text-[#D49B41]'}`} />
+                  <span>Audit Trail</span>
                 </button>
 
                 <button
@@ -318,15 +314,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isSuperAdmin && (
               <nav className="hidden md:flex items-center gap-1.5 sm:gap-2">
                 <button
-                  onClick={() => onNavigate('platform_admin')}
+                  onClick={() => onNavigate('platform_admin', undefined, 'verifications')}
                   className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
-                    currentTab === 'platform_admin'
+                    currentTab === 'platform_admin' && currentSubTab !== 'audit_trail'
                       ? 'bg-[#1E3A2B] text-white shadow-xs'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
                   }`}
                 >
-                  <ShieldCheck className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' ? 'text-white' : 'text-[#D49B41]'}`} />
+                  <ShieldCheck className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && currentSubTab !== 'audit_trail' ? 'text-white' : 'text-[#D49B41]'}`} />
                   <span>Overview & Approvals</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('platform_admin', undefined, 'audit_trail')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                    currentTab === 'platform_admin' && currentSubTab === 'audit_trail'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  }`}
+                  title="Platform-wide Security & Operations Audit Trail"
+                >
+                  <History className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && currentSubTab === 'audit_trail' ? 'text-white' : 'text-[#D49B41]'}`} />
+                  <span>Audit Trail</span>
                 </button>
 
                 <button
@@ -359,64 +368,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>Explore Stays</span>
                 </button>
 
-                {/* Browse Destinations ˅ Dropdown */}
-                <div className="relative" ref={browseMenuRef}>
+                {/* My Bookings link (Direct 1-click access for logged-in guests) */}
+                {user && (
                   <button
-                    onClick={() => {
-                      setShowBrowseMenu(!showBrowseMenu);
-                      setShowCurrencyMenu(false);
-                      setShowUserMenu(false);
-                    }}
-                    className="flex items-center gap-1.5 py-2 px-1 text-sm font-semibold text-[#212529] hover:text-[#1E3A2B] transition-colors"
+                    onClick={() => onNavigate('guest_bookings')}
+                    className={`flex items-center gap-1.5 py-2 px-1 text-sm font-semibold transition-colors ${
+                      currentTab === 'guest_bookings'
+                        ? 'text-[#1E3A2B] font-bold'
+                        : 'text-[#212529] hover:text-[#1E3A2B]'
+                    }`}
                   >
-                    <span>Destinations</span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        showBrowseMenu ? 'rotate-180 text-[#D49B41]' : 'opacity-70'
-                      }`}
-                    />
+                    <CalendarCheck className={`w-4 h-4 ${currentTab === 'guest_bookings' ? 'text-[#1E3A2B]' : 'text-[#D49B41]'}`} />
+                    <span>My Bookings</span>
                   </button>
-
-                  {showBrowseMenu && (
-                    <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-[#E8E2D8] p-3 z-50 text-[#212529] animate-in fade-in zoom-in-95 duration-150">
-                        <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-[#E8E2D8] flex items-center justify-between">
-                          <span>Popular Destinations</span>
-                          <span className="text-[9px] bg-[#D49B41]/20 text-[#8F611A] px-1.5 py-0.5 rounded font-bold">
-                            Global
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-1 mt-2">
-                          {quickDestinations.map((dest) => (
-                            <button
-                              key={dest.name}
-                              onClick={() => {
-                                setShowBrowseMenu(false);
-                                onNavigate('marketplace');
-                              }}
-                              className="flex items-center justify-between p-2 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left"
-                            >
-                              <span className="font-semibold text-[#212529]">{dest.name}</span>
-                              <span className="text-[9px] text-slate-400">{dest.badge}</span>
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="mt-2 pt-2 border-t border-[#E8E2D8]">
-                          <button
-                            onClick={() => {
-                              setShowBrowseMenu(false);
-                              onNavigate('marketplace');
-                            }}
-                            className="w-full text-center py-1.5 rounded-lg text-xs font-bold text-[#8F611A] hover:bg-[#FAF8F5] transition-colors flex items-center justify-center gap-1.5"
-                          >
-                            <Compass className="w-3.5 h-3.5" />
-                            <span>View All Inns & Stays</span>
-                          </button>
-                        </div>
-                      </div>
-                  )}
-                </div>
+                )}
 
                 {/* Help & Support */}
                 {onOpenSupport && (
@@ -438,7 +403,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     onClick={() => {
                       setShowCurrencyMenu(!showCurrencyMenu);
-                      setShowBrowseMenu(false);
                       setShowUserMenu(false);
                     }}
                     className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-2 rounded-full border transition-colors ${
@@ -503,13 +467,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
 
-              {/* Staff Front Desk Active Status Pill */}
-              {isStaff && (
-                <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100/70 border border-emerald-300 text-emerald-900 text-xs font-black">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Front Desk On Duty</span>
-                </div>
-              )}
+
 
               {/* Guest / Public: 'List Your Property' Button - Hidden on mobile (<sm) to prevent navbar blowout; accessible via mobile bottom dock and menu */}
               {isGuestOrPublic && (
@@ -527,7 +485,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     onClick={() => {
                       setShowUserMenu(!showUserMenu);
-                      setShowBrowseMenu(false);
                       setShowCurrencyMenu(false);
                     }}
                     className={`flex items-center gap-2 text-xs sm:text-sm font-semibold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-full border transition-all ${
@@ -814,6 +771,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 </div>
                               </button>
 
+                              {/* Audit Trail & Activity Log Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('staff_dashboard', undefined, 'audit_trail');
+                                }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs hover:bg-amber-50/60 transition-colors text-left group"
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 group-hover:scale-105 transition-transform">
+                                  <History className="w-4 h-4 text-[#D49B41]" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-[#212529]">Audit Trail & Activity Log</p>
+                                  <p className="text-[10px] text-slate-500">Immutable ledger of rates, bookings & staff actions</p>
+                                </div>
+                              </button>
+
                               {/* Secondary Group */}
                               <div className="px-2 pt-1.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-[#E8E2D8] mt-1">
                                 Property & Personal
@@ -941,6 +915,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   </p>
                                   <p className={`text-[10px] ${isDarkConsole ? 'text-slate-400' : 'text-slate-500'}`}>
                                     Global system overview
+                                  </p>
+                                </div>
+                              </button>
+
+                              {/* Platform Audit Trail Deep-link */}
+                              <button
+                                onClick={() => {
+                                  setShowUserMenu(false);
+                                  onNavigate('platform_admin', undefined, 'audit_trail');
+                                }}
+                                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs transition-colors text-left group ${
+                                  isDarkConsole ? 'hover:bg-white/5' : 'hover:bg-[#FAF8F5]'
+                                }`}
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-[#1E3A2B]/10 flex items-center justify-center text-[#1E3A2B] group-hover:scale-105 transition-transform">
+                                  <History className="w-4 h-4 text-[#D49B41]" />
+                                </div>
+                                <div>
+                                  <p className={`font-bold ${isDarkConsole ? 'text-slate-200' : 'text-slate-900'}`}>
+                                    Platform Audit Trail & Security
+                                  </p>
+                                  <p className={`text-[10px] ${isDarkConsole ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    Global multi-hotel activity, security & event logs
                                   </p>
                                 </div>
                               </button>
@@ -1147,19 +1144,31 @@ export const Navbar: React.FC<NavbarProps> = ({
           <>
             <button
               onClick={() => onNavigate('staff_dashboard')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
-                currentTab === 'staff_dashboard'
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail'
                   ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
-              <Building2 className={`w-5 h-5 ${currentTab === 'staff_dashboard' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <Building2 className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
               <span>Management</span>
             </button>
 
             <button
+              onClick={() => onNavigate('staff_dashboard', undefined, 'audit_trail')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <History className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Audit Trail</span>
+            </button>
+
+            <button
               onClick={() => onNavigate('marketplace')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
                 currentTab === 'marketplace'
                   ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
@@ -1171,7 +1180,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => onNavigate('guest_bookings')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
                 currentTab === 'guest_bookings'
                   ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
@@ -1183,7 +1192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+              className="flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
             >
               <UserIcon className="w-5 h-5 text-slate-500" />
               <span>{user?.first_name || 'Owner'}</span>
@@ -1195,20 +1204,32 @@ export const Navbar: React.FC<NavbarProps> = ({
         {isSuperAdmin && (
           <>
             <button
-              onClick={() => onNavigate('platform_admin')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
-                currentTab === 'platform_admin'
-                  ? 'text-purple-800 bg-purple-100'
-                  : 'text-slate-600 hover:text-purple-800'
+              onClick={() => onNavigate('platform_admin', undefined, 'verifications')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'platform_admin' && currentSubTab !== 'audit_trail'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
-              <ShieldCheck className={`w-5 h-5 ${currentTab === 'platform_admin' ? 'text-purple-700' : 'text-slate-500'}`} />
+              <ShieldCheck className={`w-5 h-5 ${currentTab === 'platform_admin' && currentSubTab !== 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
               <span>Console</span>
             </button>
 
             <button
+              onClick={() => onNavigate('platform_admin', undefined, 'audit_trail')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'platform_admin' && currentSubTab === 'audit_trail'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <History className={`w-5 h-5 ${currentTab === 'platform_admin' && currentSubTab === 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Audit Trail</span>
+            </button>
+
+            <button
               onClick={() => onNavigate('marketplace')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
                 currentTab === 'marketplace'
                   ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
@@ -1220,7 +1241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => onNavigate('partner_register')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
                 currentTab === 'partner_register'
                   ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
@@ -1232,7 +1253,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+              className="flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
             >
               <UserIcon className="w-5 h-5 text-slate-500" />
               <span>Admin</span>
@@ -1519,6 +1540,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Property Profile & Settings</span>
                   </button>
 
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('staff_dashboard', undefined, 'audit_trail');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-amber-50/70 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+                      <History className="w-4 h-4 text-[#D49B41]" />
+                    </div>
+                    <span>Audit Trail & Activity Log</span>
+                  </button>
+
                   <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 dark:border-white/10 mt-1">
                     Property & Personal
                   </div>
@@ -1601,6 +1635,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <TrendingUp className="w-4 h-4" />
                     </div>
                     <span>Platform Metrics & GMV</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('platform_admin', undefined, 'audit_trail');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-[#1E3A2B]/15 text-[#1E3A2B] flex items-center justify-center">
+                      <History className="w-4 h-4 text-[#D49B41]" />
+                    </div>
+                    <span>Platform Audit Trail & Security Logs</span>
                   </button>
 
                   <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 dark:border-white/10 mt-1">

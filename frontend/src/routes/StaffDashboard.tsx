@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toastStore';
 import { WalkInModal } from '../components/WalkInModal';
+import { CameraQRScannerModal } from '../components/CameraQRScannerModal';
 import { LocationPickerMap } from '../components/LocationPickerMap';
 import {
   Building2,
@@ -268,6 +269,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [qrInput, setQrInput] = useState('');
   const [verifyingQr, setVerifyingQr] = useState(false);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
 
   // Selected room assignments for approval: { [bookingId]: roomId }
   const [selectedRoomsForApproval, setSelectedRoomsForApproval] = useState<Record<string | number, string | number>>({});
@@ -280,6 +282,20 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const [noShowBooking, setNoShowBooking] = useState<{ id: number | string; name: string; room?: string } | null>(null);
   const [noShowReason, setNoShowReason] = useState('Guest failed to arrive by check-in window.');
   const [noShowLoading, setNoShowLoading] = useState(false);
+
+  // Checkout & Balance Settlement modal state
+  interface CheckoutModalState {
+    bookingId: number | string;
+    guestName: string;
+    roomNumber: string;
+    totalAmount: number;
+    depositAmount: number;
+    balanceDue: number;
+    paymentMethod: 'cash' | 'gcash' | 'card';
+    paymentReference: string;
+  }
+  const [checkoutModal, setCheckoutModal] = useState<CheckoutModalState | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const [now, setNow] = useState(Date.now());
 
@@ -792,9 +808,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
-  const handleQRCheckIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!qrInput) return;
+  const handleQRCheckIn = async (e?: React.FormEvent, directCode?: string) => {
+    if (e) e.preventDefault();
+    const rawCode = (directCode !== undefined ? directCode : qrInput).trim();
+    if (!rawCode) return;
     setVerifyingQr(true);
     setActionError('');
     setActionSuccess('');
@@ -802,12 +819,17 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     try {
       const allRes = await api.get('/staff/bookings/');
       const allBookings: Booking[] = allRes.data.results || allRes.data || [];
+      const cleanUpper = rawCode.toUpperCase();
       const match = allBookings.find(
-        (b) => b.booking_reference === qrInput.trim() || b.qr_token === qrInput.trim()
+        (b) =>
+          b.booking_reference?.toUpperCase() === cleanUpper ||
+          b.qr_token === rawCode ||
+          cleanUpper.includes(b.booking_reference?.toUpperCase()) ||
+          (b.qr_token && rawCode.includes(b.qr_token))
       );
 
       if (!match) {
-        setActionError(`No reservation found matching reference "${qrInput}".`);
+        setActionError(`No reservation found matching reference "${rawCode}".`);
         return;
       }
 
@@ -842,16 +864,63 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
-  const handleCheckOut = async (bookingId: number | string) => {
+  const handleCheckOut = (bookingId: number | string, occupant?: any, roomNumber?: string) => {
+    if (occupant) {
+      setCheckoutModal({
+        bookingId,
+        guestName: occupant.guest_name,
+        roomNumber: roomNumber || 'N/A',
+        totalAmount: Number(occupant.total_amount || 0),
+        depositAmount: Number(occupant.deposit_amount || 0),
+        balanceDue: Number(occupant.balance_due || 0),
+        paymentMethod: 'cash',
+        paymentReference: '',
+      });
+      return;
+    }
+    // Fallback if occupant info not passed
     if (!window.confirm('Confirm checkout for this guest? Room will be flagged for cleaning.')) return;
+    performCheckoutDirect(bookingId);
+  };
+
+  const performCheckoutDirect = async (bookingId: number | string, payload: Record<string, any> = {}) => {
     setActionError('');
     setActionSuccess('');
     try {
-      const res = await api.post(`/bookings/${bookingId}/checkout/`);
+      const res = await api.post(`/bookings/${bookingId}/checkout/`, payload);
       setActionSuccess(res.data.message || 'Guest checked out successfully.');
       fetchDashboardData();
     } catch (err: any) {
       setActionError(err.response?.data?.detail || 'Checkout failed.');
+    }
+  };
+
+  const handleConfirmCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkoutModal) return;
+
+    setCheckingOut(true);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      const payload: Record<string, any> = {};
+      if (checkoutModal.balanceDue > 0) {
+        payload.settle_balance = true;
+        payload.payment_method = checkoutModal.paymentMethod;
+        if (checkoutModal.paymentReference.trim()) {
+          payload.payment_reference = checkoutModal.paymentReference.trim();
+        }
+      }
+
+      const res = await api.post(`/bookings/${checkoutModal.bookingId}/checkout/`, payload);
+      setActionSuccess(res.data.message || 'Guest checked out successfully.');
+      setCheckoutModal(null);
+      fetchDashboardData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.detail || 'Checkout failed.');
+    } finally {
+      setCheckingOut(false);
     }
   };
 
@@ -1296,19 +1365,36 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 <QrCode className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
                 <input
                   type="text"
-                  required
                   placeholder="Scan or paste reference / token..."
                   value={qrInput}
                   onChange={(e) => setQrInput(e.target.value)}
-                  className="w-full pl-11 pr-3.5 py-2.5 text-xs sm:text-sm font-mono font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
+                  className="w-full pl-11 pr-26 py-2.5 text-xs sm:text-sm font-mono font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
                 />
+                <button
+                  type="button"
+                  onClick={() => setIsCameraScannerOpen(true)}
+                  className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white border border-slate-200 hover:border-[#1E3A2B] hover:text-[#1E3A2B] text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
+                  title="Open live device camera scanner"
+                >
+                  <Camera className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>Camera</span>
+                </button>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <button
+                  type="button"
+                  onClick={() => setIsCameraScannerOpen(true)}
+                  className="flex-1 min-w-[150px] px-4 py-3 rounded-xl bg-[#D49B41] hover:bg-[#BF8832] text-[#1E3A2B] font-black text-xs shadow-md shadow-[#D49B41]/25 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Camera className="w-4 h-4 text-[#1E3A2B]" />
+                  <span>Scan with Camera</span>
+                </button>
+
+                <button
                   type="submit"
-                  disabled={verifyingQr}
-                  className="flex-1 px-5 py-3 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  disabled={verifyingQr || !qrInput.trim()}
+                  className="flex-1 min-w-[160px] px-4 py-3 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4 text-[#D49B41]" />
                   <span>{verifyingQr ? 'Validating Token...' : 'Verify Pass & Check In'}</span>
@@ -1318,9 +1404,15 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   type="button"
                   onClick={() => setQrInput('CHK-DEMO-CONFIRMED')}
                   className="px-3.5 py-3 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl active:scale-95 transition-all"
+                  title="Insert sample confirmed reference code"
                 >
                   Demo Ref
                 </button>
+              </div>
+
+              {/* Front Desk Hardware / Camera Tips */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                <span>Supports webcam, mobile rear camera, and USB handheld 2D scanners.</span>
               </div>
             </form>
           </div>
@@ -1457,6 +1549,19 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         </div>
                       )}
 
+                      {/* Financial Balance Indicator on Room Card */}
+                      {Number(r.occupant.balance_due || 0) > 0 ? (
+                        <div className="mt-1 flex items-center justify-between text-[10px] bg-amber-50 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-lg font-bold">
+                          <span>Balance Due:</span>
+                          <span className="text-[#8F611A] font-black">₱{Number(r.occupant.balance_due).toLocaleString()}</span>
+                        </div>
+                      ) : (
+                        <div className="mt-1 flex items-center justify-between text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded-lg font-bold">
+                          <span>Account Status:</span>
+                          <span className="font-extrabold text-emerald-700">Paid (₱0.00)</span>
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-1.5 mt-2.5">
                         {(r.occupant as any).status === 'confirmed' && (
                           <div className="flex items-center gap-1.5 w-full">
@@ -1488,8 +1593,8 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                           </button>
                         )}
                         <button
-                          onClick={() => handleCheckOut(r.occupant!.booking_id)}
-                          className="flex-1 py-1.5 rounded-xl bg-[#212529] hover:bg-[#1E3A2B] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs"
+                          onClick={() => handleCheckOut(r.occupant!.booking_id, r.occupant, r.room_number)}
+                          className="flex-1 py-1.5 rounded-xl bg-[#212529] hover:bg-[#1E3A2B] text-white text-[11px] font-bold transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           <span>{(r.occupant as any).status === 'confirmed' ? 'Release Room' : 'Check Out'}</span>
@@ -2468,6 +2573,146 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         </div>
       )}
 
+      {/* Checkout & Balance Settlement Modal */}
+      {checkoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#1E3A2B] bg-[#3B5E43]/10 px-2.5 py-0.5 rounded-full">
+                  Front Desk Checkout
+                </span>
+                <h3 className="text-lg font-black text-[#212529] mt-1">
+                  Settle Bill & Complete Checkout
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCheckoutModal(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Guest & Room Information */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E8E2D8] flex items-center justify-between text-xs">
+              <div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Guest</span>
+                <span className="font-extrabold text-[#212529]">{checkoutModal.guestName}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Room</span>
+                <span className="font-extrabold text-[#1E3A2B]">Room {checkoutModal.roomNumber}</span>
+              </div>
+            </div>
+
+            {/* Financial Summary Card */}
+            <div className="p-4 rounded-2xl border border-slate-200/90 bg-white space-y-2.5">
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Total Stay Bill</span>
+                <span className="font-bold text-slate-800">₱{checkoutModal.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Reservation Deposit Paid</span>
+                <span className="font-bold text-emerald-700">- ₱{checkoutModal.depositAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-black uppercase text-[#212529]">Remaining Balance Due</span>
+                <span className={`text-lg font-black ${checkoutModal.balanceDue > 0 ? 'text-[#8F611A]' : 'text-emerald-700'}`}>
+                  ₱{checkoutModal.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            {checkoutModal.balanceDue > 0 ? (
+              <form onSubmit={handleConfirmCheckout} className="space-y-4">
+                <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 leading-relaxed font-medium">
+                  <strong>Mandatory Settlement:</strong> Guest must settle the outstanding balance of <strong>₱{checkoutModal.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> before front desk marks this stay as completed.
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Payment Method Received</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'cash', label: 'Cash' },
+                      { id: 'gcash', label: 'GCash' },
+                      { id: 'card', label: 'Card' },
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setCheckoutModal({ ...checkoutModal, paymentMethod: m.id as any })}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                          checkoutModal.paymentMethod === m.id
+                            ? 'bg-[#1E3A2B] text-white border-[#1E3A2B] shadow-xs'
+                            : 'bg-[#FAF8F5] text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Receipt / Transaction Reference <span className="text-slate-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. GCash Ref # or Cash Receipt #"
+                    value={checkoutModal.paymentReference}
+                    onChange={(e) => setCheckoutModal({ ...checkoutModal, paymentReference: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs font-medium border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E3A2B] outline-none bg-[#FAF8F5]"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutModal(null)}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={checkingOut}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-75"
+                  >
+                    {checkingOut ? 'Settling...' : `Settle ₱${checkoutModal.balanceDue.toLocaleString()} & Check Out`}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleConfirmCheckout} className="space-y-4">
+                <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900 leading-relaxed font-medium">
+                  <strong>Fully Paid:</strong> Guest account has no outstanding balance (₱0.00). Confirming checkout will set Room {checkoutModal.roomNumber} to <strong>Cleaning</strong> status.
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutModal(null)}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={checkingOut}
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-[#212529] hover:bg-[#1E3A2B] text-white font-black text-xs shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-75"
+                  >
+                    {checkingOut ? 'Checking Out...' : 'Confirm Checkout & Clean'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Walk-in Modal */}
       <WalkInModal
         isOpen={isWalkInOpen || !!isWalkInOpenExternal}
@@ -2478,6 +2723,16 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         onSuccess={(ref) => {
           setActionSuccess(`Walk-in guest registered with reference ${ref}!`);
           fetchDashboardData();
+        }}
+      />
+
+      {/* Live Camera QR Scanner Modal */}
+      <CameraQRScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScanSuccess={(code) => {
+          setQrInput(code);
+          handleQRCheckIn(undefined, code);
         }}
       />
 
