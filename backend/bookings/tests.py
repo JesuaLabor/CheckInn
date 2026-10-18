@@ -80,7 +80,7 @@ class LocalStayCoreTests(TestCase):
         d1 = today + timedelta(days=1)
         d2 = today + timedelta(days=3)
 
-        # 1. First guest creates request
+        # 1. First guest creates request with 50% deposit and payment reference
         self.client.force_authenticate(user=self.guest)
         res1 = self.client.post('/api/v1/bookings/', {
             'hotel': self.hotel_a.id,
@@ -91,12 +91,19 @@ class LocalStayCoreTests(TestCase):
             'guest_count': 2,
             'check_in': d1.strftime('%Y-%m-%d'),
             'check_out': d2.strftime('%Y-%m-%d'),
-            'payment_method': 'pay_at_hotel'
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-100289'
         })
         self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
         b1 = Booking.objects.get(id=res1.data['booking']['id'])
         self.assertEqual(b1.status, 'pending_approval')
         self.assertTrue(b1.is_hold_active)
+        self.assertEqual(float(b1.total_amount), 2400.00)
+        self.assertEqual(float(b1.deposit_amount), 1200.00)
+        self.assertEqual(float(b1.balance_due), 1200.00)
+        self.assertTrue(b1.is_non_refundable)
 
         # 2. Second guest attempts to book exact same room type for overlapping dates
         self.client.force_authenticate(user=self.guest2)
@@ -109,37 +116,47 @@ class LocalStayCoreTests(TestCase):
             'guest_count': 2,
             'check_in': d1.strftime('%Y-%m-%d'),
             'check_out': d2.strftime('%Y-%m-%d'),
-            'payment_method': 'pay_at_hotel'
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-999123'
         })
-        # Should be rejected because room inventory is 1 and soft hold is active
+        # Should be rejected because room inventory is 1 and already reserved
         self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_soft_hold_expiration_allows_rebooking(self):
-        """Expired hold prevents approval and allows new guest reservation."""
+    def test_rejection_allows_rebooking(self):
+        """Staff rejection of a reservation releases the room inventory for new guests."""
         today = date.today()
         d1 = today + timedelta(days=5)
         d2 = today + timedelta(days=7)
 
-        # Create booking with an expired hold timestamp
-        b = Booking.objects.create(
-            hotel=self.hotel_a,
-            room_type=self.rt_a,
-            guest=self.guest,
-            guest_name='Expired Hold Guest',
-            guest_email='expired@test.com',
-            check_in=d1,
-            check_out=d2,
-            total_amount=2400,
-            status='pending_approval',
-            hold_expires_at=timezone.now() - timedelta(minutes=15)
-        )
+        # 1. First guest reserves
+        self.client.force_authenticate(user=self.guest)
+        res1 = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'First Guest',
+            'guest_email': 'first@test.com',
+            'guest_phone': '09111111111',
+            'guest_count': 2,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-111111'
+        })
+        self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
+        b = Booking.objects.get(id=res1.data['booking']['id'])
 
-        # Staff attempts to approve expired request -> 400 Bad Request
+        # Staff rejects request (e.g. invalid reference)
         self.client.force_authenticate(user=self.staff_a)
-        approve_res = self.client.post(f'/api/v1/staff/requests/{b.id}/approve/')
-        self.assertEqual(approve_res.status_code, status.HTTP_400_BAD_REQUEST)
+        rej_res = self.client.post(f'/api/v1/staff/requests/{b.id}/reject/', {
+            'reason': 'Payment reference could not be verified in merchant app.'
+        })
+        self.assertEqual(rej_res.status_code, status.HTTP_200_OK)
         b.refresh_from_db()
-        self.assertEqual(b.status, 'expired')
+        self.assertEqual(b.status, 'rejected')
 
         # Another guest can now reserve the same dates
         self.client.force_authenticate(user=self.guest2)
@@ -152,7 +169,10 @@ class LocalStayCoreTests(TestCase):
             'guest_count': 2,
             'check_in': d1.strftime('%Y-%m-%d'),
             'check_out': d2.strftime('%Y-%m-%d'),
-            'payment_method': 'pay_at_hotel'
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-222222'
         })
         self.assertEqual(res_new.status_code, status.HTTP_201_CREATED)
 
@@ -198,7 +218,9 @@ class LocalStayCoreTests(TestCase):
             'guest_count': 2,
             'check_in': d1.strftime('%Y-%m-%d'),
             'check_out': d2.strftime('%Y-%m-%d'),
-            'payment_method': 'pay_at_hotel'
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-REPLACE-1234',
+            'terms_accepted': True,
         })
         self.assertEqual(res2.status_code, status.HTTP_201_CREATED)
 
@@ -614,7 +636,10 @@ class LocalStayCoreTests(TestCase):
             'guest_email': 'juan@test.com',
             'guest_phone': '09171234567',
             'guest_count': 1,
-            'payment_method': 'pay_at_hotel'
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-SHORT88'
         }, format='json')
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data if hasattr(res, 'data') else None)
@@ -622,6 +647,8 @@ class LocalStayCoreTests(TestCase):
         self.assertEqual(b_data['stay_type'], 'hourly')
         self.assertEqual(b_data['duration_hours'], 6)
         self.assertEqual(float(b_data['total_amount']), 700.00)
+        self.assertEqual(float(b_data['deposit_amount']), 350.00)
+        self.assertEqual(float(b_data['balance_due']), 350.00)
         self.assertEqual(b_data['status'], 'pending_approval')
         self.assertTrue(b_data['is_hold_active'])
 
@@ -644,7 +671,10 @@ class LocalStayCoreTests(TestCase):
             'guest_email': 'overlap@test.com',
             'guest_phone': '09170009999',
             'guest_count': 1,
-            'payment_method': 'pay_at_hotel'
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-999999'
         }, format='json')
         self.assertEqual(res_overlap.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -657,5 +687,88 @@ class LocalStayCoreTests(TestCase):
         self.assertEqual(booking.room, self.room_a1)
         self.room_a1.refresh_from_db()
         self.assertEqual(self.room_a1.status, 'occupied')
+
+    def test_mandatory_deposit_and_non_refundable_policy(self):
+        """Validates that 50% deposit and terms agreement are strictly required and calculated."""
+        self.client.force_authenticate(user=self.guest)
+        d1 = date.today() + timedelta(days=10)
+        d2 = date.today() + timedelta(days=12)
+
+        # 1. Missing payment reference fails
+        res_no_ref = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'No Ref Guest',
+            'guest_email': 'noref@test.com',
+            'guest_phone': '09171234567',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': ''
+        }, format='json')
+        self.assertEqual(res_no_ref.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('payment_reference', res_no_ref.data)
+
+        # 2. Terms not accepted fails
+        res_no_terms = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'No Terms Guest',
+            'guest_email': 'noterms@test.com',
+            'guest_phone': '09171234567',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': False,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-VALID123'
+        }, format='json')
+        self.assertEqual(res_no_terms.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('terms_accepted', res_no_terms.data)
+
+        # 3. Valid 50% deposit booking: Total=2400, Deposit=1200, Balance=1200
+        res_50 = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'Valid Deposit Guest',
+            'guest_email': 'validdeposit@test.com',
+            'guest_phone': '09171234567',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-VALID123'
+        }, format='json')
+        self.assertEqual(res_50.status_code, status.HTTP_201_CREATED)
+        b_50 = Booking.objects.get(id=res_50.data['booking']['id'])
+        self.assertEqual(b_50.deposit_type, 'fifty_percent')
+        self.assertEqual(float(b_50.deposit_amount), 1200.00)
+        self.assertEqual(float(b_50.balance_due), 1200.00)
+        self.assertTrue(b_50.is_non_refundable)
+        self.assertEqual(float(b_50.payment.amount), 1200.00)
+        self.assertIsNone(b_50.hold_expires_at)
+
+        # 4. Staff approves -> payment becomes paid
+        self.client.force_authenticate(user=self.staff_a)
+        app_res = self.client.post(f'/api/v1/staff/requests/{b_50.id}/approve/')
+        self.assertEqual(app_res.status_code, status.HTTP_200_OK)
+        b_50.refresh_from_db()
+        self.assertEqual(b_50.status, 'confirmed')
+        self.assertEqual(b_50.payment.status, 'paid')
+        self.assertEqual(float(b_50.balance_due), 1200.00)
+
+        # 5. Check-in settles balance due
+        ci_res = self.client.post(f'/api/v1/bookings/{b_50.id}/checkin/', {'collect_balance': True})
+        self.assertEqual(ci_res.status_code, status.HTTP_200_OK)
+        b_50.refresh_from_db()
+        self.assertEqual(b_50.status, 'checked_in')
+        self.assertEqual(float(b_50.balance_due), 0.00)
+
 
 

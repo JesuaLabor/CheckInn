@@ -16,7 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.serializers import UserSerializer
 from bookings.models import Booking
-from .models import Hotel, RoomType, Room
+from .models import Hotel, RoomType, Room, HotelAuditLog
 from .permissions import IsPlatformSuperAdmin, IsHotelOwnerOrAdmin
 from .serializers import (
     HotelListSerializer,
@@ -26,7 +26,9 @@ from .serializers import (
     PlatformHotelSerializer,
     HotelManageSerializer,
     StaffMemberSerializer,
+    HotelAuditLogSerializer,
 )
+from .audit import log_hotel_activity
 
 User = get_user_model()
 
@@ -189,10 +191,8 @@ class AvailableRoomsView(APIView):
                         hotel=hotel,
                         room_type=rt,
                         check_in__lt=check_out,
-                        check_out__gt=check_in
-                    ).filter(
-                        Q(status__in=['confirmed', 'checked_in']) |
-                        Q(status='pending_approval', hold_expires_at__gt=now)
+                        check_out__gt=check_in,
+                        status__in=['confirmed', 'checked_in', 'pending_approval']
                     )
 
                     booked_count = overlapping.count()
@@ -520,6 +520,31 @@ class HotelManageProfileView(APIView):
         serializer = HotelManageSerializer(hotel, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        payout_changed = any(k in data for k in ['payout_method', 'payout_account_number', 'payout_account_name'])
+        if payout_changed:
+            log_hotel_activity(
+                hotel=hotel,
+                actor=request.user,
+                request=request,
+                category='settings',
+                action='payout_settings_updated',
+                severity='critical',
+                summary=f"Disbursement payout account updated ({hotel.payout_method} / {hotel.payout_account_name})",
+                details={'payout_method': hotel.payout_method, 'account_name': hotel.payout_account_name}
+            )
+        else:
+            log_hotel_activity(
+                hotel=hotel,
+                actor=request.user,
+                request=request,
+                category='settings',
+                action='hotel_profile_updated',
+                severity='info',
+                summary="Hotel profile details and amenities updated",
+                details={'name': hotel.name, 'contact_phone': hotel.contact_phone}
+            )
+
         return Response({
             'message': 'Hotel settings saved successfully.',
             'hotel': serializer.data
@@ -582,6 +607,18 @@ class HotelManageStaffView(APIView):
             hotel=hotel
         )
 
+        full_name = f"{staff_user.first_name} {staff_user.last_name}".strip() or staff_user.username
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='staff',
+            action='staff_created',
+            severity='info',
+            summary=f"Added staff member \"{staff_user.username}\" ({full_name})",
+            details={'username': staff_user.username, 'role': staff_user.role, 'email': staff_user.email}
+        )
+
         return Response({
             'message': f'Staff member "{staff_user.username}" registered successfully.',
             'staff': {
@@ -590,7 +627,7 @@ class HotelManageStaffView(APIView):
                 'email': staff_user.email,
                 'first_name': staff_user.first_name,
                 'last_name': staff_user.last_name,
-                'full_name': f"{staff_user.first_name} {staff_user.last_name}".strip() or staff_user.username,
+                'full_name': full_name,
                 'role': staff_user.role,
                 'phone_number': staff_user.phone_number,
                 'is_active': staff_user.is_active,
@@ -615,6 +652,18 @@ class HotelManageStaffDetailView(APIView):
         # Deactivate staff user
         staff_user.is_active = False
         staff_user.save()
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='staff',
+            action='staff_deactivated',
+            severity='warning',
+            summary=f"Deactivated staff account \"{staff_user.username}\"",
+            details={'username': staff_user.username, 'role': staff_user.role}
+        )
+
         return Response({'message': f'Staff member "{staff_user.username}" deactivated.'})
 
 
@@ -714,6 +763,18 @@ class HotelManageRoomTypeView(APIView):
             rate_12h=rate_12h,
             rate_24h=rate_24h,
         )
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='inventory',
+            action='room_type_created',
+            severity='info',
+            summary=f"Created room category \"{rt.name}\" (Base Rate: ₱{float(rt.base_rate):,.2f})",
+            details={'name': rt.name, 'base_rate': float(rt.base_rate), 'capacity': rt.capacity}
+        )
+
         serializer = RoomTypeSerializer(rt)
         return Response({
             'message': f'Room category "{rt.name}" added successfully.',
@@ -756,6 +817,17 @@ class HotelManageRoomView(APIView):
             floor=floor,
             status='available',
             is_active=True
+        )
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='inventory',
+            action='room_created',
+            severity='info',
+            summary=f"Added physical Room {room.room_number} ({room.room_type.name}) on {room.floor}",
+            details={'room_number': room.room_number, 'floor': room.floor, 'category': room.room_type.name}
         )
 
         serializer = RoomSerializer(room)
@@ -872,6 +944,19 @@ class HotelManageRoomTypeDetailView(APIView):
             rt.photos = new_photos
 
         rt.save()
+
+        rate_changed = 'base_rate' in data
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='inventory',
+            action='room_type_updated',
+            severity='warning' if rate_changed else 'info',
+            summary=f"Updated room category \"{rt.name}\"" + (f" (Base rate set to ₱{float(rt.base_rate):,.2f})" if rate_changed else ""),
+            details={'name': rt.name, 'base_rate': float(rt.base_rate), 'capacity': rt.capacity}
+        )
+
         serializer = RoomTypeSerializer(rt)
         return Response({
             'message': f'Room category "{rt.name}" updated successfully.',
@@ -898,6 +983,18 @@ class HotelManageRoomTypeDetailView(APIView):
 
         category_name = rt.name
         rt.delete()
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='inventory',
+            action='room_type_deleted',
+            severity='warning',
+            summary=f"Deleted room category \"{category_name}\"",
+            details={'name': category_name}
+        )
+
         return Response({'message': f'Room category "{category_name}" has been deleted.'})
 
 
@@ -941,6 +1038,18 @@ class HotelManageRoomDetailView(APIView):
             room.is_active = bool(data.get('is_active'))
 
         room.save()
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='inventory',
+            action='room_updated',
+            severity='info',
+            summary=f"Updated configuration for Room {room.room_number} ({room.room_type.name})",
+            details={'room_number': room.room_number, 'floor': room.floor, 'status': room.status, 'is_active': room.is_active}
+        )
+
         serializer = RoomSerializer(room)
         return Response({
             'message': f'Room "{room.room_number}" updated successfully.',
@@ -965,6 +1074,78 @@ class HotelManageRoomDetailView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         room_num = room.room_number
+        room_category_name = room.room_type.name
         room.delete()
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='inventory',
+            action='room_deleted',
+            severity='warning',
+            summary=f"Deleted physical Room {room_num} ({room_category_name}) from inventory",
+            details={'room_number': room_num, 'category': room_category_name}
+        )
+
         return Response({'message': f'Room "{room_num}" deleted successfully.'})
+
+
+class HotelAuditLogListView(APIView):
+    """
+    Retrieves audit trail entries for a hotel.
+    - Hotel Owner (admin): strictly sees audit logs for their assigned hotel.
+    - Platform Superadmin (superadmin): can query any hotel via ?hotel_id=<id> or view all.
+    - Front desk staff: 403 Forbidden (enforced by IsHotelOwnerOrAdmin).
+    """
+    permission_classes = [IsHotelOwnerOrAdmin]
+
+    def get(self, request):
+        user = request.user
+        hotel = None
+
+        if user.role == 'superadmin' or user.is_superuser:
+            hotel_id = request.query_params.get('hotel_id')
+            if hotel_id:
+                try:
+                    hotel = Hotel.objects.get(pk=hotel_id)
+                except Hotel.DoesNotExist:
+                    return Response({'error': 'Hotel not found.'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            hotel = getattr(user, 'hotel', None)
+            if not hotel:
+                return Response({'error': 'No hotel assigned to this account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        logs = HotelAuditLog.objects.select_related('actor', 'hotel')
+        if hotel:
+            logs = logs.filter(hotel=hotel)
+
+        # Category filter
+        category = request.query_params.get('category')
+        if category and category != 'all':
+            logs = logs.filter(category=category)
+
+        # Severity filter
+        severity = request.query_params.get('severity')
+        if severity and severity != 'all':
+            logs = logs.filter(severity=severity)
+
+        # Staff filter
+        staff_id = request.query_params.get('staff_id')
+        if staff_id and staff_id != 'all':
+            logs = logs.filter(actor_id=staff_id)
+
+        # Search query (summary, action, actor_name, ip_address)
+        search = request.query_params.get('search', '').strip()
+        if search:
+            logs = logs.filter(
+                Q(summary__icontains=search) |
+                Q(action__icontains=search) |
+                Q(actor_name__icontains=search) |
+                Q(ip_address__icontains=search)
+            )
+
+        logs = logs.order_by('-created_at')[:250]
+        serializer = HotelAuditLogSerializer(logs, many=True)
+        return Response(serializer.data)
 

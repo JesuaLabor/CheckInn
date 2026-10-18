@@ -72,19 +72,11 @@ class StaffPendingRequestsView(APIView):
 
     def get(self, request):
         hotel = request.user.hotel
-        now = timezone.now()
-
-        # Expire past holds automatically
-        Booking.objects.filter(
-            hotel=hotel,
-            status='pending_approval',
-            hold_expires_at__lt=now
-        ).update(status='expired')
 
         pending_bookings = Booking.objects.filter(
             hotel=hotel,
             status='pending_approval'
-        ).select_related('room_type', 'guest').order_by('hold_expires_at')
+        ).select_related('room_type', 'guest', 'payment').order_by('-created_at')
 
         serializer = BookingSerializer(pending_bookings, many=True)
         return Response({
@@ -130,14 +122,6 @@ class StaffApproveRequestView(APIView):
             if booking.status != 'pending_approval':
                 return Response(
                     {'detail': f'Cannot approve booking with status "{booking.get_status_display()}".'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            if booking.hold_expires_at and now > booking.hold_expires_at:
-                booking.status = 'expired'
-                booking.save()
-                return Response(
-                    {'detail': 'This reservation request hold has expired.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
@@ -352,6 +336,10 @@ class CheckInBookingView(APIView):
 
         booking.status = 'checked_in'
         booking.checked_in_at = timezone.now()
+        collect_balance = request.data.get('collect_balance', True)
+        if collect_balance and booking.balance_due > 0:
+            from decimal import Decimal
+            booking.balance_due = Decimal('0.00')
         booking.save()
 
         if booking.room:

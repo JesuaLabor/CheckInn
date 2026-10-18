@@ -47,7 +47,9 @@ class BookingSerializer(serializers.ModelSerializer):
             'room_type', 'room_type_name', 'room', 'room_number',
             'guest', 'guest_name', 'guest_email', 'guest_phone', 'guest_count',
             'stay_type', 'duration_hours', 'check_in_datetime', 'check_out_datetime',
-            'check_in', 'check_out', 'total_amount', 'currency', 'status', 'status_display',
+            'check_in', 'check_out', 'total_amount', 'deposit_type', 'deposit_amount', 'balance_due',
+            'is_non_refundable', 'cancellation_policy',
+            'currency', 'status', 'status_display',
             'source', 'source_display', 'hold_expires_at', 'is_hold_active',
             'qr_token', 'special_requests', 'rejection_reason',
             'reviewed_by', 'reviewed_at', 'checked_in_at', 'checked_out_at',
@@ -61,15 +63,24 @@ class BookingSerializer(serializers.ModelSerializer):
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):
+    deposit_type = serializers.ChoiceField(
+        choices=Booking.DEPOSIT_TYPE_CHOICES,
+        default='fifty_percent'
+    )
+    terms_accepted = serializers.BooleanField(
+        write_only=True,
+        default=True,
+        help_text='Guest explicitly accepts that reservation deposit is strictly non-refundable upon cancellation.'
+    )
     payment_method = serializers.ChoiceField(
         choices=Payment.METHOD_CHOICES,
-        default='pay_at_hotel',
+        default='gcash',
         write_only=True
     )
     payment_reference = serializers.CharField(
         max_length=100,
-        required=False,
-        allow_blank=True,
+        required=True,
+        allow_blank=False,
         write_only=True,
         help_text='GCash or Bank transfer transaction reference number'
     )
@@ -96,12 +107,15 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'hotel', 'room_type', 'guest_name', 'guest_email', 'guest_phone',
             'guest_count', 'stay_type', 'duration_hours', 'check_in_time',
+            'deposit_type', 'deposit_amount', 'balance_due', 'is_non_refundable', 'cancellation_policy',
+            'terms_accepted',
             'check_in_datetime', 'check_out_datetime', 'check_in', 'check_out',
             'special_requests', 'payment_method', 'payment_reference',
-            'booking_reference', 'total_amount', 'status', 'hold_expires_at'
+            'booking_reference', 'total_amount', 'status'
         ]
         read_only_fields = [
-            'id', 'booking_reference', 'total_amount', 'status', 'hold_expires_at',
+            'id', 'booking_reference', 'total_amount', 'deposit_amount', 'balance_due',
+            'is_non_refundable', 'cancellation_policy', 'status',
             'check_in_datetime', 'check_out_datetime'
         ]
 
@@ -112,6 +126,20 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 
         if room_type.hotel_id != hotel.id:
             raise serializers.ValidationError({'room_type': 'Selected room type does not belong to this hotel.'})
+
+        # Mandatory Terms agreement check
+        terms_accepted = data.get('terms_accepted', False)
+        if not terms_accepted:
+            raise serializers.ValidationError({
+                'terms_accepted': 'You must acknowledge and agree that the reservation deposit is strictly non-refundable upon cancellation.'
+            })
+
+        # Mandatory payment reference check
+        payment_reference = data.get('payment_reference', '').strip()
+        if not payment_reference:
+            raise serializers.ValidationError({
+                'payment_reference': 'A payment reference number is required to guarantee your reservation.'
+            })
 
         now = timezone.now()
         tz = timezone.get_current_timezone()
@@ -165,6 +193,30 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             data['check_out_datetime'] = end_dt
             data['check_in'] = start_dt.date()
             data['check_out'] = end_dt.date()
+
+            # Calculate total amount for hourly
+            tier_rate = None
+            if duration_hours == 3:
+                tier_rate = room_type.rate_3h
+            elif duration_hours == 6:
+                tier_rate = room_type.rate_6h
+            elif duration_hours == 12:
+                tier_rate = room_type.rate_12h
+            elif duration_hours == 24:
+                tier_rate = room_type.rate_24h or room_type.base_rate
+
+            if tier_rate is None or tier_rate <= 0:
+                from decimal import Decimal
+                if duration_hours == 3:
+                    tier_rate = round(room_type.base_rate * Decimal('0.30'), 2)
+                elif duration_hours == 6:
+                    tier_rate = round(room_type.base_rate * Decimal('0.50'), 2)
+                elif duration_hours == 12:
+                    tier_rate = round(room_type.base_rate * Decimal('0.75'), 2)
+                else:
+                    tier_rate = room_type.base_rate
+
+            total_amount = tier_rate
         else:
             check_in = data.get('check_in')
             check_out = data.get('check_out')
@@ -181,7 +233,26 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             data['check_in_datetime'] = start_dt
             data['check_out_datetime'] = end_dt
 
-        # Dynamic capacity & overlap check
+            nights = (check_out - check_in).days
+            total_amount = room_type.base_rate * nights
+
+        # Calculate deposit amount (minimum 50% or 100%) and balance due
+        from decimal import Decimal
+        deposit_type = data.get('deposit_type', 'fifty_percent')
+        if deposit_type == 'fifty_percent':
+            deposit_amount = round(total_amount * Decimal('0.50'), 2)
+            balance_due = total_amount - deposit_amount
+        else:
+            deposit_amount = total_amount
+            balance_due = Decimal('0.00')
+
+        data['total_amount'] = total_amount
+        data['deposit_amount'] = deposit_amount
+        data['balance_due'] = balance_due
+        data['is_non_refundable'] = True
+        data['cancellation_policy'] = 'Strict: 50% reservation deposit is non-refundable upon cancellation or no-show.'
+
+        # Dynamic capacity & overlap check (deposit-backed bookings reserve inventory immediately)
         total_rooms = room_type.rooms.filter(is_active=True).count()
         if total_rooms == 0:
             raise serializers.ValidationError('Sorry, no active rooms are configured for this room category.')
@@ -190,10 +261,8 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             hotel=hotel,
             room_type=room_type,
             check_in__lte=data['check_out'],
-            check_out__gte=data['check_in']
-        ).filter(
-            Q(status__in=['confirmed', 'checked_in']) |
-            Q(status='pending_approval', hold_expires_at__gt=now)
+            check_out__gte=data['check_in'],
+            status__in=['confirmed', 'checked_in', 'pending_approval']
         )
 
         overlap_count = 0
@@ -218,45 +287,12 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        payment_method = validated_data.pop('payment_method', 'pay_at_hotel')
+        payment_method = validated_data.pop('payment_method', 'gcash')
         payment_reference = validated_data.pop('payment_reference', '').strip()
         validated_data.pop('check_in_time', None)
-        stay_type = validated_data.get('stay_type', 'nightly')
-        duration_hours = validated_data.get('duration_hours')
-        room_type = validated_data['room_type']
+        validated_data.pop('terms_accepted', None)
 
-        if stay_type == 'hourly':
-            tier_rate = None
-            if duration_hours == 3:
-                tier_rate = room_type.rate_3h
-            elif duration_hours == 6:
-                tier_rate = room_type.rate_6h
-            elif duration_hours == 12:
-                tier_rate = room_type.rate_12h
-            elif duration_hours == 24:
-                tier_rate = room_type.rate_24h or room_type.base_rate
-
-            if tier_rate is None or tier_rate <= 0:
-                from decimal import Decimal
-                if duration_hours == 3:
-                    tier_rate = round(room_type.base_rate * Decimal('0.30'), 2)
-                elif duration_hours == 6:
-                    tier_rate = round(room_type.base_rate * Decimal('0.50'), 2)
-                elif duration_hours == 12:
-                    tier_rate = round(room_type.base_rate * Decimal('0.75'), 2)
-                else:
-                    tier_rate = room_type.base_rate
-
-            total_amount = tier_rate
-        else:
-            check_in = validated_data['check_in']
-            check_out = validated_data['check_out']
-            nights = (check_out - check_in).days
-            total_amount = room_type.base_rate * nights
-
-        # Set 45-minute soft hold
-        now = timezone.now()
-        hold_expires_at = now + timedelta(minutes=45)
+        deposit_amount = validated_data['deposit_amount']
 
         request = self.context.get('request')
         guest = request.user if request and request.user.is_authenticated else None
@@ -264,15 +300,14 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         booking = Booking.objects.create(
             **validated_data,
             guest=guest,
-            total_amount=total_amount,
             status='pending_approval',
             source='marketplace',
-            hold_expires_at=hold_expires_at
+            hold_expires_at=None
         )
 
         Payment.objects.create(
             booking=booking,
-            amount=total_amount,
+            amount=deposit_amount,
             method=payment_method,
             status='unpaid',
             reference_number=payment_reference

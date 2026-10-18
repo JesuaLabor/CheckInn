@@ -82,9 +82,40 @@ class Booking(models.Model):
         help_text='Exact timestamp when the stay ends.'
     )
 
+    DEPOSIT_TYPE_CHOICES = (
+        ('fifty_percent', '50% Downpayment Deposit'),
+        ('full', '100% Full Payment'),
+    )
+
     check_in = models.DateField()
     check_out = models.DateField()
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    deposit_type = models.CharField(
+        max_length=20,
+        choices=DEPOSIT_TYPE_CHOICES,
+        default='fifty_percent',
+        help_text='Selected reservation payment type (50% deposit or 100% full payment).'
+    )
+    deposit_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text='Amount required/paid as reservation deposit to guarantee the booking.'
+    )
+    balance_due = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text='Remaining balance to be settled at the front desk upon physical check-in.'
+    )
+    is_non_refundable = models.BooleanField(
+        default=True,
+        help_text='Declares that the reservation deposit is strictly non-refundable upon cancellation.'
+    )
+    cancellation_policy = models.CharField(
+        max_length=150,
+        default='Strict: 50% reservation deposit is non-refundable upon cancellation or no-show.'
+    )
     currency = models.CharField(max_length=3, default='PHP', help_text='ISO-4217 currency code')
 
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending_approval')
@@ -93,7 +124,7 @@ class Booking(models.Model):
     hold_expires_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text='Soft hold expiration time while status is pending_approval.'
+        help_text='Soft hold expiration time while status is pending_approval (deprecated in favor of guaranteed deposits).'
     )
     qr_token = models.CharField(
         max_length=255,
@@ -125,9 +156,11 @@ class Booking(models.Model):
 
     @property
     def is_hold_active(self):
-        if self.status != 'pending_approval' or not self.hold_expires_at:
+        if self.status != 'pending_approval':
             return False
-        return timezone.now() < self.hold_expires_at
+        if self.hold_expires_at:
+            return timezone.now() < self.hold_expires_at
+        return True
 
     def generate_qr_token(self):
         signer = Signer(salt='localstay-qr-checkin')
