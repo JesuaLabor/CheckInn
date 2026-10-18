@@ -46,6 +46,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'booking_reference', 'hotel', 'hotel_name', 'hotel_slug', 'hotel_address',
             'room_type', 'room_type_name', 'room', 'room_number',
             'guest', 'guest_name', 'guest_email', 'guest_phone', 'guest_count',
+            'stay_type', 'duration_hours', 'check_in_datetime', 'check_out_datetime',
             'check_in', 'check_out', 'total_amount', 'currency', 'status', 'status_display',
             'source', 'source_display', 'hold_expires_at', 'is_hold_active',
             'qr_token', 'special_requests', 'rejection_reason',
@@ -156,6 +157,13 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 
 class WalkInCreateSerializer(serializers.ModelSerializer):
     room_id = serializers.IntegerField(write_only=True)
+    check_in = serializers.DateField(required=False)
+    check_out = serializers.DateField(required=False)
+    stay_type = serializers.ChoiceField(
+        choices=Booking.STAY_TYPE_CHOICES,
+        default='nightly'
+    )
+    duration_hours = serializers.IntegerField(required=False, allow_null=True)
     payment_method = serializers.ChoiceField(
         choices=Payment.METHOD_CHOICES,
         default='cash',
@@ -171,16 +179,45 @@ class WalkInCreateSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'room_id', 'guest_name', 'guest_email', 'guest_phone',
-            'guest_count', 'check_in', 'check_out', 'special_requests',
+            'guest_count', 'stay_type', 'duration_hours', 'check_in', 'check_out',
+            'check_in_datetime', 'check_out_datetime', 'special_requests',
             'payment_method', 'payment_status', 'booking_reference', 'total_amount'
         ]
-        read_only_fields = ['id', 'booking_reference', 'total_amount']
+        read_only_fields = ['id', 'booking_reference', 'total_amount', 'check_in_datetime', 'check_out_datetime']
 
     def validate(self, data):
-        check_in = data.get('check_in')
-        check_out = data.get('check_out')
-        if check_in >= check_out:
-            raise serializers.ValidationError({'check_out': 'Check-out date must be after check-in date.'})
+        stay_type = data.get('stay_type', 'nightly')
+        duration_hours = data.get('duration_hours')
+
+        now = timezone.now()
+
+        if stay_type == 'hourly':
+            if not duration_hours:
+                raise serializers.ValidationError({'duration_hours': 'Please select a duration slot (3, 6, 12, or 24 hours).'})
+            try:
+                duration_hours = int(duration_hours)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError({'duration_hours': 'Invalid duration specified.'})
+
+            if duration_hours not in [3, 6, 12, 24]:
+                raise serializers.ValidationError({'duration_hours': 'Duration must be 3, 6, 12, or 24 hours.'})
+
+            check_in_dt = now
+            check_out_dt = now + timedelta(hours=duration_hours)
+            data['duration_hours'] = duration_hours
+            data['check_in_datetime'] = check_in_dt
+            data['check_out_datetime'] = check_out_dt
+            data['check_in'] = check_in_dt.date()
+            data['check_out'] = check_out_dt.date()
+        else:
+            check_in = data.get('check_in')
+            check_out = data.get('check_out')
+            if not check_in:
+                raise serializers.ValidationError({'check_in': 'Check-in date is required for overnight stays.'})
+            if not check_out:
+                raise serializers.ValidationError({'check_out': 'Check-out date must be provided.'})
+            if check_in >= check_out:
+                raise serializers.ValidationError({'check_out': 'Check-out date must be after check-in date.'})
 
         staff_hotel = self.context['request'].user.hotel
         room_id = data.get('room_id')
@@ -204,12 +241,40 @@ class WalkInCreateSerializer(serializers.ModelSerializer):
         payment_status = validated_data.pop('payment_status', 'paid')
         validated_data.pop('room_id')
 
-        check_in = validated_data['check_in']
-        check_out = validated_data['check_out']
-        nights = (check_out - check_in).days
-        total_amount = room.room_type.base_rate * nights
+        stay_type = validated_data.get('stay_type', 'nightly')
+        duration_hours = validated_data.get('duration_hours')
 
         now = timezone.now()
+
+        if stay_type == 'hourly':
+            rt = room.room_type
+            tier_rate = None
+            if duration_hours == 3:
+                tier_rate = rt.rate_3h
+            elif duration_hours == 6:
+                tier_rate = rt.rate_6h
+            elif duration_hours == 12:
+                tier_rate = rt.rate_12h
+            elif duration_hours == 24:
+                tier_rate = rt.rate_24h or rt.base_rate
+
+            if tier_rate is None or tier_rate <= 0:
+                from decimal import Decimal
+                if duration_hours == 3:
+                    tier_rate = round(rt.base_rate * Decimal('0.30'), 2)
+                elif duration_hours == 6:
+                    tier_rate = round(rt.base_rate * Decimal('0.50'), 2)
+                elif duration_hours == 12:
+                    tier_rate = round(rt.base_rate * Decimal('0.75'), 2)
+                else:
+                    tier_rate = rt.base_rate
+
+            total_amount = tier_rate
+        else:
+            check_in = validated_data['check_in']
+            check_out = validated_data['check_out']
+            nights = (check_out - check_in).days
+            total_amount = room.room_type.base_rate * nights
 
         booking = Booking.objects.create(
             hotel=staff.hotel,

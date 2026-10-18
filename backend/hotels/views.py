@@ -682,6 +682,24 @@ class HotelManageRoomTypeView(APIView):
         if not saved_photos:
             saved_photos = ['https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80']
 
+        short_stay_enabled = data.get('short_stay_enabled', True)
+        if isinstance(short_stay_enabled, str):
+            short_stay_enabled = short_stay_enabled.lower() in ['true', '1', 'yes']
+
+        def parse_rate(val):
+            if val is not None and str(val).strip() != '':
+                try:
+                    r = float(val)
+                    return r if r >= 0 else None
+                except (ValueError, TypeError):
+                    return None
+            return None
+
+        rate_3h = parse_rate(data.get('rate_3h'))
+        rate_6h = parse_rate(data.get('rate_6h'))
+        rate_12h = parse_rate(data.get('rate_12h'))
+        rate_24h = parse_rate(data.get('rate_24h'))
+
         rt = RoomType.objects.create(
             hotel=hotel,
             name=name,
@@ -689,7 +707,12 @@ class HotelManageRoomTypeView(APIView):
             base_rate=base_rate,
             capacity=capacity,
             amenities=amenities,
-            photos=saved_photos
+            photos=saved_photos,
+            short_stay_enabled=short_stay_enabled,
+            rate_3h=rate_3h,
+            rate_6h=rate_6h,
+            rate_12h=rate_12h,
+            rate_24h=rate_24h,
         )
         serializer = RoomTypeSerializer(rt)
         return Response({
@@ -784,6 +807,31 @@ class HotelManageRoomTypeDetailView(APIView):
                 amenities = [a.strip() for a in amenities.split(',') if a.strip()]
             if isinstance(amenities, list):
                 rt.amenities = amenities
+
+        if 'short_stay_enabled' in data:
+            val = data.get('short_stay_enabled')
+            if isinstance(val, str):
+                rt.short_stay_enabled = val.lower() in ['true', '1', 'yes']
+            else:
+                rt.short_stay_enabled = bool(val)
+
+        def parse_rate(val):
+            if val is not None and str(val).strip() != '':
+                try:
+                    r = float(val)
+                    return r if r >= 0 else None
+                except (ValueError, TypeError):
+                    return None
+            return None
+
+        if 'rate_3h' in data:
+            rt.rate_3h = parse_rate(data.get('rate_3h'))
+        if 'rate_6h' in data:
+            rt.rate_6h = parse_rate(data.get('rate_6h'))
+        if 'rate_12h' in data:
+            rt.rate_12h = parse_rate(data.get('rate_12h'))
+        if 'rate_24h' in data:
+            rt.rate_24h = parse_rate(data.get('rate_24h'))
 
         # Handle uploaded photo from local device
         new_photos = []

@@ -11,6 +11,7 @@ from .views import (
     CheckInBookingView,
     CheckOutBookingView,
     StaffRoomStatusBoardView,
+    StaffExtendStayView,
     ServiceRequestListCreateView,
     ServiceRequestUpdateView,
     AdminOccupancyReportView,
@@ -30,6 +31,7 @@ urlpatterns = [
     path('staff/requests/<str:pk>/reject/', StaffRejectRequestView.as_view(), name='staff_reject_request'),
     path('bookings/<str:pk>/checkin/', CheckInBookingView.as_view(), name='booking_checkin'),
     path('bookings/<str:pk>/checkout/', CheckOutBookingView.as_view(), name='booking_checkout'),
+    path('bookings/<str:pk>/extend/', StaffExtendStayView.as_view(), name='booking_extend'),
     path('staff/rooms/status/', StaffRoomStatusBoardView.as_view(), name='staff_rooms_status'),
 
     # Service requests

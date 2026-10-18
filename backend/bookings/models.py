@@ -25,6 +25,18 @@ class Booking(models.Model):
         ('walk_in', 'Walk-in'),
     )
 
+    STAY_TYPE_CHOICES = (
+        ('nightly', 'Standard Overnight'),
+        ('hourly', 'Short-Stay (Hourly)'),
+    )
+
+    HOURLY_SLOT_CHOICES = (
+        (3, '3 Hours (Wash-and-Go)'),
+        (6, '6 Hours (Half-Day)'),
+        (12, '12 Hours (Half-Day / Overnight)'),
+        (24, '24 Hours (Full-Day Block)'),
+    )
+
     booking_reference = models.CharField(max_length=32, unique=True, default=generate_booking_ref)
     hotel = models.ForeignKey('hotels.Hotel', on_delete=models.CASCADE, related_name='bookings')
     room_type = models.ForeignKey('hotels.RoomType', on_delete=models.PROTECT, related_name='bookings')
@@ -47,6 +59,28 @@ class Booking(models.Model):
     guest_email = models.EmailField()
     guest_phone = models.CharField(max_length=50, blank=True, default='')
     guest_count = models.PositiveIntegerField(default=1)
+
+    stay_type = models.CharField(
+        max_length=20,
+        choices=STAY_TYPE_CHOICES,
+        default='nightly'
+    )
+    duration_hours = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        choices=HOURLY_SLOT_CHOICES,
+        help_text='Selected duration in hours for short-term stays (3, 6, 12, or 24).'
+    )
+    check_in_datetime = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Exact timestamp when the stay starts.'
+    )
+    check_out_datetime = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Exact timestamp when the stay ends.'
+    )
 
     check_in = models.DateField()
     check_out = models.DateField()

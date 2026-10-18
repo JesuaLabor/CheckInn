@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, timedelta
+from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.db.models import Count, Sum, Q, Case, When, IntegerField
 from django.utils import timezone
@@ -357,6 +358,7 @@ class StaffRoomStatusBoardView(APIView):
             if b.room_id and b.room_id not in occupants_by_room:
                 occupants_by_room[b.room_id] = b
 
+        now = timezone.now()
         room_data = []
         for r in rooms:
             occ = occupants_by_room.get(r.id)
@@ -364,6 +366,32 @@ class StaffRoomStatusBoardView(APIView):
             if occ and r.status == 'available':
                 r.status = 'occupied'
                 r.save(update_fields=['status'])
+
+            occupant_data = None
+            if occ:
+                remaining_seconds = None
+                is_expired = False
+                if occ.check_out_datetime:
+                    diff = (occ.check_out_datetime - now).total_seconds()
+                    remaining_seconds = max(0, int(diff))
+                    is_expired = diff <= 0
+
+                occupant_data = {
+                    'booking_id': occ.id,
+                    'booking_reference': occ.booking_reference,
+                    'guest_name': occ.guest_name,
+                    'guest_phone': occ.guest_phone,
+                    'check_in': occ.check_in,
+                    'check_out': occ.check_out,
+                    'status': occ.status,
+                    'status_display': occ.get_status_display(),
+                    'stay_type': occ.stay_type,
+                    'duration_hours': occ.duration_hours,
+                    'check_in_datetime': occ.check_in_datetime.isoformat() if occ.check_in_datetime else None,
+                    'check_out_datetime': occ.check_out_datetime.isoformat() if occ.check_out_datetime else None,
+                    'remaining_seconds': remaining_seconds,
+                    'is_expired': is_expired,
+                }
 
             room_data.append({
                 'id': r.id,
@@ -374,16 +402,12 @@ class StaffRoomStatusBoardView(APIView):
                 'room_type': r.room_type.id,
                 'room_type_name': r.room_type.name,
                 'base_rate': r.room_type.base_rate,
-                'occupant': {
-                    'booking_id': occ.id,
-                    'booking_reference': occ.booking_reference,
-                    'guest_name': occ.guest_name,
-                    'guest_phone': occ.guest_phone,
-                    'check_in': occ.check_in,
-                    'check_out': occ.check_out,
-                    'status': occ.status,
-                    'status_display': occ.get_status_display(),
-                } if occ else None
+                'short_stay_enabled': r.room_type.short_stay_enabled,
+                'rate_3h': r.room_type.rate_3h,
+                'rate_6h': r.room_type.rate_6h,
+                'rate_12h': r.room_type.rate_12h,
+                'rate_24h': r.room_type.rate_24h,
+                'occupant': occupant_data
             })
 
         # Summary counts
@@ -428,6 +452,66 @@ class StaffRoomStatusBoardView(APIView):
             'message': f'Room {room.room_number} status updated to {new_status}.',
             'room_id': room.id,
             'status': room.status
+        })
+
+
+class StaffExtendStayView(APIView):
+    permission_classes = [IsHotelStaff]
+
+    def post(self, request, pk):
+        hotel = request.user.hotel
+        booking = get_object_or_404(Booking, pk=pk, hotel=hotel)
+
+        if booking.status != 'checked_in':
+            return Response({'error': 'Only currently checked-in bookings can be extended.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            additional_hours = int(request.data.get('hours', 3))
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid hours parameter.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if additional_hours not in [3, 6, 12, 24]:
+            return Response({'error': 'Extension slot must be 3, 6, 12, or 24 hours.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rt = booking.room_type
+        tier_rate = None
+        if additional_hours == 3:
+            tier_rate = rt.rate_3h
+        elif additional_hours == 6:
+            tier_rate = rt.rate_6h
+        elif additional_hours == 12:
+            tier_rate = rt.rate_12h
+        elif additional_hours == 24:
+            tier_rate = rt.rate_24h or rt.base_rate
+
+        if tier_rate is None or tier_rate <= 0:
+            from decimal import Decimal
+            if additional_hours == 3:
+                tier_rate = round(rt.base_rate * Decimal('0.30'), 2)
+            elif additional_hours == 6:
+                tier_rate = round(rt.base_rate * Decimal('0.50'), 2)
+            elif additional_hours == 12:
+                tier_rate = round(rt.base_rate * Decimal('0.75'), 2)
+            else:
+                tier_rate = rt.base_rate
+
+        now = timezone.now()
+        base_dt = booking.check_out_datetime if (booking.check_out_datetime and booking.check_out_datetime > now) else now
+        booking.check_out_datetime = base_dt + timedelta(hours=additional_hours)
+        booking.check_out = booking.check_out_datetime.date()
+        booking.duration_hours = (booking.duration_hours or 0) + additional_hours
+        booking.total_amount += tier_rate
+        booking.save()
+
+        if hasattr(booking, 'payment') and booking.payment:
+            booking.payment.amount += tier_rate
+            booking.payment.save()
+
+        return Response({
+            'message': f'Stay extended by {additional_hours}h until {booking.check_out_datetime.strftime("%I:%M %p")}. Added ₱{tier_rate:,.2f}.',
+            'booking_id': booking.id,
+            'check_out_datetime': booking.check_out_datetime.isoformat(),
+            'total_amount': booking.total_amount
         })
 
 

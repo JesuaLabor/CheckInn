@@ -535,3 +535,59 @@ class LocalStayCoreTests(TestCase):
         self.assertIsNotNone(room_entry['occupant'])
         self.assertEqual(room_entry['occupant']['guest_name'], 'Assigned Guest')
         self.assertEqual(room_entry['occupant']['status'], 'confirmed')
+
+    def test_short_stay_walkin_and_room_board_countdown(self):
+        """Staff registers a 3-hour short stay; rates and room countdown board are accurately populated."""
+        self.rt_a.short_stay_enabled = True
+        self.rt_a.rate_3h = 450.00
+        self.rt_a.rate_6h = 750.00
+        self.rt_a.rate_12h = 1200.00
+        self.rt_a.rate_24h = 1800.00
+        self.rt_a.save()
+
+        self.client.force_authenticate(user=self.staff_a)
+        res = self.client.post('/api/v1/bookings/walkin/', {
+            'room_id': self.room_a1.id,
+            'stay_type': 'hourly',
+            'duration_hours': 3,
+            'guest_name': 'Wash & Go Guest',
+            'guest_email': 'hourly@test.com',
+            'guest_phone': '09170001122',
+            'guest_count': 1,
+            'payment_method': 'cash',
+            'payment_status': 'paid'
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        booking = Booking.objects.get(id=res.data['booking']['id'])
+        self.assertEqual(booking.stay_type, 'hourly')
+        self.assertEqual(booking.duration_hours, 3)
+        self.assertEqual(booking.total_amount, 450.00)
+        self.assertEqual(booking.status, 'checked_in')
+        self.assertIsNotNone(booking.check_in_datetime)
+        self.assertIsNotNone(booking.check_out_datetime)
+
+        # Room Status Board
+        board_res = self.client.get('/api/v1/staff/rooms/status/')
+        self.assertEqual(board_res.status_code, status.HTTP_200_OK)
+        room_entry = next(r for r in board_res.data['rooms'] if r['id'] == self.room_a1.id)
+        self.assertEqual(room_entry['status'], 'occupied')
+        self.assertEqual(room_entry['short_stay_enabled'], True)
+        self.assertEqual(float(room_entry['rate_3h']), 450.00)
+
+        occ = room_entry['occupant']
+        self.assertIsNotNone(occ)
+        self.assertEqual(occ['stay_type'], 'hourly')
+        self.assertEqual(occ['duration_hours'], 3)
+        self.assertGreater(occ['remaining_seconds'], 0)
+        self.assertFalse(occ['is_expired'])
+
+        # Extend Stay by 3 hours
+        extend_res = self.client.post(f'/api/v1/bookings/{booking.id}/extend/', {
+            'hours': 3
+        }, format='json')
+        self.assertEqual(extend_res.status_code, status.HTTP_200_OK)
+        booking.refresh_from_db()
+        self.assertEqual(booking.duration_hours, 6)
+        self.assertEqual(booking.total_amount, 900.00)  # 450 + 450
+

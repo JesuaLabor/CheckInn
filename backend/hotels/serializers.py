@@ -19,7 +19,9 @@ class RoomTypeSerializer(serializers.ModelSerializer):
         model = RoomType
         fields = [
             'id', 'hotel', 'hotel_name', 'name', 'description',
-            'base_rate', 'currency', 'capacity', 'amenities', 'photos', 'rooms', 'available_count'
+            'base_rate', 'currency', 'capacity', 'amenities', 'photos',
+            'short_stay_enabled', 'rate_3h', 'rate_6h', 'rate_12h', 'rate_24h',
+            'rooms', 'available_count'
         ]
 
     def get_available_count(self, obj):
@@ -60,6 +62,11 @@ class HotelListSerializer(serializers.ModelSerializer):
                 'id': rt.id,
                 'name': rt.name,
                 'base_rate': rt.base_rate,
+                'short_stay_enabled': rt.short_stay_enabled,
+                'rate_3h': rt.rate_3h,
+                'rate_6h': rt.rate_6h,
+                'rate_12h': rt.rate_12h,
+                'rate_24h': rt.rate_24h,
                 'capacity': rt.capacity,
                 'photo': rt.photos[0] if (rt.photos and len(rt.photos) > 0) else None,
             }

@@ -87,6 +87,26 @@ class RoomType(models.Model):
     capacity = models.PositiveIntegerField(default=2, help_text='Maximum guests')
     amenities = models.JSONField(default=list, blank=True)
     photos = models.JSONField(default=list, blank=True)
+    short_stay_enabled = models.BooleanField(
+        default=True,
+        help_text='Whether this room category supports hourly/short-term stays.'
+    )
+    rate_3h = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Rate for 3-hour wash-and-go stay in hotel currency.'
+    )
+    rate_6h = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Rate for 6-hour transit stay in hotel currency.'
+    )
+    rate_12h = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Rate for 12-hour stay in hotel currency.'
+    )
+    rate_24h = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Rate for 24-hour flexible stay in hotel currency.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
