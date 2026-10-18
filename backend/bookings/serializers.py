@@ -73,46 +73,145 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         write_only=True,
         help_text='GCash or Bank transfer transaction reference number'
     )
+    stay_type = serializers.ChoiceField(
+        choices=Booking.STAY_TYPE_CHOICES,
+        default='nightly'
+    )
+    duration_hours = serializers.IntegerField(
+        required=False,
+        allow_null=True
+    )
+    check_in_time = serializers.CharField(
+        max_length=10,
+        required=False,
+        allow_blank=True,
+        write_only=True,
+        help_text='Arrival time for short stays, e.g. 14:00'
+    )
+    check_in = serializers.DateField(required=False)
+    check_out = serializers.DateField(required=False)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'hotel', 'room_type', 'guest_name', 'guest_email', 'guest_phone',
-            'guest_count', 'check_in', 'check_out', 'special_requests',
-            'payment_method', 'payment_reference',
+            'guest_count', 'stay_type', 'duration_hours', 'check_in_time',
+            'check_in_datetime', 'check_out_datetime', 'check_in', 'check_out',
+            'special_requests', 'payment_method', 'payment_reference',
             'booking_reference', 'total_amount', 'status', 'hold_expires_at'
         ]
-        read_only_fields = ['id', 'booking_reference', 'total_amount', 'status', 'hold_expires_at']
+        read_only_fields = [
+            'id', 'booking_reference', 'total_amount', 'status', 'hold_expires_at',
+            'check_in_datetime', 'check_out_datetime'
+        ]
 
     def validate(self, data):
-        check_in = data.get('check_in')
-        check_out = data.get('check_out')
+        stay_type = data.get('stay_type', 'nightly')
         room_type = data.get('room_type')
         hotel = data.get('hotel')
-
-        if check_in >= check_out:
-            raise serializers.ValidationError({'check_out': 'Check-out date must be after check-in date.'})
 
         if room_type.hotel_id != hotel.id:
             raise serializers.ValidationError({'room_type': 'Selected room type does not belong to this hotel.'})
 
-        # Availability check: count active holds and confirmed bookings
         now = timezone.now()
-        total_rooms = room_type.rooms.filter(is_active=True).count()
+        tz = timezone.get_current_timezone()
 
-        overlapping_count = Booking.objects.filter(
+        if stay_type == 'hourly':
+            if not room_type.short_stay_enabled:
+                raise serializers.ValidationError({'stay_type': 'This room category does not offer short-time hourly stays.'})
+
+            duration_hours = data.get('duration_hours')
+            if not duration_hours:
+                raise serializers.ValidationError({'duration_hours': 'Please select a duration slot (3, 6, 12, or 24 hours).'})
+            try:
+                duration_hours = int(duration_hours)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError({'duration_hours': 'Invalid duration specified.'})
+
+            if duration_hours not in [3, 6, 12, 24]:
+                raise serializers.ValidationError({'duration_hours': 'Duration must be 3, 6, 12, or 24 hours.'})
+
+            check_in_date = data.get('check_in')
+            if not check_in_date:
+                check_in_date = timezone.localtime().date()
+
+            check_in_time_str = data.get('check_in_time')
+            if check_in_time_str and check_in_time_str.strip():
+                try:
+                    parts = [int(p) for p in check_in_time_str.strip().split(':')]
+                    from datetime import time as dt_time
+                    parsed_time = dt_time(parts[0], parts[1])
+                except Exception:
+                    raise serializers.ValidationError({'check_in_time': 'Invalid arrival time format. Use HH:MM.'})
+            else:
+                if check_in_date == timezone.localtime().date():
+                    parsed_time = timezone.localtime().time().replace(second=0, microsecond=0)
+                else:
+                    from datetime import time as dt_time
+                    parsed_time = dt_time(14, 0)
+
+            from datetime import datetime
+            naive_start = datetime.combine(check_in_date, parsed_time)
+            start_dt = timezone.make_aware(naive_start, tz) if timezone.is_naive(naive_start) else naive_start
+
+            # Allow 15-minute grace period if booking right now
+            if start_dt < now - timedelta(minutes=15):
+                raise serializers.ValidationError({'check_in_time': 'Check-in time cannot be in the past.'})
+
+            end_dt = start_dt + timedelta(hours=duration_hours)
+
+            data['duration_hours'] = duration_hours
+            data['check_in_datetime'] = start_dt
+            data['check_out_datetime'] = end_dt
+            data['check_in'] = start_dt.date()
+            data['check_out'] = end_dt.date()
+        else:
+            check_in = data.get('check_in')
+            check_out = data.get('check_out')
+            if not check_in:
+                raise serializers.ValidationError({'check_in': 'Check-in date is required for overnight stays.'})
+            if not check_out:
+                raise serializers.ValidationError({'check_out': 'Check-out date must be provided.'})
+            if check_in >= check_out:
+                raise serializers.ValidationError({'check_out': 'Check-out date must be after check-in date.'})
+
+            from datetime import datetime, time as dt_time
+            start_dt = timezone.make_aware(datetime.combine(check_in, dt_time(14, 0)), tz)
+            end_dt = timezone.make_aware(datetime.combine(check_out, dt_time(12, 0)), tz)
+            data['check_in_datetime'] = start_dt
+            data['check_out_datetime'] = end_dt
+
+        # Dynamic capacity & overlap check
+        total_rooms = room_type.rooms.filter(is_active=True).count()
+        if total_rooms == 0:
+            raise serializers.ValidationError('Sorry, no active rooms are configured for this room category.')
+
+        candidate_bookings = Booking.objects.filter(
             hotel=hotel,
             room_type=room_type,
-            check_in__lt=check_out,
-            check_out__gt=check_in
+            check_in__lte=data['check_out'],
+            check_out__gte=data['check_in']
         ).filter(
             Q(status__in=['confirmed', 'checked_in']) |
             Q(status='pending_approval', hold_expires_at__gt=now)
-        ).count()
+        )
 
-        if overlapping_count >= total_rooms:
+        overlap_count = 0
+        from datetime import datetime, time as dt_time
+        for b in candidate_bookings:
+            if b.check_in_datetime and b.check_out_datetime:
+                b_start = b.check_in_datetime
+                b_end = b.check_out_datetime
+            else:
+                b_start = timezone.make_aware(datetime.combine(b.check_in, dt_time(14, 0)), tz)
+                b_end = timezone.make_aware(datetime.combine(b.check_out, dt_time(12, 0)), tz)
+
+            if b_start < end_dt and b_end > start_dt:
+                overlap_count += 1
+
+        if overlap_count >= total_rooms:
             raise serializers.ValidationError(
-                'Sorry, no rooms of this type are available for the selected dates (they may be booked or under a pending hold).'
+                'Sorry, no rooms of this type are available for the selected dates/times (they may be booked or under a pending hold).'
             )
 
         return data
@@ -121,12 +220,39 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         payment_method = validated_data.pop('payment_method', 'pay_at_hotel')
         payment_reference = validated_data.pop('payment_reference', '').strip()
-        check_in = validated_data['check_in']
-        check_out = validated_data['check_out']
+        validated_data.pop('check_in_time', None)
+        stay_type = validated_data.get('stay_type', 'nightly')
+        duration_hours = validated_data.get('duration_hours')
         room_type = validated_data['room_type']
 
-        nights = (check_out - check_in).days
-        total_amount = room_type.base_rate * nights
+        if stay_type == 'hourly':
+            tier_rate = None
+            if duration_hours == 3:
+                tier_rate = room_type.rate_3h
+            elif duration_hours == 6:
+                tier_rate = room_type.rate_6h
+            elif duration_hours == 12:
+                tier_rate = room_type.rate_12h
+            elif duration_hours == 24:
+                tier_rate = room_type.rate_24h or room_type.base_rate
+
+            if tier_rate is None or tier_rate <= 0:
+                from decimal import Decimal
+                if duration_hours == 3:
+                    tier_rate = round(room_type.base_rate * Decimal('0.30'), 2)
+                elif duration_hours == 6:
+                    tier_rate = round(room_type.base_rate * Decimal('0.50'), 2)
+                elif duration_hours == 12:
+                    tier_rate = round(room_type.base_rate * Decimal('0.75'), 2)
+                else:
+                    tier_rate = room_type.base_rate
+
+            total_amount = tier_rate
+        else:
+            check_in = validated_data['check_in']
+            check_out = validated_data['check_out']
+            nights = (check_out - check_in).days
+            total_amount = room_type.base_rate * nights
 
         # Set 45-minute soft hold
         now = timezone.now()

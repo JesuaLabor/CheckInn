@@ -20,6 +20,8 @@ import {
   Check,
   Smartphone,
   Info,
+  Moon,
+  Timer,
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -38,6 +40,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
   if (!isModalOpen || !draft || !draft.hotel || !draft.roomType) return null;
 
   const { hotel, roomType } = draft;
+  const isShortStay = draft.stayType === 'hourly';
+  const baseRate = Number(roomType.base_rate);
 
   const calculateNights = () => {
     if (!draft.checkIn || !draft.checkOut) return 1;
@@ -47,9 +51,36 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
     return diff > 0 ? Math.round(diff) : 1;
   };
 
+  const getTierRate = (hours: number): number => {
+    if (hours === 3) {
+      return Number(roomType.rate_3h || Math.round(baseRate * 0.3));
+    } else if (hours === 6) {
+      return Number(roomType.rate_6h || Math.round(baseRate * 0.5));
+    } else if (hours === 12) {
+      return Number(roomType.rate_12h || Math.round(baseRate * 0.75));
+    } else {
+      return Number(roomType.rate_24h || baseRate);
+    }
+  };
+
   const nights = calculateNights();
-  const baseRate = Number(roomType.base_rate);
-  const totalAmount = nights * baseRate;
+  const totalAmount = isShortStay ? getTierRate(draft.durationHours || 3) : nights * baseRate;
+
+  const getExpectedCheckoutPreview = () => {
+    if (!draft.checkIn || !draft.checkInTime) return '';
+    try {
+      const [h, m] = draft.checkInTime.split(':').map(Number);
+      const dt = new Date(`${draft.checkIn}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+      dt.setHours(dt.getHours() + (draft.durationHours || 3));
+
+      const timeStr = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const startDate = new Date(`${draft.checkIn}T00:00:00`);
+      const isNextDay = dt.getDate() !== startDate.getDate();
+      return `${isNextDay ? 'Next Day' : 'Same Day'} at ${timeStr}`;
+    } catch {
+      return '';
+    }
+  };
 
   const payoutMethod = hotel.payout_method || 'GCash';
   const payoutName = hotel.payout_account_name || hotel.name;
@@ -76,20 +107,28 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
     setLoading(true);
 
     try {
-      const payload = {
+      const payload: any = {
         hotel: hotel.id,
         room_type: roomType.id,
         guest_name: user.first_name ? `${user.first_name} ${user.last_name}` : user.username,
         guest_email: user.email || `${user.username}@localstay.local`,
         guest_phone: user.phone_number || '+63 917 123 4567',
         guest_count: draft.guestCount,
-        check_in: draft.checkIn,
-        check_out: draft.checkOut,
         special_requests: draft.specialRequests,
         payment_method: draft.paymentMethod,
         payment_reference: draft.paymentReference?.trim() || '',
         currency: currency,
+        stay_type: draft.stayType,
       };
+
+      if (isShortStay) {
+        payload.duration_hours = draft.durationHours || 3;
+        payload.check_in = draft.checkIn;
+        payload.check_in_time = draft.checkInTime;
+      } else {
+        payload.check_in = draft.checkIn;
+        payload.check_out = draft.checkOut;
+      }
 
       const res = await api.post('/bookings/', payload);
       const bookingData = res.data.booking;
@@ -102,7 +141,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
         });
       } catch {}
 
-      toast.success('Reservation request submitted! 45-min hold secured.');
+      toast.success(
+        isShortStay
+          ? `${draft.durationHours}-hour short-stay reservation requested! 45-min hold secured.`
+          : 'Reservation request submitted! 45-min hold secured.'
+      );
       closeBookingModal();
       onSuccess(bookingData.booking_reference);
     } catch (err: any) {
@@ -142,6 +185,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
               </h2>
               <p className="text-[11px] text-slate-500 font-medium flex items-center gap-2">
                 <span>{formatPrice(baseRate)} / night</span>
+                {roomType.short_stay_enabled && (
+                  <>
+                    <span>•</span>
+                    <span className="text-[#8F611A] font-bold">
+                      Short-Stay from {formatPrice(getTierRate(3))} (3h)
+                    </span>
+                  </>
+                )}
                 <span>•</span>
                 <span>Max {roomType.capacity} {roomType.capacity === 1 ? 'guest' : 'guests'}</span>
               </p>
@@ -182,48 +233,178 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
             </div>
           </div>
 
-          {/* Dates Selector */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">Stay Dates</label>
-              <span className="text-[11px] font-bold text-[#1E3A2B] bg-[#1E3A2B]/10 px-2 py-0.5 rounded-full">
-                {nights} {nights === 1 ? 'night' : 'nights'} stay
-              </span>
+          {/* Stay Type Toggle (Overnight vs Short-Stay) */}
+          {roomType.short_stay_enabled && (
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                Stay Format
+              </label>
+              <div className="flex p-1 bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl gap-1">
+                <button
+                  type="button"
+                  onClick={() => setDraft({ stayType: 'nightly' })}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    !isShortStay
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                  <span>Standard Overnight</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDraft({ stayType: 'hourly', durationHours: draft.durationHours || 3 })}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    isShortStay
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Short-Stay (Wash & Go)</span>
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2.5">
+          )}
+
+          {/* Short-Stay Hourly Selector */}
+          {isShortStay ? (
+            <div className="space-y-3 p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E8E2D8]">
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Check-in
-                </label>
-                <div className="relative">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                    Select Duration
+                  </label>
+                  <span className="text-[10px] text-[#8F611A] font-bold bg-[#D49B41]/15 px-2 py-0.5 rounded-full">
+                    Fixed Hourly Slots
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { hours: 3, label: '3 Hours', sub: 'Wash & Go' },
+                    { hours: 6, label: '6 Hours', sub: 'Half-Day' },
+                    { hours: 12, label: '12 Hours', sub: 'Half-Day+' },
+                    { hours: 24, label: '24 Hours', sub: 'Full Day' },
+                  ].map((slot) => {
+                    const rate = getTierRate(slot.hours);
+                    const isSelected = draft.durationHours === slot.hours;
+                    return (
+                      <button
+                        key={slot.hours}
+                        type="button"
+                        onClick={() => setDraft({ durationHours: slot.hours })}
+                        className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-[#1E3A2B] bg-[#1E3A2B] text-white shadow-sm ring-1 ring-[#1E3A2B]'
+                            : 'border-[#E8E2D8] bg-white text-slate-700 hover:border-[#1E3A2B]/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-black ${isSelected ? 'text-white' : 'text-[#212529]'}`}>
+                            {slot.label}
+                          </span>
+                          {isSelected && <Sparkles className="w-3 h-3 text-[#E2AE55]" />}
+                        </div>
+                        <div className={`text-[10px] ${isSelected ? 'text-slate-200' : 'text-slate-500'} font-medium truncate mt-0.5`}>
+                          {slot.sub}
+                        </div>
+                        <div className={`text-xs font-black mt-1.5 ${isSelected ? 'text-[#E2AE55]' : 'text-[#1E3A2B]'}`}>
+                          {formatPrice(rate)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Arrival Date and Time */}
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Arrival Date
+                  </label>
                   <input
                     type="date"
                     required
                     min={new Date().toISOString().split('T')[0]}
                     value={draft.checkIn}
                     onChange={(e) => setDraft({ checkIn: e.target.value })}
-                    className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                    className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Arrival Time
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={draft.checkInTime}
+                    onChange={(e) => setDraft({ checkInTime: e.target.value })}
+                    className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-white"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Check-out
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    required
-                    min={draft.checkIn || new Date().toISOString().split('T')[0]}
-                    value={draft.checkOut}
-                    onChange={(e) => setDraft({ checkOut: e.target.value })}
-                    className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
-                  />
+              {/* Check-out Departure Preview */}
+              <div className="p-2.5 rounded-xl bg-white border border-[#E8E2D8] flex items-center justify-between text-xs text-[#1E3A2B]">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <Timer className="w-3.5 h-3.5 text-[#3B5E43]" />
+                  <span>Estimated Checkout:</span>
+                </div>
+                <span className="font-extrabold text-[#212529]">
+                  {getExpectedCheckoutPreview() || 'Specify arrival time'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            /* Standard Overnight Dates Selector */
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-black text-slate-700 uppercase tracking-wider">Stay Dates</label>
+                <span className="text-[11px] font-bold text-[#1E3A2B] bg-[#1E3A2B]/10 px-2 py-0.5 rounded-full">
+                  {nights} {nights === 1 ? 'night' : 'nights'} stay
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Check-in
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      value={draft.checkIn}
+                      onChange={(e) => setDraft({ checkIn: e.target.value })}
+                      className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Check-out
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      min={draft.checkIn || new Date().toISOString().split('T')[0]}
+                      value={draft.checkOut}
+                      onChange={(e) => setDraft({ checkOut: e.target.value })}
+                      className="w-full px-3 py-2 text-xs font-bold border border-[#E8E2D8] rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-[#FAF8F5]"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Number of Guests */}
           <div>
@@ -335,7 +516,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                   <button
                     type="button"
                     onClick={handleCopyNumber}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] border border-[#E8E2D8] text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95 shrink-0"
+                    className="px-2.5 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] border border-[#E8E2D8] text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95 shrink-0 cursor-pointer"
                   >
                     {copiedNumber ? (
                       <>
@@ -394,7 +575,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
           <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E8E2D8] space-y-1.5">
             <div className="flex justify-between text-xs text-slate-600">
               <span>
-                {formatPrice(baseRate)} × {nights} {nights === 1 ? 'night' : 'nights'}
+                {isShortStay ? (
+                  <>Short-Stay ({draft.durationHours || 3} Hours Fixed Slot)</>
+                ) : (
+                  <>{formatPrice(baseRate)} × {nights} {nights === 1 ? 'night' : 'nights'}</>
+                )}
               </span>
               <span className="font-bold text-[#212529]">{formatPrice(totalAmount)}</span>
             </div>
@@ -414,7 +599,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                 <span className="text-xl sm:text-2xl font-black text-[#1E3A2B] leading-none">
                   {formatPrice(totalAmount)}
                 </span>
-                <span className="text-[11px] text-slate-500 font-medium">({nights} {nights === 1 ? 'night' : 'nights'})</span>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {isShortStay
+                    ? `(${draft.durationHours || 3}h short-stay)`
+                    : `(${nights} ${nights === 1 ? 'night' : 'nights'})`}
+                </span>
               </div>
             </div>
 

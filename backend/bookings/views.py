@@ -7,6 +7,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from hotels.models import Room
+from hotels.audit import log_hotel_activity
 from .models import Booking, GuestRequest, Payment
 from .permissions import IsHotelStaff, IsHotelAdmin
 from .serializers import (
@@ -150,13 +151,35 @@ class StaffApproveRequestView(APIView):
             else:
                 # Find available room of this type
                 # Check rooms that don't have overlapping confirmed/checked_in bookings
-                overlapping_room_ids = Booking.objects.filter(
+                tz = timezone.get_current_timezone()
+                if booking.check_in_datetime and booking.check_out_datetime:
+                    b_start = booking.check_in_datetime
+                    b_end = booking.check_out_datetime
+                else:
+                    from datetime import datetime, time as dt_time
+                    b_start = timezone.make_aware(datetime.combine(booking.check_in, dt_time(14, 0)), tz)
+                    b_end = timezone.make_aware(datetime.combine(booking.check_out, dt_time(12, 0)), tz)
+
+                cand_bookings = Booking.objects.filter(
                     hotel=hotel,
                     room_type=booking.room_type,
-                    check_in__lt=booking.check_out,
-                    check_out__gt=booking.check_in,
-                    status__in=['confirmed', 'checked_in']
-                ).exclude(id=booking.id).values_list('room_id', flat=True)
+                    status__in=['confirmed', 'checked_in'],
+                    room__isnull=False,
+                    check_in__lte=booking.check_out,
+                    check_out__gte=booking.check_in
+                ).exclude(id=booking.id)
+
+                overlapping_room_ids = []
+                from datetime import datetime, time as dt_time
+                for other in cand_bookings:
+                    if other.check_in_datetime and other.check_out_datetime:
+                        o_start = other.check_in_datetime
+                        o_end = other.check_out_datetime
+                    else:
+                        o_start = timezone.make_aware(datetime.combine(other.check_in, dt_time(14, 0)), tz)
+                        o_end = timezone.make_aware(datetime.combine(other.check_out, dt_time(12, 0)), tz)
+                    if o_start < b_end and o_end > b_start:
+                        overlapping_room_ids.append(other.room_id)
 
                 assigned_room = Room.objects.filter(
                     hotel=hotel,
@@ -185,6 +208,22 @@ class StaffApproveRequestView(APIView):
                     booking.payment.status = 'paid'
                     booking.payment.paid_at = now
                     booking.payment.save()
+
+            log_hotel_activity(
+                hotel=hotel,
+                actor=request.user,
+                request=request,
+                category='booking',
+                action='booking_approved',
+                severity='info',
+                summary=f"Approved reservation {booking.booking_reference} for {booking.guest_name}" + (f" (Room {assigned_room.room_number})" if assigned_room else ""),
+                details={
+                    'booking_reference': booking.booking_reference,
+                    'guest_name': booking.guest_name,
+                    'room': assigned_room.room_number if assigned_room else None,
+                    'total_amount': float(booking.total_amount)
+                }
+            )
 
             serializer = BookingSerializer(booking)
             return Response({
@@ -226,6 +265,21 @@ class StaffRejectRequestView(APIView):
                 old_room.status = 'available'
                 old_room.save(update_fields=['status'])
 
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='booking',
+            action='booking_rejected',
+            severity='warning',
+            summary=f"Rejected reservation {booking.booking_reference} for {booking.guest_name}: \"{reason}\"",
+            details={
+                'booking_reference': booking.booking_reference,
+                'guest_name': booking.guest_name,
+                'reason': reason
+            }
+        )
+
         serializer = BookingSerializer(booking)
         return Response({
             'message': f'Booking {booking.booking_reference} has been rejected. Soft hold released.',
@@ -241,6 +295,23 @@ class WalkInBookingView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         booking = serializer.save()
+
+        log_hotel_activity(
+            hotel=booking.hotel,
+            actor=request.user,
+            request=request,
+            category='booking',
+            action='walkin_registered',
+            severity='info',
+            summary=f"Walk-in guest {booking.guest_name} registered into Room {booking.room.room_number if booking.room else 'N/A'} (₱{float(booking.total_amount):,.2f})",
+            details={
+                'booking_reference': booking.booking_reference,
+                'guest_name': booking.guest_name,
+                'room': booking.room.room_number if booking.room else None,
+                'amount': float(booking.total_amount)
+            }
+        )
+
         output_serializer = BookingSerializer(booking)
         return Response({
             'message': f'Walk-in guest checked into Room {booking.room.room_number} successfully!',
@@ -287,6 +358,21 @@ class CheckInBookingView(APIView):
             booking.room.status = 'occupied'
             booking.room.save()
 
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='booking',
+            action='guest_checked_in',
+            severity='info',
+            summary=f"Checked in {booking.guest_name} ({booking.booking_reference}) into Room {booking.room.room_number if booking.room else 'N/A'}",
+            details={
+                'booking_reference': booking.booking_reference,
+                'guest_name': booking.guest_name,
+                'room': booking.room.room_number if booking.room else None
+            }
+        )
+
         serializer = BookingSerializer(booking)
         return Response({
             'message': f'Guest {booking.guest_name} successfully checked in to Room {booking.room.room_number if booking.room else "N/A"}!',
@@ -324,6 +410,21 @@ class CheckOutBookingView(APIView):
                 booking.payment.status = 'paid'
                 booking.payment.paid_at = timezone.now()
                 booking.payment.save()
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='booking',
+            action='guest_checked_out',
+            severity='info',
+            summary=f"Checked out {booking.guest_name} ({booking.booking_reference}). Room {booking.room.room_number if booking.room else 'N/A'} moved to cleaning.",
+            details={
+                'booking_reference': booking.booking_reference,
+                'guest_name': booking.guest_name,
+                'room': booking.room.room_number if booking.room else None
+            }
+        )
 
         serializer = BookingSerializer(booking)
         return Response({
@@ -445,8 +546,20 @@ class StaffRoomStatusBoardView(APIView):
         except Room.DoesNotExist:
             return Response({'detail': 'Room not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        old_status = room.status
         room.status = new_status
         room.save()
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='housekeeping',
+            action='room_status_changed',
+            severity='info' if new_status in ['available', 'cleaning'] else 'warning',
+            summary=f"Room {room.room_number} ({room.room_type.name}) housekeeping status set to \"{new_status}\" (was {old_status})",
+            details={'room_number': room.room_number, 'old_status': old_status, 'new_status': new_status}
+        )
 
         return Response({
             'message': f'Room {room.room_number} status updated to {new_status}.',
@@ -506,6 +619,23 @@ class StaffExtendStayView(APIView):
         if hasattr(booking, 'payment') and booking.payment:
             booking.payment.amount += tier_rate
             booking.payment.save()
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='booking',
+            action='stay_extended',
+            severity='info',
+            summary=f"Extended stay for {booking.guest_name} ({booking.booking_reference}) by {additional_hours}h (+₱{float(tier_rate):,.2f})",
+            details={
+                'booking_reference': booking.booking_reference,
+                'guest_name': booking.guest_name,
+                'additional_hours': additional_hours,
+                'added_rate': float(tier_rate),
+                'new_total': float(booking.total_amount)
+            }
+        )
 
         return Response({
             'message': f'Stay extended by {additional_hours}h until {booking.check_out_datetime.strftime("%I:%M %p")}. Added ₱{tier_rate:,.2f}.',

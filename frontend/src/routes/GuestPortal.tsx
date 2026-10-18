@@ -219,9 +219,15 @@ export const GuestPortal: React.FC = () => {
                         {booking.hotel_name}
                       </h3>
                       
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A2B]">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A2B] flex-wrap">
                         <Bed className="w-4 h-4 text-[#3B5E43]" />
                         <span>{booking.room_type_name}</span>
+                        {booking.stay_type === 'hourly' && (
+                          <span className="bg-[#D49B41]/15 text-[#8F611A] px-2 py-0.5 rounded-md text-[10px] font-black border border-[#D49B41]/30 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-[#D49B41]" />
+                            <span>{booking.duration_hours}h Short-Stay</span>
+                          </span>
+                        )}
                         {booking.room_number && (
                           <span className="bg-[#3B5E43]/15 text-[#1E3A2B] px-2 py-0.5 rounded-md text-[11px] font-extrabold border border-[#3B5E43]/30">
                             Room {booking.room_number}
@@ -238,15 +244,32 @@ export const GuestPortal: React.FC = () => {
                       <div className="pt-3 grid grid-cols-3 gap-2 p-3 bg-[#FAF8F5] rounded-2xl border border-[#E8E2D8] text-center">
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase block">Check-in</span>
-                          <span className="text-xs font-black text-[#212529]">{booking.check_in}</span>
+                          <span className="text-xs font-black text-[#212529]">
+                            {booking.stay_type === 'hourly' && booking.check_in_datetime
+                              ? new Date(booking.check_in_datetime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                              : booking.check_in}
+                          </span>
+                          {booking.stay_type === 'hourly' && (
+                            <span className="text-[9px] text-slate-400 block font-medium">{booking.check_in}</span>
+                          )}
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase block">Check-out</span>
-                          <span className="text-xs font-black text-[#212529]">{booking.check_out}</span>
+                          <span className="text-xs font-black text-[#212529]">
+                            {booking.stay_type === 'hourly' && booking.check_out_datetime
+                              ? new Date(booking.check_out_datetime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                              : booking.check_out}
+                          </span>
+                          {booking.stay_type === 'hourly' && (
+                            <span className="text-[9px] text-slate-400 block font-medium">{booking.check_out}</span>
+                          )}
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase block">Guests</span>
                           <span className="text-xs font-black text-[#212529]">{booking.guest_count}</span>
+                          {booking.stay_type === 'hourly' && (
+                            <span className="text-[9px] text-[#8F611A] block font-bold">{booking.duration_hours}h slot</span>
+                          )}
                         </div>
                       </div>
                     </div>

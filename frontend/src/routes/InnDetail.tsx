@@ -92,9 +92,9 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
 
   const nights = calculateNights();
 
-  const handleReserve = (roomType: RoomType) => {
+  const handleReserve = (roomType: RoomType, stayType?: 'nightly' | 'hourly') => {
     if (!hotel) return;
-    openBookingModal(hotel, roomType, { checkIn, checkOut, guests });
+    openBookingModal(hotel, roomType, { checkIn, checkOut, guests, stayType: stayType || 'nightly' });
   };
 
   if (loading) {
@@ -360,6 +360,14 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                             <span className="hidden sm:inline">Total: {formatPrice(totalPrice)} for {nights} nights</span>
                           </div>
                         )}
+                        {rt.short_stay_enabled && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 text-[9px] sm:text-[11px] font-extrabold text-[#8F611A] bg-[#D49B41]/15 px-2 py-0.5 rounded-full border border-[#D49B41]/30">
+                              <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#D49B41]" />
+                              <span>Short-stay from {formatPrice(Number(rt.rate_3h || Math.round(Number(rt.base_rate) * 0.3)))} (3h)</span>
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -404,14 +412,26 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                       <span>Instant 45-min hold locks room inventory</span>
                     </div>
 
-                    <button
-                      onClick={() => handleReserve(rt)}
-                      className="w-full sm:w-auto px-3 sm:px-6 py-2 sm:py-3 min-h-[36px] sm:min-h-[44px] rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-[10px] sm:text-xs shadow-xs sm:shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                      <span>Reserve</span>
-                      <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
-                    </button>
+                    <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                      {rt.short_stay_enabled && (
+                        <button
+                          onClick={() => handleReserve(rt, 'hourly')}
+                          className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-3 min-h-[36px] sm:min-h-[44px] rounded-xl bg-[#FAF8F5] hover:bg-[#E8E2D8]/50 text-[#1E3A2B] border border-[#1E3A2B]/30 font-extrabold text-[10px] sm:text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#3B5E43]" />
+                          <span>Short-Stay</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleReserve(rt, 'nightly')}
+                        className="flex-1 sm:flex-initial px-3 sm:px-6 py-2 sm:py-3 min-h-[36px] sm:min-h-[44px] rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-[10px] sm:text-xs shadow-xs sm:shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span>Reserve</span>
+                        <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

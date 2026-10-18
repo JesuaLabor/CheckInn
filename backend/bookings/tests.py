@@ -591,3 +591,71 @@ class LocalStayCoreTests(TestCase):
         self.assertEqual(booking.duration_hours, 6)
         self.assertEqual(booking.total_amount, 900.00)  # 450 + 450
 
+    def test_guest_marketplace_short_stay_booking(self):
+        """Guest reserves a 6-hour micro-stay via marketplace, gets soft hold, staff approves."""
+        self.rt_a.short_stay_enabled = True
+        self.rt_a.rate_3h = 400.00
+        self.rt_a.rate_6h = 700.00
+        self.rt_a.save()
+
+        self.client.force_authenticate(user=self.guest)
+        future_start = timezone.localtime() + timedelta(hours=1)
+        check_in_str = future_start.date().strftime('%Y-%m-%d')
+        check_in_time_str = future_start.strftime('%H:%M')
+
+        res = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'stay_type': 'hourly',
+            'duration_hours': 6,
+            'check_in': check_in_str,
+            'check_in_time': check_in_time_str,
+            'guest_name': 'Juan Dela Cruz',
+            'guest_email': 'juan@test.com',
+            'guest_phone': '09171234567',
+            'guest_count': 1,
+            'payment_method': 'pay_at_hotel'
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data if hasattr(res, 'data') else None)
+        b_data = res.data['booking']
+        self.assertEqual(b_data['stay_type'], 'hourly')
+        self.assertEqual(b_data['duration_hours'], 6)
+        self.assertEqual(float(b_data['total_amount']), 700.00)
+        self.assertEqual(b_data['status'], 'pending_approval')
+        self.assertTrue(b_data['is_hold_active'])
+
+        booking = Booking.objects.get(id=b_data['id'])
+        self.assertIsNotNone(booking.check_in_datetime)
+        self.assertIsNotNone(booking.check_out_datetime)
+        self.assertEqual((booking.check_out_datetime - booking.check_in_datetime).total_seconds(), 6 * 3600)
+
+        # Another guest tries to book overlapping time on the same room category (only 1 room exists)
+        self.client.force_authenticate(user=self.guest2)
+        overlap_start = future_start + timedelta(hours=2)
+        res_overlap = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'stay_type': 'hourly',
+            'duration_hours': 3,
+            'check_in': overlap_start.date().strftime('%Y-%m-%d'),
+            'check_in_time': overlap_start.strftime('%H:%M'),  # falls squarely inside 6h window
+            'guest_name': 'Overlapping Guest',
+            'guest_email': 'overlap@test.com',
+            'guest_phone': '09170009999',
+            'guest_count': 1,
+            'payment_method': 'pay_at_hotel'
+        }, format='json')
+        self.assertEqual(res_overlap.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Staff approves the first booking
+        self.client.force_authenticate(user=self.staff_a)
+        app_res = self.client.post(f'/api/v1/staff/requests/{booking.id}/approve/', {}, format='json')
+        self.assertEqual(app_res.status_code, status.HTTP_200_OK)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'confirmed')
+        self.assertEqual(booking.room, self.room_a1)
+        self.room_a1.refresh_from_db()
+        self.assertEqual(self.room_a1.status, 'occupied')
+
+
