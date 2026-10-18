@@ -120,6 +120,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     capacity: 2,
     amenities: 'King Bed, Air Conditioning, En-suite Hot Shower, High-Speed Wi-Fi',
     description: '',
+    short_stay_enabled: true,
+    rate_3h: '',
+    rate_6h: '',
+    rate_12h: '',
+    rate_24h: '',
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -190,6 +195,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     capacity: 2,
     amenities: '',
     description: '',
+    short_stay_enabled: true,
+    rate_3h: '',
+    rate_6h: '',
+    rate_12h: '',
+    rate_24h: '',
   });
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const [editRoomImageFile, setEditRoomImageFile] = useState<File | null>(null);
@@ -363,6 +373,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       formData.append('capacity', String(newRoomTypeData.capacity));
       formData.append('description', newRoomTypeData.description.trim());
       formData.append('amenities', newRoomTypeData.amenities);
+      formData.append('short_stay_enabled', String(newRoomTypeData.short_stay_enabled));
+      if (newRoomTypeData.rate_3h) formData.append('rate_3h', newRoomTypeData.rate_3h);
+      if (newRoomTypeData.rate_6h) formData.append('rate_6h', newRoomTypeData.rate_6h);
+      if (newRoomTypeData.rate_12h) formData.append('rate_12h', newRoomTypeData.rate_12h);
+      if (newRoomTypeData.rate_24h) formData.append('rate_24h', newRoomTypeData.rate_24h);
 
       if (roomImageFile) {
         formData.append('photo', roomImageFile);
@@ -380,6 +395,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         capacity: 2,
         amenities: 'King Bed, Air Conditioning, En-suite Hot Shower, High-Speed Wi-Fi',
         description: '',
+        short_stay_enabled: true,
+        rate_3h: '',
+        rate_6h: '',
+        rate_12h: '',
+        rate_24h: '',
       });
       setRoomImageFile(null);
       setRoomImagePreview('');
@@ -416,6 +436,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       capacity: rt.capacity || 2,
       amenities: Array.isArray(rt.amenities) ? rt.amenities.join(', ') : '',
       description: rt.description || '',
+      short_stay_enabled: rt.short_stay_enabled !== false,
+      rate_3h: rt.rate_3h ? String(rt.rate_3h) : '',
+      rate_6h: rt.rate_6h ? String(rt.rate_6h) : '',
+      rate_12h: rt.rate_12h ? String(rt.rate_12h) : '',
+      rate_24h: rt.rate_24h ? String(rt.rate_24h) : '',
     });
     setEditRoomImageFile(null);
     setEditRoomImagePreview(rt.photos && rt.photos.length > 0 ? rt.photos[0] : '');
@@ -481,6 +506,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       formData.append('capacity', String(editRoomTypeData.capacity));
       formData.append('description', editRoomTypeData.description.trim());
       formData.append('amenities', editRoomTypeData.amenities);
+      formData.append('short_stay_enabled', String(editRoomTypeData.short_stay_enabled));
+      formData.append('rate_3h', editRoomTypeData.rate_3h || '');
+      formData.append('rate_6h', editRoomTypeData.rate_6h || '');
+      formData.append('rate_12h', editRoomTypeData.rate_12h || '');
+      formData.append('rate_24h', editRoomTypeData.rate_24h || '');
 
       if (editRoomImageFile) {
         formData.append('photo', editRoomImageFile);
@@ -494,6 +524,26 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || 'Failed to update room category.';
       toast.error(errorMsg, 'Update Failed');
+    }
+  };
+
+  const handleExtendStay = async (bookingId: number | string, guestName: string) => {
+    const hours = window.prompt(
+      `Extend short-stay for guest "${guestName}"?\nEnter additional duration slot (3, 6, 12, or 24 hours):`,
+      '3'
+    );
+    if (!hours) return;
+    const numHours = parseInt(hours, 10);
+    if (![3, 6, 12, 24].includes(numHours)) {
+      toast.error('Extension slot must be 3, 6, 12, or 24 hours.', 'Invalid Slot');
+      return;
+    }
+    try {
+      const res = await api.post(`/bookings/${bookingId}/extend/`, { hours: numHours });
+      toast.success(res.data.message || 'Stay extended successfully!');
+      fetchDashboardData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to extend stay.');
     }
   };
 
@@ -1228,9 +1278,43 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         )}
                       </div>
                       <div className="text-[11px] text-slate-600 font-medium">{r.occupant.guest_phone || 'No phone'}</div>
-                      <div className="text-[10px] text-[#1E3A2B] font-bold">
-                        Checkout: {r.occupant.check_out}
-                      </div>
+                      
+                      {r.occupant.stay_type === 'hourly' ? (
+                        <div className="pt-1 pb-0.5 space-y-1">
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-[#1E3A2B]/10 text-[#1E3A2B]">
+                              <Clock className="w-2.5 h-2.5 text-[#D49B41]" />
+                              <span>{r.occupant.duration_hours || 3}h Wash-and-Go</span>
+                            </span>
+
+                            {r.occupant.is_expired ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 animate-pulse flex items-center gap-1">
+                                ⚠️ Time Expired
+                              </span>
+                            ) : typeof r.occupant.remaining_seconds === 'number' ? (
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                                r.occupant.remaining_seconds <= 900
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                                  : 'bg-emerald-100 text-emerald-900'
+                              }`}>
+                                <Clock className="w-2.5 h-2.5" />
+                                {Math.floor(r.occupant.remaining_seconds / 3600) > 0 ? `${Math.floor(r.occupant.remaining_seconds / 3600)}h ` : ''}
+                                {Math.floor((r.occupant.remaining_seconds % 3600) / 60)}m left
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {r.occupant.check_out_datetime && (
+                            <div className="text-[10px] text-[#1E3A2B] font-bold">
+                              Out: {new Date(r.occupant.check_out_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-[#1E3A2B] font-bold">
+                          Checkout: {r.occupant.check_out}
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-1.5 mt-2.5">
                         {(r.occupant as any).status === 'confirmed' && (
@@ -1241,6 +1325,16 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                           >
                             <CheckCircle2 className="w-3.5 h-3.5 text-[#D49B41]" />
                             <span>Check In</span>
+                          </button>
+                        )}
+                        {r.occupant.stay_type === 'hourly' && (r.occupant as any).status === 'checked_in' && (
+                          <button
+                            onClick={() => handleExtendStay(r.occupant!.booking_id, r.occupant!.guest_name)}
+                            className="px-2.5 py-1.5 rounded-xl bg-[#D49B41] hover:bg-[#b8822f] text-[#212529] text-[11px] font-black transition-all active:scale-95 flex items-center justify-center gap-1 shadow-2xs"
+                            title="Extend stay duration (+3h/6h)"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Extend</span>
                           </button>
                         )}
                         <button
@@ -1547,6 +1641,26 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                             +{rt.amenities.length - 3} more
                           </span>
                         )}
+                      </div>
+                    )}
+
+                    {rt.short_stay_enabled !== false && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs flex-wrap gap-1">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1E3A2B]">
+                          <Clock className="w-3 h-3 text-[#D49B41]" />
+                          <span>Short-Stay:</span>
+                        </span>
+                        <div className="flex items-center gap-1 text-[10px] font-black text-slate-700">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200">
+                            3h: ₱{Number(rt.rate_3h || Math.round(Number(rt.base_rate) * 0.3)).toLocaleString()}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200">
+                            6h: ₱{Number(rt.rate_6h || Math.round(Number(rt.base_rate) * 0.5)).toLocaleString()}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                            12h: ₱{Number(rt.rate_12h || Math.round(Number(rt.base_rate) * 0.75)).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                     )}
 
@@ -1975,6 +2089,107 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                 </div>
               </div>
 
+              {/* Short-Stay / Micro-Stay Tiers (Wash-and-Go) */}
+              <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-slate-200/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-[#D49B41]" />
+                    <span className="text-xs font-bold text-slate-800">
+                      Short-Stay / Micro-Stay Tiers (Wash-and-Go)
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newRoomTypeData.short_stay_enabled}
+                      onChange={(e) =>
+                        setNewRoomTypeData({ ...newRoomTypeData, short_stay_enabled: e.target.checked })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1E3A2B]"></div>
+                  </label>
+                </div>
+
+                {newRoomTypeData.short_stay_enabled && (
+                  <div className="space-y-2.5 pt-1">
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Configure standard fixed hourly rates for micro-stays. Leave blank to use proportional defaults.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          3 Hours (Wash & Go)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={50}
+                            placeholder={newRoomTypeData.base_rate ? String(Math.round(Number(newRoomTypeData.base_rate) * 0.3)) : '450'}
+                            value={newRoomTypeData.rate_3h}
+                            onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, rate_3h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          6 Hours (Half-Day)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={50}
+                            placeholder={newRoomTypeData.base_rate ? String(Math.round(Number(newRoomTypeData.base_rate) * 0.5)) : '750'}
+                            value={newRoomTypeData.rate_6h}
+                            onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, rate_6h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          12 Hours (Overnight/Rest)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={100}
+                            placeholder={newRoomTypeData.base_rate ? String(Math.round(Number(newRoomTypeData.base_rate) * 0.75)) : '1200'}
+                            value={newRoomTypeData.rate_12h}
+                            onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, rate_12h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          24 Hours (Full-Day Block)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={100}
+                            placeholder={newRoomTypeData.base_rate || '1800'}
+                            value={newRoomTypeData.rate_24h}
+                            onChange={(e) => setNewRoomTypeData({ ...newRoomTypeData, rate_24h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Room Photography from Local Device */}
               <div className="pt-1">
                 <div className="flex items-center justify-between mb-2">
@@ -2318,6 +2533,107 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Short-Stay / Micro-Stay Tiers (Wash-and-Go) */}
+              <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-slate-200/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-[#D49B41]" />
+                    <span className="text-xs font-bold text-slate-800">
+                      Short-Stay / Micro-Stay Tiers (Wash-and-Go)
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editRoomTypeData.short_stay_enabled}
+                      onChange={(e) =>
+                        setEditRoomTypeData({ ...editRoomTypeData, short_stay_enabled: e.target.checked })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1E3A2B]"></div>
+                  </label>
+                </div>
+
+                {editRoomTypeData.short_stay_enabled && (
+                  <div className="space-y-2.5 pt-1">
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Configure standard fixed hourly rates for micro-stays. Leave blank to use proportional defaults.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          3 Hours (Wash & Go)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={50}
+                            placeholder={editRoomTypeData.base_rate ? String(Math.round(Number(editRoomTypeData.base_rate) * 0.3)) : '450'}
+                            value={editRoomTypeData.rate_3h}
+                            onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, rate_3h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          6 Hours (Half-Day)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={50}
+                            placeholder={editRoomTypeData.base_rate ? String(Math.round(Number(editRoomTypeData.base_rate) * 0.5)) : '750'}
+                            value={editRoomTypeData.rate_6h}
+                            onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, rate_6h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          12 Hours (Overnight/Rest)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={100}
+                            placeholder={editRoomTypeData.base_rate ? String(Math.round(Number(editRoomTypeData.base_rate) * 0.75)) : '1200'}
+                            value={editRoomTypeData.rate_12h}
+                            onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, rate_12h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          24 Hours (Full-Day Block)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-2 text-xs font-black text-slate-400">₱</span>
+                          <input
+                            type="number"
+                            min={100}
+                            placeholder={editRoomTypeData.base_rate || '1800'}
+                            value={editRoomTypeData.rate_24h}
+                            onChange={(e) => setEditRoomTypeData({ ...editRoomTypeData, rate_24h: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-6 pr-2.5 py-1.5 text-xs text-[#212529] font-bold outline-none focus:border-[#1E3A2B]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Photo Attachment Section */}

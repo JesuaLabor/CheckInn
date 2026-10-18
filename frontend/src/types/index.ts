@@ -104,6 +104,11 @@ export interface RoomType {
   capacity: number;
   amenities: string[];
   photos: string[];
+  short_stay_enabled?: boolean;
+  rate_3h?: number | string | null;
+  rate_6h?: number | string | null;
+  rate_12h?: number | string | null;
+  rate_24h?: number | string | null;
   total_rooms?: number;
   available_count?: number;
   rooms?: Room[];
@@ -118,6 +123,11 @@ export interface Room {
   room_type: number | string;
   room_type_name?: string;
   base_rate?: number | string;
+  short_stay_enabled?: boolean;
+  rate_3h?: number | string | null;
+  rate_6h?: number | string | null;
+  rate_12h?: number | string | null;
+  rate_24h?: number | string | null;
   occupant?: {
     booking_id: number | string;
     booking_reference: string;
@@ -125,6 +135,14 @@ export interface Room {
     guest_phone: string;
     check_in: string;
     check_out: string;
+    status?: string;
+    status_display?: string;
+    stay_type?: 'nightly' | 'hourly';
+    duration_hours?: number;
+    check_in_datetime?: string;
+    check_out_datetime?: string;
+    remaining_seconds?: number | null;
+    is_expired?: boolean;
   } | null;
 }
 
@@ -176,6 +194,10 @@ export interface Booking {
   guest_email: string;
   guest_phone: string;
   guest_count: number;
+  stay_type?: 'nightly' | 'hourly';
+  duration_hours?: number | null;
+  check_in_datetime?: string | null;
+  check_out_datetime?: string | null;
   check_in: string;
   check_out: string;
   total_amount: number | string;
