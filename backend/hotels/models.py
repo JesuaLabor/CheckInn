@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -137,3 +139,80 @@ class Room(models.Model):
 
     def __str__(self):
         return f"Room {self.room_number} ({self.room_type.name}) - {self.hotel.name}"
+
+
+class HotelAuditLog(models.Model):
+    CATEGORY_CHOICES = (
+        ('booking', 'Bookings & Front Desk'),
+        ('inventory', 'Rooms & Rates'),
+        ('housekeeping', 'Housekeeping & Maintenance'),
+        ('staff', 'Staff & Team'),
+        ('settings', 'Property Settings & Payout'),
+    )
+
+    SEVERITY_CHOICES = (
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('critical', 'Critical'),
+    )
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name='audit_logs', db_index=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hotel_audit_logs'
+    )
+    actor_name = models.CharField(max_length=150, blank=True, default='')
+    actor_role = models.CharField(max_length=50, blank=True, default='')
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, db_index=True)
+    action = models.CharField(max_length=80, db_index=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='info', db_index=True)
+    summary = models.CharField(max_length=255)
+    details = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['hotel', '-created_at']),
+            models.Index(fields=['hotel', 'category', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"[{self.hotel.name}] {self.category.upper()} - {self.action} by {self.actor_name or 'System'}"
+
+
+class Review(models.Model):
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name='reviews')
+    booking = models.OneToOneField('bookings.Booking', on_delete=models.CASCADE, related_name='review')
+    guest = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='hotel_reviews')
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        help_text='Rating from 0 to 5 stars (0=lowest, 5=highest).'
+    )
+    comment = models.TextField(blank=True, default='', help_text='Optional guest feedback/comments.')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.guest.username} -> {self.hotel.name} ({self.rating}/5)"
+
+
+def recalculate_hotel_rating(hotel):
+    """
+    Recalculates the average rating and review count of a hotel based on verified reviews.
+    """
+    reviews = hotel.reviews.all()
+    count = reviews.count()
+    if count > 0:
+        avg = reviews.aggregate(models.Avg('rating'))['rating__avg']
+        hotel.rating = round(float(avg), 1)
+        hotel.review_count = count
+    hotel.save(update_fields=['rating', 'review_count'])
+

@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers
 from hotels.models import Hotel, RoomType, Room
+from hotels.serializers import ReviewSerializer
 from .models import Booking, GuestRequest, Payment
 
 
@@ -39,6 +40,7 @@ class BookingSerializer(serializers.ModelSerializer):
     is_hold_active = serializers.BooleanField(read_only=True)
     payment = PaymentSerializer(read_only=True)
     service_requests = GuestRequestSerializer(many=True, read_only=True)
+    review = ReviewSerializer(read_only=True)
 
     class Meta:
         model = Booking
@@ -53,7 +55,7 @@ class BookingSerializer(serializers.ModelSerializer):
             'source', 'source_display', 'hold_expires_at', 'is_hold_active',
             'qr_token', 'special_requests', 'rejection_reason',
             'reviewed_by', 'reviewed_at', 'checked_in_at', 'checked_out_at',
-            'created_at', 'payment', 'service_requests'
+            'created_at', 'payment', 'service_requests', 'review'
         ]
         read_only_fields = [
             'id', 'booking_reference', 'status', 'source', 'hold_expires_at',

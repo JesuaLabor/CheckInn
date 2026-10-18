@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hotel, RoomType, Room
+from .models import Hotel, RoomType, Room, HotelAuditLog, Review
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -167,3 +167,37 @@ class StaffMemberSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, required=False, min_length=6)
     is_active = serializers.BooleanField(read_only=True)
     date_joined = serializers.DateTimeField(read_only=True)
+
+
+class HotelAuditLogSerializer(serializers.ModelSerializer):
+    actor_email = serializers.EmailField(source='actor.email', read_only=True)
+    hotel_name = serializers.CharField(source='hotel.name', read_only=True)
+
+    class Meta:
+        model = HotelAuditLog
+        fields = [
+            'id', 'hotel', 'hotel_name', 'actor', 'actor_name', 'actor_role', 'actor_email',
+            'category', 'action', 'severity', 'summary', 'details', 'ip_address', 'created_at'
+        ]
+        read_only_fields = fields
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    guest_name = serializers.SerializerMethodField()
+    hotel_name = serializers.CharField(source='hotel.name', read_only=True)
+    booking_reference = serializers.CharField(source='booking.booking_reference', read_only=True)
+
+    class Meta:
+        model = Review
+        fields = [
+            'id', 'hotel', 'hotel_name', 'booking', 'booking_reference',
+            'guest', 'guest_name', 'rating', 'comment', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'hotel', 'booking', 'guest', 'created_at', 'updated_at']
+
+    def get_guest_name(self, obj):
+        if obj.guest:
+            full = f"{obj.guest.first_name} {obj.guest.last_name}".strip()
+            return full or obj.guest.username
+        return "Verified Guest"
+

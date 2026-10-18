@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.db.models import Count, Sum, Q, Case, When, IntegerField
@@ -6,8 +7,9 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from hotels.models import Room
+from hotels.models import Room, Review, recalculate_hotel_rating
 from hotels.audit import log_hotel_activity
+from hotels.serializers import ReviewSerializer
 from .models import Booking, GuestRequest, Payment
 from .permissions import IsHotelStaff, IsHotelAdmin
 from .serializers import (
@@ -336,10 +338,14 @@ class CheckInBookingView(APIView):
 
         booking.status = 'checked_in'
         booking.checked_in_at = timezone.now()
-        collect_balance = request.data.get('collect_balance', True)
+        collect_balance = request.data.get('collect_balance', False)
         if collect_balance and booking.balance_due > 0:
-            from decimal import Decimal
             booking.balance_due = Decimal('0.00')
+            if hasattr(booking, 'payment') and booking.payment:
+                booking.payment.status = 'paid'
+                booking.payment.paid_at = timezone.now()
+                booking.payment.amount = booking.total_amount
+                booking.payment.save()
         booking.save()
 
         if booking.room:
@@ -384,6 +390,55 @@ class CheckOutBookingView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Enforce remaining balance settlement before checkout
+        if booking.balance_due > 0:
+            settle_balance = request.data.get('settle_balance', False)
+            if not settle_balance:
+                return Response(
+                    {
+                        'detail': f'Guest has an outstanding balance of ₱{booking.balance_due:,.2f}. The remaining bill must be settled and paid before completing checkout.',
+                        'balance_due': float(booking.balance_due)
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            payment_method = request.data.get('payment_method', 'cash')
+            payment_ref = request.data.get('payment_reference', '').strip()
+
+            settled_amount = booking.balance_due
+            booking.balance_due = Decimal('0.00')
+
+            if hasattr(booking, 'payment') and booking.payment:
+                booking.payment.status = 'paid'
+                booking.payment.paid_at = timezone.now()
+                booking.payment.amount = booking.total_amount
+                if payment_ref and not booking.payment.reference_number:
+                    booking.payment.reference_number = payment_ref
+                booking.payment.save()
+
+            log_hotel_activity(
+                hotel=hotel,
+                actor=request.user,
+                request=request,
+                category='booking',
+                action='balance_settled_at_checkout',
+                severity='info',
+                summary=f"Settled final balance of ₱{settled_amount:,.2f} via {payment_method.upper()} for {booking.guest_name} ({booking.booking_reference})",
+                details={
+                    'booking_reference': booking.booking_reference,
+                    'guest_name': booking.guest_name,
+                    'amount_settled': float(settled_amount),
+                    'payment_method': payment_method,
+                    'payment_reference': payment_ref
+                }
+            )
+        else:
+            if hasattr(booking, 'payment') and booking.payment:
+                if booking.payment.status != 'paid':
+                    booking.payment.status = 'paid'
+                    booking.payment.paid_at = timezone.now()
+                    booking.payment.save()
+
         booking.status = 'checked_out'
         booking.checked_out_at = timezone.now()
         booking.save()
@@ -391,13 +446,6 @@ class CheckOutBookingView(APIView):
         if booking.room:
             booking.room.status = 'cleaning'  # mark cleaning before ready
             booking.room.save()
-
-        # Update payment to paid if not already
-        if hasattr(booking, 'payment'):
-            if booking.payment.status != 'paid':
-                booking.payment.status = 'paid'
-                booking.payment.paid_at = timezone.now()
-                booking.payment.save()
 
         log_hotel_activity(
             hotel=hotel,
@@ -416,7 +464,7 @@ class CheckOutBookingView(APIView):
 
         serializer = BookingSerializer(booking)
         return Response({
-            'message': f'Guest {booking.guest_name} checked out. Room {booking.room.room_number} set to cleaning status.',
+            'message': f'Guest {booking.guest_name} checked out. Room {booking.room.room_number if booking.room else ""} set to cleaning status.',
             'booking': serializer.data
         })
 
@@ -593,6 +641,11 @@ class StaffRoomStatusBoardView(APIView):
                     'check_out_datetime': occ.check_out_datetime.isoformat() if occ.check_out_datetime else None,
                     'remaining_seconds': remaining_seconds,
                     'is_expired': is_expired,
+                    'total_amount': float(occ.total_amount),
+                    'deposit_amount': float(occ.deposit_amount),
+                    'balance_due': float(occ.balance_due),
+                    'deposit_type': occ.deposit_type,
+                    'payment_status': occ.payment.status if hasattr(occ, 'payment') and occ.payment else 'unpaid',
                 }
 
             room_data.append({
@@ -825,3 +878,57 @@ class AdminOccupancyReportView(APIView):
                 'pending_requests': pending_count,
             }
         })
+
+
+class BookingReviewView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(id=pk)
+        except Booking.DoesNotExist:
+            return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if booking.guest != request.user and booking.guest_email.lower() != (request.user.email or '').lower():
+            return Response({'detail': 'You can only review your own bookings.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if booking.status != 'checked_out':
+            return Response(
+                {'detail': f'You can only rate and review your stay after checkout is completed. Current status: {booking.get_status_display()}.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        rating = request.data.get('rating')
+        if rating is None:
+            return Response({'detail': 'A rating score between 0 and 5 is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            rating = int(rating)
+        except (ValueError, TypeError):
+            return Response({'detail': 'Rating must be an integer between 0 and 5.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if rating < 0 or rating > 5:
+            return Response({'detail': 'Rating score must be between 0 and 5 stars.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = request.data.get('comment', '').strip()
+
+        review, created = Review.objects.update_or_create(
+            booking=booking,
+            defaults={
+                'hotel': booking.hotel,
+                'guest': request.user,
+                'rating': rating,
+                'comment': comment
+            }
+        )
+
+        recalculate_hotel_rating(booking.hotel)
+
+        serializer = ReviewSerializer(review)
+        return Response({
+            'message': 'Thank you! Your rating and review have been recorded.',
+            'review': serializer.data,
+            'hotel_rating': float(booking.hotel.rating),
+            'hotel_review_count': booking.hotel.review_count
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+

@@ -16,6 +16,8 @@ from .views import (
     HotelManageRoomTypeDetailView,
     HotelManageRoomView,
     HotelManageRoomDetailView,
+    HotelAuditLogListView,
+    HotelReviewsListView,
 )
 
 urlpatterns = [
@@ -25,6 +27,7 @@ urlpatterns = [
     path('inns/exchange-rates/', ExchangeRatesView.as_view(), name='exchange_rates'),
     path('inns/partner-register/', PartnerRegisterView.as_view(), name='partner_register'),
     path('inns/<slug:slug>/', HotelDetailView.as_view(), name='hotel_detail'),
+    path('inns/<slug:pk_or_slug>/reviews/', HotelReviewsListView.as_view(), name='hotel_reviews'),
     path('inns/<slug:slug>/rooms/available/', AvailableRoomsView.as_view(), name='hotel_available_rooms'),
 
     # Platform Super Admin endpoints
@@ -40,4 +43,5 @@ urlpatterns = [
     path('hotel-manage/room-types/<int:pk>/', HotelManageRoomTypeDetailView.as_view(), name='hotel_manage_room_type_detail'),
     path('hotel-manage/rooms/', HotelManageRoomView.as_view(), name='hotel_manage_rooms'),
     path('hotel-manage/rooms/<int:pk>/', HotelManageRoomDetailView.as_view(), name='hotel_manage_room_detail'),
+    path('hotel-manage/audit-logs/', HotelAuditLogListView.as_view(), name='hotel_manage_audit_logs'),
 ]

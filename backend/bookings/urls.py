@@ -10,6 +10,7 @@ from .views import (
     WalkInBookingView,
     CheckInBookingView,
     CheckOutBookingView,
+    BookingReviewView,
     GuestCancelBookingView,
     StaffNoShowBookingView,
     StaffRoomStatusBoardView,
@@ -26,6 +27,7 @@ urlpatterns = [
     path('bookings/walkin/', WalkInBookingView.as_view(), name='walkin_booking'),
     path('bookings/<str:pk>/', BookingDetailView.as_view(), name='booking_detail'),
     path('bookings/<str:pk>/cancel/', GuestCancelBookingView.as_view(), name='booking_cancel'),
+    path('bookings/<str:pk>/review/', BookingReviewView.as_view(), name='booking_review'),
 
     # Staff endpoints
     path('staff/requests/pending/', StaffPendingRequestsView.as_view(), name='staff_pending_requests'),

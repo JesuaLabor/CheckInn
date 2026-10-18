@@ -858,5 +858,136 @@ class LocalStayCoreTests(TestCase):
         self.assertEqual(b.room.status, 'available')
         self.assertEqual(float(b.deposit_amount), 1200.00)
 
+    def test_checkout_requires_balance_settlement_and_clears_balance(self):
+        """Guest with 50% deposit cannot checkout until front desk settles remaining balance."""
+        d1 = timezone.now().date() + timedelta(days=2)
+        d2 = d1 + timedelta(days=1)
+        self.client.force_authenticate(user=self.guest)
+        res = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'Carlos Yulo',
+            'guest_email': 'carlos@test.com',
+            'guest_phone': '09181234567',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-DEPOSIT50'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        b = Booking.objects.get(id=res.data['booking']['id'])
+        self.assertEqual(float(b.balance_due), 600.00)
+
+        # Staff approves and checks in guest
+        self.client.force_authenticate(user=self.staff_a)
+        self.client.post(f'/api/v1/staff/requests/{b.id}/approve/')
+        self.client.post(f'/api/v1/bookings/{b.id}/checkin/')
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'checked_in')
+        self.assertEqual(float(b.balance_due), 600.00)
+
+        # Attempt checkout without settlement -> Must be blocked
+        blocked_res = self.client.post(f'/api/v1/bookings/{b.id}/checkout/', {}, format='json')
+        self.assertEqual(blocked_res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('outstanding balance', blocked_res.data['detail'])
+
+        # Checkout with settlement
+        checkout_res = self.client.post(f'/api/v1/bookings/{b.id}/checkout/', {
+            'settle_balance': True,
+            'payment_method': 'card',
+            'payment_reference': 'CARD-AUTH-9999'
+        }, format='json')
+        self.assertEqual(checkout_res.status_code, status.HTTP_200_OK)
+
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'checked_out')
+        self.assertEqual(float(b.balance_due), 0.00)
+        self.assertEqual(b.payment.status, 'paid')
+        b.room.refresh_from_db()
+        self.assertEqual(b.room.status, 'cleaning')
+
+    def test_guest_optional_rating_after_checkout(self):
+        """Guest can optionally rate 0-5 stars only after checkout is complete."""
+        d1 = timezone.now().date() + timedelta(days=3)
+        d2 = d1 + timedelta(days=1)
+        self.client.force_authenticate(user=self.guest)
+        res = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'Maria Clara',
+            'guest_email': 'maria@test.com',
+            'guest_phone': '09191234567',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-MARIA'
+        }, format='json')
+        b = Booking.objects.get(id=res.data['booking']['id'])
+
+        # Attempt to rate while pending_approval -> HTTP 400
+        rev_fail = self.client.post(f'/api/v1/bookings/{b.id}/review/', {
+            'rating': 5,
+            'comment': 'Too early review'
+        }, format='json')
+        self.assertEqual(rev_fail.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Staff approves, checks in, and checks out with balance settlement
+        self.client.force_authenticate(user=self.staff_a)
+        self.client.post(f'/api/v1/staff/requests/{b.id}/approve/')
+        self.client.post(f'/api/v1/bookings/{b.id}/checkin/')
+        self.client.post(f'/api/v1/bookings/{b.id}/checkout/', {
+            'settle_balance': True,
+            'payment_method': 'cash'
+        }, format='json')
+
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'checked_out')
+
+        # Other user cannot rate this booking -> HTTP 403
+        self.client.force_authenticate(user=self.staff_a)
+        rev_forbidden = self.client.post(f'/api/v1/bookings/{b.id}/review/', {
+            'rating': 5
+        }, format='json')
+        self.assertEqual(rev_forbidden.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Guest rates with invalid score (6 stars) -> HTTP 400
+        self.client.force_authenticate(user=self.guest)
+        rev_invalid = self.client.post(f'/api/v1/bookings/{b.id}/review/', {
+            'rating': 6
+        }, format='json')
+        self.assertEqual(rev_invalid.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Guest submits valid 5-star rating with optional comment -> HTTP 201
+        rev_ok = self.client.post(f'/api/v1/bookings/{b.id}/review/', {
+            'rating': 5,
+            'comment': 'Outstanding hospitality, spotless room!'
+        }, format='json')
+        self.assertEqual(rev_ok.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(rev_ok.data['review']['rating'], 5)
+
+        # Verify hotel rating updated
+        self.hotel_a.refresh_from_db()
+        self.assertEqual(float(self.hotel_a.rating), 5.0)
+        self.assertEqual(self.hotel_a.review_count, 1)
+
+        # Verify booking detail / serializer exposes the review
+        b_res = self.client.get(f'/api/v1/bookings/{b.id}/')
+        self.assertIsNotNone(b_res.data['review'])
+        self.assertEqual(b_res.data['review']['rating'], 5)
+
+        # Public reviews endpoint for hotel
+        self.client.logout()
+        pub_res = self.client.get(f'/api/v1/inns/{self.hotel_a.slug}/reviews/')
+        self.assertEqual(pub_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(pub_res.data['reviews']), 1)
+        self.assertEqual(pub_res.data['reviews'][0]['rating'], 5)
+
+
 
 

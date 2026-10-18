@@ -16,7 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.serializers import UserSerializer
 from bookings.models import Booking
-from .models import Hotel, RoomType, Room, HotelAuditLog
+from .models import Hotel, RoomType, Room, HotelAuditLog, Review
 from .permissions import IsPlatformSuperAdmin, IsHotelOwnerOrAdmin
 from .serializers import (
     HotelListSerializer,
@@ -27,6 +27,7 @@ from .serializers import (
     HotelManageSerializer,
     StaffMemberSerializer,
     HotelAuditLogSerializer,
+    ReviewSerializer,
 )
 from .audit import log_hotel_activity
 
@@ -1148,4 +1149,28 @@ class HotelAuditLogListView(APIView):
         logs = logs.order_by('-created_at')[:250]
         serializer = HotelAuditLogSerializer(logs, many=True)
         return Response(serializer.data)
+
+
+class HotelReviewsListView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk_or_slug):
+        if str(pk_or_slug).isdigit():
+            hotel = Hotel.objects.filter(id=pk_or_slug, is_active=True).first()
+        else:
+            hotel = Hotel.objects.filter(slug=pk_or_slug, is_active=True).first()
+
+        if not hotel:
+            return Response({'detail': 'Hotel not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        reviews = hotel.reviews.select_related('guest', 'booking').all()
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response({
+            'hotel_id': hotel.id,
+            'hotel_name': hotel.name,
+            'average_rating': float(hotel.rating),
+            'review_count': hotel.review_count,
+            'reviews': serializer.data
+        })
+
 
