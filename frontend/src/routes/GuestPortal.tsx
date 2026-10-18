@@ -398,16 +398,6 @@ export const GuestPortal: React.FC = () => {
                             </button>
                           )}
 
-                          {booking.status === 'checked_out' && (
-                            <button
-                              onClick={() => handleOpenRatingModal(booking)}
-                              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#D49B41] hover:bg-[#b8822f] text-[#212529] font-black text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                            >
-                              <Star className="w-4 h-4 fill-[#212529]" />
-                              <span>{booking.review ? 'Edit Review' : 'Rate Stay'}</span>
-                            </button>
-                          )}
-
                           {(booking.status === 'confirmed' || booking.status === 'pending_approval') && (
                             <button
                               onClick={() => setCancellingBooking(booking)}
@@ -443,58 +433,66 @@ export const GuestPortal: React.FC = () => {
                   {booking.status === 'checked_out' && (
                     <div className="pt-4 border-t border-[#E8E2D8]">
                       {booking.review ? (
-                        <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="bg-amber-50/70 border border-amber-200/90 rounded-2xl p-4 sm:p-4.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 shadow-2xs">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <div className="flex items-center text-amber-500">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <Star
                                     key={star}
-                                    className={`w-4 h-4 ${star <= (booking.review?.rating || 0) ? 'fill-amber-400 text-amber-500' : 'text-slate-300'}`}
+                                    className={`w-4 h-4 ${star <= (booking.review?.rating || 0) ? 'fill-amber-400 text-amber-500' : 'text-slate-200'}`}
                                   />
                                 ))}
                               </div>
                               <span className="text-xs font-black text-amber-950">
                                 {booking.review.rating} / 5 Stars
                               </span>
-                              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900">
-                                Verified Stay Review
+                              <span className="text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 border border-amber-300/60">
+                                Your Verified Review
                               </span>
                             </div>
                             {booking.review.comment ? (
-                              <p className="text-xs text-slate-700 italic">"{booking.review.comment}"</p>
+                              <p className="text-xs text-slate-700 font-medium italic mt-1 leading-relaxed">
+                                "{booking.review.comment}"
+                              </p>
                             ) : (
-                              <p className="text-[11px] text-slate-500">No written feedback provided.</p>
+                              <p className="text-[11px] text-slate-400 italic">Rated without written comments.</p>
                             )}
                           </div>
                           <button
                             onClick={() => handleOpenRatingModal(booking)}
-                            className="px-3.5 py-1.5 rounded-xl border border-amber-300 bg-white hover:bg-amber-100/50 text-amber-900 text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+                            className="w-full sm:w-auto px-4 py-2 rounded-xl border border-amber-300 bg-white hover:bg-amber-100/60 text-amber-950 text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0 shadow-2xs flex items-center justify-center gap-1.5"
                           >
-                            Edit Review
+                            <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                            <span>Edit Review</span>
                           </button>
                         </div>
                       ) : (
-                        <div className="bg-[#FAF8F5] border border-[#E8E2D8] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-[#D49B41]/15 border border-[#D49B41]/30 flex items-center justify-center shrink-0">
-                              <Star className="w-5 h-5 text-[#8F611A] fill-[#D49B41]" />
+                        <div className="bg-gradient-to-r from-[#FAF8F5] via-[#FAF8F5] to-amber-50/50 border border-[#E8E2D8] hover:border-[#D49B41]/50 rounded-2xl p-4 sm:p-4.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3.5 transition-all shadow-2xs">
+                          <div className="flex items-start sm:items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-[#D49B41]/15 border border-[#D49B41]/30 flex items-center justify-center shrink-0 text-[#8F611A]">
+                              <Star className="w-5 h-5 fill-[#D49B41] text-[#8F611A]" />
                             </div>
                             <div>
-                              <h4 className="text-xs font-bold text-[#1E3A2B]">
-                                How was your stay at {booking.hotel_name}? (Optional)
-                              </h4>
-                              <p className="text-[11px] text-slate-500">
-                                Rate your experience from 0 to 5 stars to help future travelers.
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-xs sm:text-sm font-extrabold text-[#1E3A2B]">
+                                  How was your stay at {booking.hotel_name}?
+                                </h4>
+                                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-full">
+                                  Optional
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5">
+                                Share a quick 0 to 5 star rating to help other travelers and support local hosts.
                               </p>
                             </div>
                           </div>
                           <button
                             onClick={() => handleOpenRatingModal(booking)}
-                            className="px-4 py-2 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white font-extrabold text-xs shadow-md shadow-[#1E3A2B]/15 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
                           >
                             <Sparkles className="w-3.5 h-3.5 text-[#D49B41]" />
-                            <span>Rate Stay</span>
+                            <span>Rate Your Stay</span>
                           </button>
                         </div>
                       )}
