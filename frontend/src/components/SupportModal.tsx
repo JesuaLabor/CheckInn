@@ -31,9 +31,9 @@ export const SupportModal: React.FC<SupportModalProps> = ({
 
   const faqs = [
     {
-      q: 'How does the 45-Minute Soft Hold work?',
-      a: 'When you submit a room booking request, LocalStay immediately locks the room inventory so no one else can book it. The inn’s front-desk desk team is notified instantly to review and confirm your stay. You won’t be charged upfront—your hold is guaranteed for 45 minutes while the inn prepares your arrival.',
-      icon: Clock,
+      q: 'How does the mandatory reservation deposit & non-refundable policy work?',
+      a: 'When you submit a room booking request, an upfront reservation deposit of at least 50% (or 100% full payment) is required. This immediately locks room inventory without expiration timers. Please note that all reservation deposits are strictly non-refundable upon cancellation, modification, or no-show. Any remaining balance is settled upon check-in at the front desk.',
+      icon: ShieldCheck,
       badge: 'Guest Guarantee',
     },
     {
@@ -50,7 +50,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
     },
     {
       q: 'How can hoteliers and inn owners list a property?',
-      a: 'Independent hotels, boutique resorts, and heritage lodges across the Philippines and abroad can join LocalStay. Apply through "List Your Property" to set up your front-desk dashboard, room categories, and soft-hold rules.',
+      a: 'Independent hotels, boutique resorts, and heritage lodges across the Philippines and abroad can join LocalStay. Apply through "List Your Property" to set up your front-desk dashboard, room categories, and custom rates.',
       icon: Building2,
       badge: 'For Hosts',
     },
@@ -82,7 +82,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-white/70 mt-0.5">
-                  Answers to soft holds, instant QR passes, and property host onboarding.
+                  Answers to reservation deposits, instant QR passes, and property host onboarding.
                 </p>
               </div>
             </div>
@@ -104,9 +104,9 @@ export const SupportModal: React.FC<SupportModalProps> = ({
             <div className="p-4 rounded-2xl bg-[#1E3A2B]/5 border border-[#1E3A2B]/10 flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-[#3B5E43] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-bold text-[#1E3A2B]">45-Minute Soft Hold Guarantee</h4>
+                <h4 className="text-xs font-bold text-[#1E3A2B]">Guaranteed Reservation Protection</h4>
                 <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                  Zero immediate charge. Rooms are held while the front desk reviews your request.
+                  50% minimum deposit locks room inventory with zero expiration countdowns.
                 </p>
               </div>
             </div>

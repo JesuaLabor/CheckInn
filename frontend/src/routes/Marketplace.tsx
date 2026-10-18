@@ -293,7 +293,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
           </h1>
 
           <p className="text-xs sm:text-sm md:text-[15px] text-slate-200/90 max-w-xl mx-auto font-normal leading-relaxed px-2">
-            Discover verified boutique hotels, mountain lodges, and coastal inns with instant front-desk soft holds and paperless QR check-in.
+            Discover verified boutique hotels, mountain lodges, and coastal inns with guaranteed room reservations and paperless QR check-in.
           </p>
 
           {/* Curated Experience / Travel Style Segmented Glass Dock (Above Search for Intuitive Intent Filter) */}
@@ -453,8 +453,8 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                 <ShieldCheck className="w-5 h-5 text-[#1E3A2B]" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-xs font-bold text-[#212529] truncate">45-Minute Hold Protection</h3>
-                <p className="text-[11px] text-slate-500 leading-snug">Soft hold locks room inventory during front-desk review.</p>
+                <h3 className="text-xs font-bold text-[#212529] truncate">Guaranteed Room Reservation</h3>
+                <p className="text-[11px] text-slate-500 leading-snug">50% deposit locks room inventory without expiration timers.</p>
               </div>
             </div>
 

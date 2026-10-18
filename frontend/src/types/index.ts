@@ -202,6 +202,11 @@ export interface Booking {
   check_out: string;
   total_amount: number | string;
   currency?: string;
+  deposit_type?: 'fifty_percent' | 'full';
+  deposit_amount?: number | string;
+  balance_due?: number | string;
+  is_non_refundable?: boolean;
+  cancellation_policy?: string;
   status: BookingStatus;
   status_display: string;
   source: 'marketplace' | 'walk_in';
@@ -218,4 +223,24 @@ export interface Booking {
   created_at: string;
   payment?: Payment;
   service_requests?: GuestRequest[];
+}
+
+export type AuditLogCategory = 'all' | 'booking' | 'inventory' | 'housekeeping' | 'staff' | 'settings';
+export type AuditLogSeverity = 'all' | 'info' | 'warning' | 'critical';
+
+export interface HotelAuditLog {
+  id: number | string;
+  hotel: number | string;
+  hotel_name: string;
+  actor?: number | string | null;
+  actor_name: string;
+  actor_role: string;
+  actor_email?: string;
+  category: 'booking' | 'inventory' | 'housekeeping' | 'staff' | 'settings';
+  action: string;
+  severity: 'info' | 'warning' | 'critical';
+  summary: string;
+  details: Record<string, any>;
+  ip_address?: string | null;
+  created_at: string;
 }

@@ -38,8 +38,23 @@ import {
   UploadCloud,
   Camera,
   X,
+  History,
+  ShieldAlert,
+  Download,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import { Booking, Room, GuestRequest, Hotel, StaffMember, RoomType } from '../types';
+import {
+  Booking,
+  Room,
+  GuestRequest,
+  Hotel,
+  StaffMember,
+  RoomType,
+  HotelAuditLog,
+  AuditLogCategory,
+  AuditLogSeverity,
+} from '../types';
 
 const COMMON_ROOM_AMENITIES = [
   'King Bed',
@@ -61,7 +76,8 @@ export type StaffSubTab =
   | 'reports'
   | 'staff_manage'
   | 'inventory_manage'
-  | 'hotel_settings';
+  | 'hotel_settings'
+  | 'audit_trail';
 
 interface StaffDashboardProps {
   initialSubTab?: StaffSubTab;
@@ -69,6 +85,7 @@ interface StaffDashboardProps {
   deepLinkNonce?: number;
   isWalkInOpenExternal?: boolean;
   onCloseWalkInExternal?: () => void;
+  onTabChange?: (tab: StaffSubTab) => void;
 }
 
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({
@@ -76,11 +93,16 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   deepLinkNonce,
   isWalkInOpenExternal,
   onCloseWalkInExternal,
+  onTabChange,
 }) => {
   const { user } = useAuthStore();
   const isHotelAdmin = user && (user.role === 'admin' || user.role === 'superadmin');
 
   const [activeTab, setActiveTab] = useState<StaffSubTab>(initialSubTab || 'pending');
+
+  useEffect(() => {
+    onTabChange?.(activeTab);
+  }, [activeTab, onTabChange]);
 
   // Apply navbar deep-links (profile shortcuts) during render instead of in an effect,
   // so repeated clicks on the same shortcut (new nonce) re-select the target sub-tab.
@@ -256,6 +278,75 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
   const [now, setNow] = useState(Date.now());
 
+  // Audit Trail State (Hotel Owner Exclusive)
+  const [auditLogs, setAuditLogs] = useState<HotelAuditLog[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditCategory, setAuditCategory] = useState<AuditLogCategory>('all');
+  const [auditSeverity, setAuditSeverity] = useState<AuditLogSeverity>('all');
+  const [auditStaffFilter, setAuditStaffFilter] = useState<string>('all');
+  const [auditSearch, setAuditSearch] = useState<string>('');
+  const [auditExpandedLogId, setAuditExpandedLogId] = useState<number | string | null>(null);
+
+  const fetchAuditLogs = async (
+    cat = auditCategory,
+    sev = auditSeverity,
+    staff = auditStaffFilter,
+    query = auditSearch
+  ) => {
+    if (!isHotelAdmin) return;
+    setAuditLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (cat !== 'all') params.append('category', cat);
+      if (sev !== 'all') params.append('severity', sev);
+      if (staff !== 'all') params.append('staff_id', staff);
+      if (query.trim()) params.append('search', query.trim());
+
+      const res = await api.get(`/hotel-manage/audit-logs/?${params.toString()}`);
+      setAuditLogs(res.data || []);
+    } catch (err: any) {
+      console.error('Failed to load audit logs:', err);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const handleExportAuditCSV = () => {
+    if (!auditLogs.length) {
+      toast.error('No audit logs available to export.', 'Export Failed');
+      return;
+    }
+
+    const headers = ['Timestamp', 'Category', 'Action', 'Severity', 'Actor Name', 'Actor Role', 'Summary', 'IP Address', 'Details'];
+    const rows = auditLogs.map((log) => [
+      `"${new Date(log.created_at).toLocaleString()}"`,
+      `"${log.category}"`,
+      `"${log.action}"`,
+      `"${log.severity}"`,
+      `"${(log.actor_name || 'System').replace(/"/g, '""')}"`,
+      `"${log.actor_role || 'system'}"`,
+      `"${(log.summary || '').replace(/"/g, '""')}"`,
+      `"${log.ip_address || 'N/A'}"`,
+      `"${JSON.stringify(log.details || {}).replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `localstay_audit_trail_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Audit trail exported to CSV successfully.', 'Export Complete');
+  };
+
+  useEffect(() => {
+    if (isHotelAdmin && activeTab === 'audit_trail') {
+      fetchAuditLogs(auditCategory, auditSeverity, auditStaffFilter, auditSearch);
+    }
+  }, [activeTab, auditCategory, auditSeverity, auditStaffFilter, auditSearch]);
+
   useEffect(() => {
     fetchDashboardData();
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -288,10 +379,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
       // Load Hotel Owner SaaS Data
       if (isHotelAdmin) {
-        const [profileRes, staffRes, rtRes] = await Promise.allSettled([
+        const [profileRes, staffRes, rtRes, auditRes] = await Promise.allSettled([
           api.get('/hotel-manage/profile/'),
           api.get('/hotel-manage/staff/'),
           api.get('/hotel-manage/room-types/'),
+          api.get('/hotel-manage/audit-logs/'),
         ]);
 
         if (profileRes.status === 'fulfilled') {
@@ -313,6 +405,9 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         }
         if (rtRes.status === 'fulfilled') {
           setRoomTypes(rtRes.value.data || []);
+        }
+        if (auditRes.status === 'fulfilled') {
+          setAuditLogs(auditRes.value.data || []);
         }
       }
     } catch {
@@ -663,7 +758,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       const res = await api.post(`/staff/requests/${rejectingBookingId}/reject/`, {
         reason: rejectionReason,
       });
-      setActionSuccess(res.data.message || 'Booking rejected. Soft hold released.');
+      setActionSuccess(res.data.message || 'Booking rejected. Room inventory released.');
       setRejectingBookingId(null);
       fetchDashboardData();
     } catch (err: any) {
@@ -776,7 +871,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             Front Desk Operations Center
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Manage incoming booking requests, soft holds, room statuses, walk-in arrivals, and QR check-in passes.
+            Manage incoming booking requests, reservation deposits, room statuses, walk-in arrivals, and QR check-in passes.
           </p>
         </div>
 
@@ -973,6 +1068,21 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               <Settings className="w-4 h-4 text-slate-400" />
               <span>Property & Payout</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('audit_trail')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shrink-0 ${
+                activeTab === 'audit_trail'
+                  ? 'bg-[#1E3A2B] text-white shadow-md shadow-[#1E3A2B]/20'
+                  : 'bg-white text-slate-600 hover:bg-[#FAF8F5] border border-slate-200/80'
+              }`}
+            >
+              <History className="w-4 h-4 text-[#D49B41]" />
+              <span>Audit Trail</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#FAF8F5] text-[#1E3A2B] border border-slate-200 font-black">
+                {auditLogs.length}
+              </span>
+            </button>
           </>
         )}
       </div>
@@ -985,7 +1095,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               Incoming Marketplace Requests
             </h2>
             <span className="text-xs text-slate-500 font-medium">
-              Automated 45-min soft hold protection active
+              Guaranteed reservations with verified reservation deposits
             </span>
           </div>
 
@@ -996,14 +1106,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
               </div>
               <h3 className="text-base font-extrabold text-[#212529]">All Requests Cleared</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                There are no pending booking requests awaiting review right now. New requests will appear here with live countdowns.
+                There are no pending booking requests awaiting review right now. New requests will appear here with deposit details.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {pendingRequests.map((b) => {
-                const holdCountdown = calculateRemainingHold(b.hold_expires_at);
-
                 const matchingRooms = (roomBoard?.rooms || []).filter(
                   (r) =>
                     (Number(r.room_type) === Number(b.room_type) ||
@@ -1021,9 +1129,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         <span className="text-xs font-mono font-bold bg-[#FAF8F5] text-[#212529] px-2 py-0.5 rounded-lg border border-slate-200">
                           {b.booking_reference}
                         </span>
-                        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1 rounded-full bg-[#D49B41]/15 text-[#212529] border border-[#D49B41]/40">
-                          <Clock className="w-3.5 h-3.5 text-[#D49B41] animate-spin" />
-                          <span>Soft Hold Active: {holdCountdown}</span>
+                        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-300">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>
+                            {b.deposit_type === 'full' ? '100% Full Payment Paid' : '50% Mandatory Deposit Paid'}
+                            {b.deposit_amount && ` (₱${Number(b.deposit_amount).toLocaleString()})`}
+                          </span>
                         </span>
                       </div>
 
@@ -1036,6 +1147,10 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         <span>Check-in: <strong className="text-[#212529]">{b.check_in}</strong></span>
                         <span>Check-out: <strong className="text-[#212529]">{b.check_out}</strong></span>
                         <span>Total: <strong className="text-[#1E3A2B]">₱{Number(b.total_amount).toLocaleString()}</strong></span>
+                        <span>Deposit: <strong className="text-emerald-700">₱{Number(b.deposit_amount || Number(b.total_amount) * 0.5).toLocaleString()}</strong></span>
+                        {Number(b.balance_due) > 0 && (
+                          <span>Balance at Check-in: <strong className="text-[#8F611A]">₱{Number(b.balance_due).toLocaleString()}</strong></span>
+                        )}
                         <span>Contact: <strong className="text-[#212529]">{b.guest_phone || b.guest_email}</strong></span>
                       </div>
 
@@ -1120,7 +1235,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         <button
                           onClick={() => setRejectingBookingId(b.id)}
                           className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 active:scale-95 transition-all"
-                          title="Decline request & release soft hold"
+                          title="Decline request & cancel booking"
                         >
                           <XCircle className="w-4 h-4" />
                         </button>
@@ -1849,13 +1964,394 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         </section>
       )}
 
+      {/* Tab 9: Hotel Owner - Audit Trail & Activity Log */}
+      {isHotelAdmin && activeTab === 'audit_trail' && (
+        <section className="space-y-6">
+          {/* Header & Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-2xs">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center">
+                  <History className="w-4 h-4 text-[#D49B41]" />
+                </div>
+                <h2 className="text-lg font-black text-[#212529]">
+                  Audit Trail & Activity Log
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Real-time chronological timeline of operational events, rate changes, housekeeping updates, and staff actions.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => fetchAuditLogs()}
+                disabled={auditLoading}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FAF8F5] hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-all active:scale-95 disabled:opacity-50"
+                title="Refresh audit feed"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportAuditCSV}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-xs font-bold shadow-md shadow-[#1E3A2B]/10 transition-all active:scale-95"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                Total Events Logged
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-[#212529]">
+                  {auditLogs.length}
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-[#FAF8F5] text-slate-600 flex items-center justify-center">
+                  <FileText className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-rose-500 tracking-wider block">
+                Critical Security Events
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-rose-600">
+                  {auditLogs.filter((l) => l.severity === 'critical').length}
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-amber-500 tracking-wider block">
+                Operational Warnings
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-amber-600">
+                  {auditLogs.filter((l) => l.severity === 'warning').length}
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+              <span className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider block">
+                Logged Today
+              </span>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-2xl font-black text-emerald-700">
+                  {
+                    auditLogs.filter(
+                      (l) => new Date(l.created_at).toDateString() === new Date().toDateString()
+                    ).length
+                  }
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Filter Toolbar */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs space-y-3.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Search input */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search logs by keyword, action, staff name, or IP..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl pl-9 pr-9 py-2 text-xs text-[#212529] font-medium focus:outline-none focus:border-[#1E3A2B] focus:ring-1 focus:ring-[#1E3A2B]"
+                />
+                {auditSearch && (
+                  <button
+                    onClick={() => setAuditSearch('')}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Staff filter dropdown */}
+              <div className="sm:w-48">
+                <select
+                  value={auditStaffFilter}
+                  onChange={(e) => setAuditStaffFilter(e.target.value)}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] font-bold focus:outline-none focus:border-[#1E3A2B]"
+                >
+                  <option value="all">All Actors</option>
+                  {staffList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.full_name || s.username} ({s.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Severity filter dropdown */}
+              <div className="sm:w-40">
+                <select
+                  value={auditSeverity}
+                  onChange={(e) => setAuditSeverity(e.target.value as AuditLogSeverity)}
+                  className="w-full bg-[#FAF8F5] border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#212529] font-bold focus:outline-none focus:border-[#1E3A2B]"
+                >
+                  <option value="all">All Severities</option>
+                  <option value="info">Info / Normal</option>
+                  <option value="warning">Warnings</option>
+                  <option value="critical">Critical Only</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Category Segmented Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              <span className="text-[11px] font-bold text-slate-400 mr-1 shrink-0">Category:</span>
+              {[
+                { id: 'all', label: 'All Events' },
+                { id: 'booking', label: 'Bookings & Front Desk' },
+                { id: 'inventory', label: 'Rooms & Rates' },
+                { id: 'housekeeping', label: 'Housekeeping' },
+                { id: 'staff', label: 'Staff Team' },
+                { id: 'settings', label: 'Settings & Payout' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setAuditCategory(cat.id as AuditLogCategory)}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition-all shrink-0 text-xs ${
+                    auditCategory === cat.id
+                      ? 'bg-[#1E3A2B] text-white shadow-xs'
+                      : 'bg-[#FAF8F5] text-slate-600 hover:bg-slate-100 border border-slate-200/60'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Chronological Timeline Feed */}
+          <div className="space-y-3">
+            {auditLoading && auditLogs.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 space-y-3">
+                <RefreshCw className="w-6 h-6 text-[#1E3A2B] animate-spin mx-auto" />
+                <p className="text-xs font-bold text-slate-500">Loading audit history...</p>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 space-y-2">
+                <History className="w-8 h-8 text-slate-300 mx-auto" />
+                <h4 className="text-sm font-bold text-[#212529]">No audit events found</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  No activity log entries match your selected category, actor, or search criteria.
+                </p>
+                {(auditCategory !== 'all' || auditSeverity !== 'all' || auditStaffFilter !== 'all' || auditSearch) && (
+                  <button
+                    onClick={() => {
+                      setAuditCategory('all');
+                      setAuditSeverity('all');
+                      setAuditStaffFilter('all');
+                      setAuditSearch('');
+                    }}
+                    className="mt-2 text-xs font-bold text-[#1E3A2B] underline"
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              auditLogs.map((log) => {
+                const isExpanded = auditExpandedLogId === log.id;
+                const hasDetails = log.details && Object.keys(log.details).length > 0;
+                const logDate = new Date(log.created_at);
+                const timeAgo = (() => {
+                  const diff = Date.now() - logDate.getTime();
+                  if (diff < 60000) return 'Just now';
+                  const mins = Math.floor(diff / 60000);
+                  if (mins < 60) return `${mins}m ago`;
+                  const hrs = Math.floor(mins / 60);
+                  if (hrs < 24) return `${hrs}h ago`;
+                  const days = Math.floor(hrs / 24);
+                  return `${days}d ago`;
+                })();
+
+                const severityStyles = {
+                  critical: 'bg-rose-50 text-rose-700 border-rose-200',
+                  warning: 'bg-amber-50 text-amber-700 border-amber-200',
+                  info: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                }[log.severity] || 'bg-slate-50 text-slate-700 border-slate-200';
+
+                const getCategoryIcon = () => {
+                  switch (log.category) {
+                    case 'booking':
+                      return <Calendar className="w-4 h-4 text-emerald-700" />;
+                    case 'inventory':
+                      return <Bed className="w-4 h-4 text-indigo-700" />;
+                    case 'housekeeping':
+                      return <Sparkles className="w-4 h-4 text-amber-600" />;
+                    case 'staff':
+                      return <Users className="w-4 h-4 text-blue-700" />;
+                    case 'settings':
+                      return <Settings className="w-4 h-4 text-slate-700" />;
+                    default:
+                      return <History className="w-4 h-4 text-slate-700" />;
+                  }
+                };
+
+                return (
+                  <div
+                    key={log.id}
+                    className="bg-white rounded-2xl border border-slate-200/80 hover:border-slate-300 shadow-2xs transition-all overflow-hidden"
+                  >
+                    <div className="p-4 sm:p-5 flex items-start gap-3.5">
+                      {/* Icon */}
+                      <div className="w-9 h-9 rounded-xl bg-[#FAF8F5] border border-slate-200/60 flex items-center justify-center shrink-0 mt-0.5">
+                        {getCategoryIcon()}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Severity Pill */}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${severityStyles}`}
+                          >
+                            {log.severity}
+                          </span>
+
+                          {/* Category Tag */}
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF8F5] text-slate-600 border border-slate-200/70 capitalize">
+                            {log.category}
+                          </span>
+
+                          {/* Action Code */}
+                          <span className="text-[11px] font-mono font-medium text-slate-400">
+                            {log.action}
+                          </span>
+
+                          <span className="text-slate-300 text-xs ml-auto hidden sm:inline">•</span>
+
+                          {/* Timestamp */}
+                          <span
+                            className="text-xs text-slate-400 ml-auto sm:ml-0 font-medium"
+                            title={logDate.toLocaleString()}
+                          >
+                            {timeAgo}
+                          </span>
+                        </div>
+
+                        {/* Summary */}
+                        <p className="text-xs sm:text-sm font-bold text-[#212529] leading-snug">
+                          {log.summary}
+                        </p>
+
+                        {/* Actor & Metadata Footer */}
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 pt-0.5">
+                          <span className="font-semibold text-slate-700">
+                            Actor: <span className="text-[#1E3A2B] font-bold">{log.actor_name || 'System'}</span>
+                          </span>
+
+                          <span className="px-1.5 py-0.2 rounded text-[10px] bg-slate-100 text-slate-600 font-bold uppercase">
+                            {log.actor_role || 'system'}
+                          </span>
+
+                          {log.actor_email && (
+                            <span className="text-slate-400 hidden md:inline">
+                              ({log.actor_email})
+                            </span>
+                          )}
+
+                          {log.ip_address && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="font-mono text-[10px] text-slate-400">
+                                IP: {log.ip_address}
+                              </span>
+                            </>
+                          )}
+
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-400 text-[10px]">
+                            {logDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Expand Details Button */}
+                      {hasDetails && (
+                        <button
+                          type="button"
+                          onClick={() => setAuditExpandedLogId(isExpanded ? null : log.id)}
+                          className={`p-1.5 rounded-xl border transition-all text-xs shrink-0 flex items-center gap-1 ${
+                            isExpanded
+                              ? 'bg-[#FAF8F5] text-[#1E3A2B] border-slate-300'
+                              : 'bg-white text-slate-500 hover:bg-[#FAF8F5] border-slate-200'
+                          }`}
+                          title="Inspect structured parameters"
+                        >
+                          <span className="text-[11px] font-bold hidden sm:inline">Details</span>
+                          {isExpanded ? (
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Expandable JSON / Change Details */}
+                    {isExpanded && hasDetails && (
+                      <div className="bg-[#FAF8F5] border-t border-slate-200/80 p-4 sm:px-5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-2">
+                          Structured Event Payload & Changes
+                        </span>
+                        <div className="bg-white rounded-xl p-3 border border-slate-200 text-xs font-mono text-slate-800 overflow-x-auto space-y-1">
+                          {Object.entries(log.details).map(([key, val]) => (
+                            <div key={key} className="flex items-start gap-2">
+                              <span className="text-[#1E3A2B] font-bold shrink-0">{key}:</span>
+                              <span className="text-slate-700 break-all">
+                                {typeof val === 'object' && val !== null
+                                  ? JSON.stringify(val)
+                                  : String(val)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Rejection Reason Modal */}
       {rejectingBookingId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#212529]/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
             <h3 className="text-base font-extrabold text-[#212529]">Decline Reservation Request</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              The 45-minute soft hold will be immediately released, freeing room availability on the marketplace.
+              The reservation will be declined and the room inventory will be immediately released on the marketplace.
             </p>
 
             <form onSubmit={handleReject} className="space-y-3.5">

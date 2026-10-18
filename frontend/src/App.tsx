@@ -25,7 +25,7 @@ export function App() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [staffSubTab, setStaffSubTab] = useState<StaffSubTab>('pending');
   const [isStaffWalkInOpen, setIsStaffWalkInOpen] = useState(false);
-  const [platformStatusFilter, setPlatformStatusFilter] = useState<PlatformStatusFilter>('pending');
+  const [platformStatusFilter, setPlatformStatusFilter] = useState<PlatformStatusFilter | 'audit_trail'>('pending');
   // Incremented on every navbar deep-link so repeated clicks on the same shortcut still re-apply it
   const [deepLinkNonce, setDeepLinkNonce] = useState(0);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -83,7 +83,7 @@ export function App() {
       if (!user || user.role !== 'superadmin') {
         setIsAuthOpen(true);
       } else {
-        setPlatformStatusFilter((subTab as PlatformStatusFilter) || 'pending');
+        setPlatformStatusFilter((subTab as PlatformStatusFilter | 'audit_trail') || 'pending');
         setDeepLinkNonce((n) => n + 1);
         setCurrentTab('platform_admin');
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -128,6 +128,13 @@ export function App() {
             ? 'marketplace'
             : currentTab
         }
+        currentSubTab={
+          currentTab === 'staff_dashboard'
+            ? staffSubTab
+            : currentTab === 'platform_admin'
+            ? platformStatusFilter
+            : undefined
+        }
         onNavigate={handleNavigate}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenSupport={() => setIsSupportOpen(true)}
@@ -153,6 +160,7 @@ export function App() {
           <PlatformAdmin
             initialStatus={platformStatusFilter}
             deepLinkNonce={deepLinkNonce}
+            onTabChange={(tab) => setPlatformStatusFilter(tab)}
             onNavigate={(tab, slug) => {
               if (slug) setSelectedSlug(slug);
               setCurrentTab(tab as any);
@@ -180,6 +188,7 @@ export function App() {
             deepLinkNonce={deepLinkNonce}
             isWalkInOpenExternal={isStaffWalkInOpen}
             onCloseWalkInExternal={() => setIsStaffWalkInOpen(false)}
+            onTabChange={(tab) => setStaffSubTab(tab)}
           />
         )}
       </main>
@@ -200,7 +209,7 @@ export function App() {
             Philippines & Global Network
           </span>
           <span className="text-white/20">•</span>
-          <span>45-Min Soft Hold Protection</span>
+          <span>Guaranteed Reservation Protection</span>
         </div>
       </footer>
 

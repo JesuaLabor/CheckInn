@@ -384,7 +384,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                 List Your Hotel or Inn on LocalStay
               </h1>
               <p className="text-emerald-100/75 text-xs sm:text-sm max-w-xl leading-relaxed">
-                Empower your front desk with automated 45-minute room hold protection, digital reservations, instant QR check-ins, and automated guest payouts across the Philippines & abroad.
+                Empower your front desk with mandatory reservation deposit protection, digital reservations, instant QR check-ins, and direct guest payouts across the Philippines & abroad.
               </p>
             </div>
 
@@ -402,8 +402,8 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                 <div className="text-slate-300 text-[11px] font-medium">Front Desk Matrix</div>
               </div>
               <div className="p-3.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/10 hover:border-[#D49B41]/30 transition-all">
-                <div className="font-black text-emerald-300 text-lg">45 Min</div>
-                <div className="text-slate-300 text-[11px] font-medium">Soft Hold Overbooking Shield</div>
+                <div className="font-black text-emerald-300 text-lg">50% Min</div>
+                <div className="text-slate-300 text-[11px] font-medium">Mandatory Reservation Deposit</div>
               </div>
               <div className="p-3.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/10 hover:border-[#D49B41]/30 transition-all">
                 <div className="font-black text-[#E2AE55] text-lg">Direct</div>
@@ -1461,7 +1461,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
                   className="mt-0.5 w-4 h-4 rounded text-[#D49B41] focus:ring-[#D49B41] border-white/20 bg-black/40"
                 />
                 <div className="text-xs text-slate-300 leading-relaxed">
-                  I agree to the <span className="text-white font-bold underline">LocalStay Merchant Partner Terms</span>, including the automated 45-minute soft room hold policy and front desk check-in verification protocols.
+                  I agree to the <span className="text-white font-bold underline">LocalStay Merchant Partner Terms</span>, including the mandatory reservation deposit & non-refundable policy and front desk check-in verification protocols.
                 </div>
               </label>
 

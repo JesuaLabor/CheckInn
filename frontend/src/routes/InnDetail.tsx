@@ -233,8 +233,8 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
 
             <div className="pt-3 border-t border-[#E8E2D8]">
               <div className="flex items-center gap-2.5 text-xs text-[#1E3A2B] font-bold bg-[#3B5E43]/15 p-3 rounded-xl border border-[#3B5E43]/30">
-                <Clock className="w-4 h-4 text-[#1E3A2B] shrink-0" />
-                <span>45-Min Soft Hold Guaranteed</span>
+                <ShieldCheck className="w-4 h-4 text-[#1E3A2B] shrink-0" />
+                <span>Guaranteed Booking • 50% Deposit</span>
               </div>
             </div>
           </div>
@@ -303,7 +303,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
             Available Room Types
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Select your preferred room to reserve with an automated 45-minute soft hold while staff approves.
+            Select your preferred room to reserve with an upfront 50% deposit to guarantee your stay.
           </p>
         </div>
 
@@ -409,7 +409,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                   <div className="pt-2 sm:pt-4 border-t border-[#E8E2D8]/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 mt-auto">
                     <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#1E3A2B] font-semibold">
                       <ShieldCheck className="w-4 h-4 text-[#3B5E43] shrink-0" />
-                      <span>Instant 45-min hold locks room inventory</span>
+                      <span>Mandatory 50% deposit locks room inventory</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 w-full sm:w-auto">

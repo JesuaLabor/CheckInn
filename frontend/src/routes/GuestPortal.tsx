@@ -183,13 +183,12 @@ export const GuestPortal: React.FC = () => {
           </div>
           <h3 className="text-lg font-extrabold text-[#212529]">No Reservations Found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-            You don't have any bookings in your itinerary yet. Explore our verified lodgings to create a reservation with an instant 45-minute hold.
+            You don't have any bookings in your itinerary yet. Explore our verified lodgings to create a reservation with guaranteed room inventory.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
           {bookings.map((booking) => {
-            const holdCountdown = calculateRemainingHold(booking.hold_expires_at);
 
             return (
               <div
@@ -278,32 +277,44 @@ export const GuestPortal: React.FC = () => {
                     <div className="md:text-right flex flex-col justify-between md:items-end space-y-4">
                       <div>
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
-                          Total Booking Amount
+                          Total Stay Amount
                         </span>
                         <div className="text-2xl font-black text-[#1E3A2B]">
                           ₱{Number(booking.total_amount).toLocaleString()}
                         </div>
-                        <span className="text-xs text-slate-500 font-medium capitalize">
-                          {booking.payment?.method === 'pay_at_hotel' ? 'Pay at Front Desk' : 'GCash / E-Wallet'} (
-                          {booking.payment?.status === 'paid' ? 'Paid & Verified' : 'Awaiting Review'})
-                        </span>
-                        {booking.payment?.reference_number && (
-                          <div className="mt-1 text-[11px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md inline-block font-bold border border-emerald-200">
-                            GCash Ref: #{booking.payment.reference_number}
+                        <div className="text-xs text-slate-600 font-bold mt-0.5">
+                          Deposit Paid: <span className="text-emerald-700">₱{Number(booking.deposit_amount || Number(booking.total_amount) * 0.5).toLocaleString()}</span>
+                          <span className="text-[10px] text-slate-400 font-normal ml-1">
+                            ({booking.deposit_type === 'full' ? 'Full' : '50%'})
+                          </span>
+                        </div>
+                        {Number(booking.balance_due) > 0 && (
+                          <div className="text-xs text-[#8F611A] font-bold">
+                            Balance at Check-in: ₱{Number(booking.balance_due).toLocaleString()}
                           </div>
                         )}
+                        <div className="mt-1 flex flex-wrap gap-1 md:justify-end">
+                          <span className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded font-bold">
+                            Non-Refundable Policy
+                          </span>
+                          {booking.payment?.reference_number && (
+                            <span className="text-[10px] font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-bold border border-emerald-200">
+                              Ref: #{booking.payment.reference_number}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Status-specific action buttons */}
                       <div className="w-full sm:w-auto">
                         {booking.status === 'pending_approval' && (
-                          <div className="bg-[#D49B41]/10 p-3.5 rounded-2xl border border-[#D49B41]/35 text-left md:text-right space-y-1">
-                            <div className="text-xs text-[#8F611A] font-extrabold flex items-center md:justify-end gap-1.5">
-                              <Clock className="w-4 h-4 text-[#D49B41] animate-spin" />
-                              <span>Soft Hold: {holdCountdown}</span>
+                          <div className="bg-emerald-50/90 p-3.5 rounded-2xl border border-emerald-200 text-left md:text-right space-y-1">
+                            <div className="text-xs text-emerald-900 font-extrabold flex items-center md:justify-end gap-1.5">
+                              <ShieldCheck className="w-4 h-4 text-emerald-700" />
+                              <span>Reservation Deposit Submitted</span>
                             </div>
-                            <p className="text-[11px] text-[#8F611A] leading-tight">
-                              Room inventory is held for you while front desk confirms.
+                            <p className="text-[11px] text-emerald-800 leading-tight">
+                              Deposit of ₱{Number(booking.deposit_amount || Number(booking.total_amount) * 0.5).toLocaleString()} recorded. Your room is reserved while staff verifies your payment.
                             </p>
                           </div>
                         )}

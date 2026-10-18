@@ -65,6 +65,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
 
   const nights = calculateNights();
   const totalAmount = isShortStay ? getTierRate(draft.durationHours || 3) : nights * baseRate;
+  const depositType = draft.depositType || 'fifty_percent';
+  const depositAmount = depositType === 'full' ? totalAmount : Math.round(totalAmount * 0.5);
+  const balanceDue = Math.max(0, totalAmount - depositAmount);
 
   const getExpectedCheckoutPreview = () => {
     if (!draft.checkIn || !draft.checkInTime) return '';
@@ -99,8 +102,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
       return;
     }
 
-    if (draft.paymentMethod === 'gcash' && !draft.paymentReference?.trim()) {
-      toast.error('Please enter your GCash / Bank Transfer transaction reference number to proceed.');
+    if (!draft.agreedToNonRefundable) {
+      toast.error('Please accept the non-refundable reservation deposit policy before reserving.');
+      return;
+    }
+
+    if (!draft.paymentReference?.trim()) {
+      toast.error('Please enter the payment transaction reference number for your reservation deposit.');
       return;
     }
 
@@ -115,8 +123,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
         guest_phone: user.phone_number || '+63 917 123 4567',
         guest_count: draft.guestCount,
         special_requests: draft.specialRequests,
-        payment_method: draft.paymentMethod,
-        payment_reference: draft.paymentReference?.trim() || '',
+        deposit_type: depositType,
+        payment_method: draft.paymentMethod || 'gcash',
+        payment_reference: draft.paymentReference.trim(),
+        terms_accepted: true,
         currency: currency,
         stay_type: draft.stayType,
       };
@@ -143,8 +153,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
 
       toast.success(
         isShortStay
-          ? `${draft.durationHours}-hour short-stay reservation requested! 45-min hold secured.`
-          : 'Reservation request submitted! 45-min hold secured.'
+          ? `${draft.durationHours}-hour short-stay reservation confirmed! Deposit of ${formatPrice(depositAmount)} recorded.`
+          : `Reservation confirmed! Deposit of ${formatPrice(depositAmount)} recorded.`
       );
       closeBookingModal();
       onSuccess(bookingData.booking_reference);
@@ -215,20 +225,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
           className="flex-1 overflow-y-auto px-6 py-4 space-y-4 overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300"
         >
 
-          {/* 45-Minute Soft Hold Guarantee Micro-Banner */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#D49B41]/10 via-[#FAF8F5] to-[#3B5E43]/10 border border-[#D49B41]/35 flex items-start gap-3 shadow-2xs">
-            <div className="w-8 h-8 rounded-xl bg-white text-[#D49B41] border border-[#D49B41]/30 flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
-              <Clock className="w-4 h-4 text-[#D49B41]" />
+          {/* Guaranteed Reservation with Mandatory Deposit Banner */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#1E3A2B]/10 via-[#FAF8F5] to-[#D49B41]/10 border border-[#1E3A2B]/20 flex items-start gap-3 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl bg-white text-[#1E3A2B] border border-[#1E3A2B]/30 flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+              <ShieldCheck className="w-4 h-4 text-[#3B5E43]" />
             </div>
             <div className="text-xs text-[#212529]">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-black text-[#8F611A]">45-Minute Soft Hold Guarantee</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#3B5E43]/15 text-[#1E3A2B] font-bold">
-                  Zero Upfront Charge
+                <span className="font-black text-[#1E3A2B]">Guaranteed Reservation • Mandatory Deposit</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#1E3A2B]/15 text-[#1E3A2B] font-bold">
+                  No Expiration Hold
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
-                Locks room inventory immediately so no other traveler can book these dates while hotel staff confirms your stay.
+                Your room inventory is locked immediately upon submitting your deposit. No 45-minute countdown—your booking stays reserved while hotel staff verifies your deposit payment.
               </p>
             </div>
           </div>
@@ -427,39 +437,74 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
             </div>
           </div>
 
+          {/* Mandatory Deposit Selection */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                Select Reservation Deposit
+              </label>
+              <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Minimum 50% Required
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setDraft({ depositType: 'fifty_percent' })}
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  depositType === 'fifty_percent'
+                    ? 'border-[#1E3A2B] bg-[#1E3A2B] text-white shadow-sm ring-1 ring-[#1E3A2B]'
+                    : 'border-[#E8E2D8] bg-white text-slate-700 hover:border-[#1E3A2B]/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-black ${depositType === 'fifty_percent' ? 'text-white' : 'text-[#212529]'}`}>
+                    50% Deposit
+                  </span>
+                  {depositType === 'fifty_percent' && <Sparkles className="w-3.5 h-3.5 text-[#E2AE55]" />}
+                </div>
+                <div className={`text-[10px] ${depositType === 'fifty_percent' ? 'text-slate-200' : 'text-slate-500'} font-medium mt-0.5`}>
+                  Pay balance at check-in
+                </div>
+                <div className={`text-sm font-black mt-1.5 ${depositType === 'fifty_percent' ? 'text-[#E2AE55]' : 'text-[#1E3A2B]'}`}>
+                  {formatPrice(Math.round(totalAmount * 0.5))}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setDraft({ depositType: 'full' })}
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  depositType === 'full'
+                    ? 'border-[#1E3A2B] bg-[#1E3A2B] text-white shadow-sm ring-1 ring-[#1E3A2B]'
+                    : 'border-[#E8E2D8] bg-white text-slate-700 hover:border-[#1E3A2B]/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-black ${depositType === 'full' ? 'text-white' : 'text-[#212529]'}`}>
+                    100% Full Payment
+                  </span>
+                  {depositType === 'full' && <Sparkles className="w-3.5 h-3.5 text-[#E2AE55]" />}
+                </div>
+                <div className={`text-[10px] ${depositType === 'full' ? 'text-slate-200' : 'text-slate-500'} font-medium mt-0.5`}>
+                  Zero balance at check-in
+                </div>
+                <div className={`text-sm font-black mt-1.5 ${depositType === 'full' ? 'text-[#E2AE55]' : 'text-[#1E3A2B]'}`}>
+                  {formatPrice(totalAmount)}
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Payment Method Selector */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">Payment Method</label>
-              <span className="text-[10px] text-slate-400 font-medium">Boutique lodging workflow</span>
+              <label className="text-xs font-black text-slate-700 uppercase tracking-wider">Deposit Payment Channel</label>
+              <span className="text-[10px] text-slate-400 font-medium">Direct lodging payout</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <label
-                className={`flex items-start gap-2.5 p-3 rounded-2xl border text-xs cursor-pointer transition-all ${
-                  draft.paymentMethod === 'pay_at_hotel'
-                    ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs ring-1 ring-[#1E3A2B]/20'
-                    : 'border-[#E8E2D8] text-slate-700 hover:bg-[#FAF8F5] font-medium'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  checked={draft.paymentMethod === 'pay_at_hotel'}
-                  onChange={() => setDraft({ paymentMethod: 'pay_at_hotel' })}
-                  className="hidden"
-                />
-                <Building className="w-4 h-4 text-[#1E3A2B] shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-extrabold text-[#212529] flex items-center gap-1.5">
-                    <span>Pay at Front Desk</span>
-                  </div>
-                  <div className="text-[10px] text-slate-500 font-normal mt-0.5 leading-tight">
-                    Settle with cash or card upon physical arrival
-                  </div>
-                </div>
-              </label>
-
               <label
                 className={`flex items-start gap-2.5 p-3 rounded-2xl border text-xs cursor-pointer transition-all ${
                   draft.paymentMethod === 'gcash'
@@ -478,83 +523,132 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                 <div>
                   <div className="font-extrabold text-[#212529] flex items-center gap-1.5">
                     <span>{payoutMethod} / E-Wallet</span>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#3B5E43]/15 text-[#1E3A2B] font-bold">Fast</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#3B5E43]/15 text-[#1E3A2B] font-bold">Recommended</span>
                   </div>
                   <div className="text-[10px] text-slate-500 font-normal mt-0.5 leading-tight">
-                    Send via app & attach transaction reference
+                    Instant GCash / Maya transfer
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-start gap-2.5 p-3 rounded-2xl border text-xs cursor-pointer transition-all ${
+                  draft.paymentMethod === 'card' || draft.paymentMethod === 'bank_transfer'
+                    ? 'border-[#1E3A2B] bg-[#FAF8F5] text-[#1E3A2B] font-bold shadow-2xs ring-1 ring-[#1E3A2B]/20'
+                    : 'border-[#E8E2D8] text-slate-700 hover:bg-[#FAF8F5] font-medium'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  checked={draft.paymentMethod === 'card' || draft.paymentMethod === 'bank_transfer'}
+                  onChange={() => setDraft({ paymentMethod: 'card' })}
+                  className="hidden"
+                />
+                <Building className="w-4 h-4 text-[#1E3A2B] shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-extrabold text-[#212529] flex items-center gap-1.5">
+                    <span>Bank Transfer / Card</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-normal mt-0.5 leading-tight">
+                    Online bank transfer to lodging account
                   </div>
                 </div>
               </label>
             </div>
 
-            {/* GCash / Transfer Instructions Card */}
-            {draft.paymentMethod === 'gcash' && (
-              <div className="mt-2.5 p-3.5 rounded-2xl bg-gradient-to-br from-[#1E3A2B]/5 via-[#FAF8F5] to-[#FAF8F5] border border-[#1E3A2B]/20 space-y-3 animate-in fade-in zoom-in-98 duration-150">
-                <div className="flex items-center justify-between pb-2 border-b border-[#E8E2D8]/80">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-[#1E3A2B] text-white flex items-center justify-center font-black text-xs shadow-2xs">
-                      G
-                    </div>
-                    <div>
-                      <div className="text-xs font-black text-[#212529]">{hotel.name}</div>
-                      <div className="text-[10px] text-[#3B5E43] font-bold">{payoutMethod} Official Account</div>
-                    </div>
+            {/* Deposit Payment Instructions Card */}
+            <div className="mt-2.5 p-3.5 rounded-2xl bg-gradient-to-br from-[#1E3A2B]/5 via-[#FAF8F5] to-[#FAF8F5] border border-[#1E3A2B]/20 space-y-3 animate-in fade-in zoom-in-98 duration-150">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8E2D8]/80">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#1E3A2B] text-white flex items-center justify-center font-black text-xs shadow-2xs">
+                    G
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Due</span>
-                    <span className="text-xs font-black text-[#1E3A2B]">{formatPrice(totalAmount)}</span>
+                  <div>
+                    <div className="text-xs font-black text-[#212529]">{hotel.name}</div>
+                    <div className="text-[10px] text-[#3B5E43] font-bold">{payoutMethod} Merchant Account</div>
                   </div>
                 </div>
-
-                {/* Account Details Box with Copy */}
-                <div className="bg-white p-2.5 rounded-xl border border-[#E8E2D8] flex items-center justify-between gap-3">
-                  <div className="space-y-0.5">
-                    <div className="text-[9px] font-bold uppercase text-slate-400">Account Name & Number</div>
-                    <div className="text-xs font-black text-[#212529]">{payoutName}</div>
-                    <div className="text-xs font-mono font-bold text-[#1E3A2B] tracking-wide">{payoutNumber}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyNumber}
-                    className="px-2.5 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] border border-[#E8E2D8] text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95 shrink-0 cursor-pointer"
-                  >
-                    {copiedNumber ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-[#3B5E43]" />
-                        <span className="text-[#3B5E43]">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Reference Number Input */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold text-[#212529]">
-                      Enter {payoutMethod} Reference Number <span className="text-rose-500">*</span>
-                    </label>
-                    <span className="text-[10px] text-slate-400 font-medium">From receipt / SMS</span>
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 1002 9845 1204"
-                    value={draft.paymentReference || ''}
-                    onChange={(e) => setDraft({ paymentReference: e.target.value })}
-                    className="w-full px-3 py-2 text-xs font-mono font-bold border border-[#1E3A2B]/30 rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-white placeholder:text-slate-400 shadow-2xs"
-                  />
-                  <div className="flex items-start gap-1.5 pt-0.5 text-[10px] text-slate-500 leading-tight">
-                    <Info className="w-3 h-3 text-[#3B5E43] shrink-0 mt-0.5" />
-                    <span>Hotel front desk will cross-reference this in their merchant app upon reviewing your stay.</span>
-                  </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Deposit Due Now</span>
+                  <span className="text-xs font-black text-[#1E3A2B]">{formatPrice(depositAmount)}</span>
                 </div>
               </div>
-            )}
+
+              {/* Account Details Box with Copy */}
+              <div className="bg-white p-2.5 rounded-xl border border-[#E8E2D8] flex items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="text-[9px] font-bold uppercase text-slate-400">Account Name & Number</div>
+                  <div className="text-xs font-black text-[#212529]">{payoutName}</div>
+                  <div className="text-xs font-mono font-bold text-[#1E3A2B] tracking-wide">{payoutNumber}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyNumber}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] border border-[#E8E2D8] text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95 shrink-0 cursor-pointer"
+                >
+                  {copiedNumber ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#3B5E43]" />
+                      <span className="text-[#3B5E43]">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Reference Number Input */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-[#212529]">
+                    Enter Payment Reference Number <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">From receipt / SMS</span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 1002 9845 1204"
+                  value={draft.paymentReference || ''}
+                  onChange={(e) => setDraft({ paymentReference: e.target.value })}
+                  className="w-full px-3 py-2 text-xs font-mono font-bold border border-[#1E3A2B]/30 rounded-xl focus:ring-2 focus:ring-[#3B5E43] outline-none bg-white placeholder:text-slate-400 shadow-2xs"
+                />
+                <div className="flex items-start gap-1.5 pt-0.5 text-[10px] text-slate-500 leading-tight">
+                  <Info className="w-3 h-3 text-[#3B5E43] shrink-0 mt-0.5" />
+                  <span>Hotel staff will verify this payment reference before welcoming you at the front desk.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Strict Non-Refundable Deposit Policy Agreement */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/90 space-y-2.5">
+            <div className="flex items-center gap-2 text-amber-950 font-black text-xs">
+              <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Strict Non-Refundable Reservation Policy</span>
+            </div>
+            <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
+              The reservation deposit of <strong className="font-black text-amber-950">{formatPrice(depositAmount)}</strong> ({depositType === 'fifty_percent' ? '50%' : '100%'}) is <span className="font-black text-rose-700 underline">strictly non-refundable</span> upon guest cancellation, date modification, or no-show.
+              {balanceDue > 0 && (
+                <> The remaining balance of <strong className="font-black text-amber-950">{formatPrice(balanceDue)}</strong> will be collected upon physical check-in at the front desk.</>
+              )}
+            </p>
+            <label className="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                required
+                checked={draft.agreedToNonRefundable || false}
+                onChange={(e) => setDraft({ agreedToNonRefundable: e.target.checked })}
+                className="mt-0.5 w-4 h-4 rounded text-[#1E3A2B] focus:ring-[#3B5E43] border-amber-400 cursor-pointer"
+              />
+              <span className="text-xs font-black text-slate-800 leading-tight">
+                I understand and agree that this reservation deposit of {formatPrice(depositAmount)} is strictly non-refundable if I cancel this reservation. <span className="text-rose-600">*</span>
+              </span>
+            </label>
           </div>
 
           {/* Special Requests */}
@@ -584,6 +678,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
               <span className="font-bold text-[#212529]">{formatPrice(totalAmount)}</span>
             </div>
             <div className="flex justify-between text-xs text-slate-600">
+              <span>
+                Reservation Deposit ({depositType === 'fifty_percent' ? '50% Minimum' : '100% Full'})
+              </span>
+              <span className="font-bold text-emerald-800">{formatPrice(depositAmount)}</span>
+            </div>
+            {balanceDue > 0 && (
+              <div className="flex justify-between text-xs text-slate-600">
+                <span>Remaining Balance Due at Front Desk</span>
+                <span className="font-black text-[#8F611A]">{formatPrice(balanceDue)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-xs text-slate-600">
               <span>Hospitality & Service Tax</span>
               <span className="text-[#3B5E43] font-bold">Included</span>
             </div>
@@ -594,20 +700,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
         <div className="px-6 py-4 border-t border-[#E8E2D8] bg-white shrink-0 shadow-lg shadow-black/5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Total Rate Due</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Deposit Due Now</span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl sm:text-2xl font-black text-[#1E3A2B] leading-none">
-                  {formatPrice(totalAmount)}
+                  {formatPrice(depositAmount)}
                 </span>
                 <span className="text-[11px] text-slate-500 font-medium">
-                  {isShortStay
-                    ? `(${draft.durationHours || 3}h short-stay)`
-                    : `(${nights} ${nights === 1 ? 'night' : 'nights'})`}
+                  {depositType === 'fifty_percent' ? '(50% deposit)' : '(full payment)'}
                 </span>
               </div>
+              {balanceDue > 0 && (
+                <div className="text-[10px] text-[#8F611A] font-bold mt-0.5">
+                  Balance {formatPrice(balanceDue)} payable at check-in
+                </div>
+              )}
             </div>
 
-            <div className="flex-1 sm:max-w-[270px]">
+            <div className="flex-1 sm:max-w-[280px]">
               {user ? (
                 <button
                   type="submit"
@@ -616,11 +725,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onSuccess, onOpenAut
                   className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-black text-xs sm:text-sm shadow-md shadow-[#1E3A2B]/25 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
                 >
                   {loading ? (
-                    <span>Securing 45-Min Hold...</span>
+                    <span>Submitting Reservation...</span>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 text-[#E2AE55] shrink-0" />
-                      <span className="truncate">Lock 45-Min Hold</span>
+                      <span className="truncate">
+                        Submit & Pay {formatPrice(depositAmount)}
+                      </span>
                     </>
                   )}
                 </button>

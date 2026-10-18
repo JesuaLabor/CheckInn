@@ -14,8 +14,10 @@ export interface BookingDraft {
   guestEmail: string;
   guestPhone: string;
   specialRequests: string;
-  paymentMethod: 'pay_at_hotel' | 'gcash' | 'cash' | 'card';
+  depositType: 'fifty_percent' | 'full';
+  paymentMethod: 'gcash' | 'card' | 'bank_transfer' | 'cash' | 'pay_at_hotel';
   paymentReference?: string;
+  agreedToNonRefundable: boolean;
 }
 
 interface BookingDraftState {
@@ -73,8 +75,10 @@ export const useBookingDraftStore = create<BookingDraftState>((set) => ({
         guestEmail: '',
         guestPhone: '',
         specialRequests: '',
-        paymentMethod: 'pay_at_hotel',
+        depositType: 'fifty_percent',
+        paymentMethod: 'gcash',
         paymentReference: '',
+        agreedToNonRefundable: false,
       },
     });
   },
