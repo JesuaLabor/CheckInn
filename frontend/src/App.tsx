@@ -47,7 +47,7 @@ export function App() {
 
   const handleNavigate = (
     tab: 'marketplace' | 'guest_bookings' | 'staff_dashboard' | 'partner_register' | 'platform_admin' | 'inn_detail',
-    hotelSlug?: string,
+    hotelSlug?: string | null,
     subTab?: string
   ) => {
     if (tab === 'inn_detail' || hotelSlug) {

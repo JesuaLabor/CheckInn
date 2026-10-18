@@ -24,6 +24,8 @@ import {
   Ticket,
   X,
   History,
+  QrCode,
+  Layers,
 } from 'lucide-react';
 import { useCurrencyStore, CurrencyCode } from '../stores/currencyStore';
 import { toast } from '../stores/toastStore';
@@ -39,7 +41,7 @@ export type NavTab =
 interface NavbarProps {
   currentTab: NavTab;
   currentSubTab?: string;
-  onNavigate: (tab: NavTab, hotelSlug?: string, subTab?: string) => void;
+  onNavigate: (tab: NavTab, hotelSlug?: string | null, subTab?: string) => void;
   onOpenAuth: () => void;
   onOpenSupport?: () => void;
 }
@@ -193,7 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {user.hotel_name || 'Front Desk'}
                   </span>
                   <span className="text-[10px] text-emerald-700/80 font-medium hidden md:inline">
-                    • Staff Portal
+                    • Front Desk Reception
                   </span>
                 </div>
               )}
@@ -209,145 +211,199 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 </div>
               )}
+
+              {isSuperAdmin && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-white text-xs font-bold shadow-2xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span className="truncate">Platform Governance</span>
+                  <span className="text-[10px] text-amber-400 font-extrabold hidden md:inline">
+                    • Superadmin
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Center: Role-Tailored Navigation Items (Strictly max 3 items to avoid overcrowding) */}
+            {/* Center: Strictly Role-Tailored Navigation Items */}
             {/* 1. FRONT DESK STAFF CENTER NAV */}
             {isStaff && (
-              <nav className="hidden md:flex items-center gap-1.5 sm:gap-2">
+              <nav className="hidden md:flex items-center gap-1 sm:gap-1.5">
                 <button
-                  onClick={() => onNavigate('staff_dashboard')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
-                    currentTab === 'staff_dashboard'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'pending')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending')
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
                   }`}
+                  title="Guest Arrivals & Reservation Queue"
                 >
-                  <Building2 className="w-3.5 h-3.5 text-[#D49B41]" />
-                  <span>Front Desk Operations</span>
+                  <Clock className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending') ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Arrivals Queue</span>
                 </button>
 
                 <button
-                  onClick={() => onNavigate('marketplace')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
-                    currentTab === 'marketplace'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'checkin')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && currentSubTab === 'checkin'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
                   }`}
+                  title="Front Desk QR Check-in Terminal"
                 >
-                  <Compass className="w-3.5 h-3.5 opacity-70" />
-                  <span>Public Marketplace</span>
+                  <QrCode className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'checkin' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>QR Check-in</span>
                 </button>
 
-                {onOpenSupport && (
-                  <button
-                    onClick={onOpenSupport}
-                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 transition-all"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5 opacity-70" />
-                    <span>Staff Help</span>
-                  </button>
-                )}
+                <button
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'rooms')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && currentSubTab === 'rooms'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
+                  }`}
+                  title="Room Status & Housekeeping Board"
+                >
+                  <Bed className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'rooms' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Rooms Board</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'requests')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && currentSubTab === 'requests'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
+                  }`}
+                  title="Active Guest Service Requests"
+                >
+                  <BellRing className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'requests' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Requests</span>
+                </button>
               </nav>
             )}
 
             {/* 2. HOTEL OWNER / ADMIN CENTER NAV */}
             {isHotelAdmin && (
-              <nav className="hidden md:flex items-center gap-1.5 sm:gap-2">
+              <nav className="hidden md:flex items-center gap-1 sm:gap-1.5">
                 <button
-                  onClick={() => onNavigate('staff_dashboard')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
-                    currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'pending')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending' || currentSubTab === 'rooms' || currentSubTab === 'checkin' || currentSubTab === 'requests')
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
                   }`}
+                  title="Front Desk Operations Hub"
                 >
-                  <Building2 className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail' ? 'text-[#D49B41]' : 'text-[#D49B41]'}`} />
-                  <span>Management Portal</span>
+                  <Building2 className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending' || currentSubTab === 'rooms' || currentSubTab === 'checkin' || currentSubTab === 'requests') ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Operations</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'inventory_manage')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && currentSubTab === 'inventory_manage'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
+                  }`}
+                  title="Room Inventory, Pricing & Availability"
+                >
+                  <Layers className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'inventory_manage' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Rooms & Rates</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'reports')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && currentSubTab === 'reports'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
+                  }`}
+                  title="Occupancy & Financial Reports"
+                >
+                  <TrendingUp className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'reports' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Analytics</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'staff_manage')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'staff_dashboard' && currentSubTab === 'staff_manage'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
+                  }`}
+                  title="Staff Accounts & Role Permissions"
+                >
+                  <Users className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'staff_manage' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Staff Team</span>
                 </button>
 
                 <button
                   onClick={() => onNavigate('staff_dashboard', undefined, 'audit_trail')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail'
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
                   }`}
-                  title="View operational audit logs and activity history"
+                  title="Immutable Activity Log & Rate Changes"
                 >
-                  <History className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail' ? 'text-white' : 'text-[#D49B41]'}`} />
+                  <History className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
                   <span>Audit Trail</span>
                 </button>
-
-                <button
-                  onClick={() => {
-                    if (user.hotel_slug) {
-                      onNavigate('inn_detail', user.hotel_slug);
-                    } else {
-                      onNavigate('marketplace');
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
-                    currentTab === 'inn_detail'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
-                  }`}
-                  title="View your public hotel listing page"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-[#D49B41]" />
-                  <span>View Live Listing</span>
-                </button>
-
-                {onOpenSupport && (
-                  <button
-                    onClick={onOpenSupport}
-                    className="flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 transition-all"
-                  >
-                    <HelpCircle className="w-3.5 h-3.5 opacity-70" />
-                    <span>Owner Support</span>
-                  </button>
-                )}
               </nav>
             )}
 
             {/* 3. SUPER ADMIN CENTER NAV */}
             {isSuperAdmin && (
-              <nav className="hidden md:flex items-center gap-1.5 sm:gap-2">
+              <nav className="hidden md:flex items-center gap-1 sm:gap-1.5">
                 <button
                   onClick={() => onNavigate('platform_admin', undefined, 'verifications')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
-                    currentTab === 'platform_admin' && currentSubTab !== 'audit_trail'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'platform_admin' && (!currentSubTab || currentSubTab === 'verifications' || currentSubTab === 'pending' || currentSubTab === 'approved')
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
                   }`}
+                  title="Partner Verification Queue & Lodging Dossiers"
                 >
-                  <ShieldCheck className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && currentSubTab !== 'audit_trail' ? 'text-white' : 'text-[#D49B41]'}`} />
-                  <span>Overview & Approvals</span>
+                  <ShieldCheck className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && (!currentSubTab || currentSubTab === 'verifications' || currentSubTab === 'pending' || currentSubTab === 'approved') ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Approvals</span>
                 </button>
 
                 <button
                   onClick={() => onNavigate('platform_admin', undefined, 'audit_trail')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'platform_admin' && currentSubTab === 'audit_trail'
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
                   }`}
-                  title="Platform-wide Security & Operations Audit Trail"
+                  title="Platform-wide Security & Multi-Hotel Activity Logs"
                 >
-                  <History className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && currentSubTab === 'audit_trail' ? 'text-white' : 'text-[#D49B41]'}`} />
-                  <span>Audit Trail</span>
+                  <History className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && currentSubTab === 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Platform Audit Trail</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('platform_admin', undefined, 'all')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                    currentTab === 'platform_admin' && currentSubTab === 'all'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
+                  }`}
+                  title="Platform Metrics & Overall Lodgings"
+                >
+                  <TrendingUp className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && currentSubTab === 'all' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+                  <span>Metrics</span>
                 </button>
 
                 <button
                   onClick={() => onNavigate('marketplace')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'marketplace'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5'
+                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
+                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
                   }`}
+                  title="Inspect Live Guest Marketplace"
                 >
-                  <Compass className={`w-3.5 h-3.5 ${currentTab === 'marketplace' ? 'text-white' : 'opacity-70'}`} />
-                  <span>Live Marketplace</span>
+                  <Compass className={`w-3.5 h-3.5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'opacity-70'}`} />
+                  <span>Marketplace</span>
                 </button>
               </nav>
             )}
@@ -389,6 +445,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={onOpenSupport}
                     className="flex items-center gap-1.5 py-2 px-1 text-sm font-semibold text-[#212529] hover:text-[#1E3A2B] transition-colors"
                   >
+                    <HelpCircle className="w-4 h-4 text-slate-500" />
                     <span>Help & Support</span>
                   </button>
                 )}
@@ -397,8 +454,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Right Group: Role-Tailored Actions & Profile Menu */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Currency Picker Dropdown (Guest, Owner, Superadmin) */}
-              {(isGuestOrPublic || isHotelAdmin || isSuperAdmin) && (
+              {/* Currency Picker Dropdown (Strictly Guest & Public) */}
+              {isGuestOrPublic && (
                 <div className="relative" ref={currencyMenuRef}>
                   <button
                     onClick={() => {
@@ -467,9 +524,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
 
-
-
-              {/* Guest / Public: 'List Your Property' Button - Hidden on mobile (<sm) to prevent navbar blowout; accessible via mobile bottom dock and menu */}
+              {/* Guest / Public: 'List Your Property' Button */}
               {isGuestOrPublic && (
                 <button
                   onClick={() => onNavigate('partner_register')}
@@ -477,6 +532,44 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   List Your Property
                 </button>
+              )}
+
+              {/* Staff: Direct Walk-In Quick Action Button */}
+              {isStaff && (
+                <button
+                  onClick={() => onNavigate('staff_dashboard', undefined, 'walkin')}
+                  className="hidden sm:inline-flex items-center gap-1.5 bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-xs transition-all active:scale-95 shrink-0"
+                  title="Open fast walk-in guest check-in modal"
+                >
+                  <PlusCircle className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>+ Walk-In</span>
+                </button>
+              )}
+
+              {/* Hotel Owner: View Public Listing Quick Button */}
+              {isHotelAdmin && (
+                <button
+                  onClick={() => {
+                    if (user.hotel_slug) {
+                      onNavigate('inn_detail', user.hotel_slug);
+                    } else {
+                      onNavigate('marketplace');
+                    }
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 bg-white border border-slate-200 hover:border-[#1E3A2B] text-slate-700 hover:text-[#1E3A2B] text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all active:scale-95 shrink-0"
+                  title="View your public hotel listing page"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <span>View Live Listing</span>
+                </button>
+              )}
+
+              {/* Superadmin: Live System Status Pill */}
+              {isSuperAdmin && (
+                <div className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/90 text-emerald-900 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Platform Active</span>
+                </div>
               )}
 
               {/* User Profile Pill OR Sign In Button */}
@@ -667,32 +760,47 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 </div>
                               </button>
 
-                              {/* Workspaces Group */}
+                              {/* Operational Tools & Preview */}
                               <div className="px-2 pt-1.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-[#E8E2D8] mt-1">
-                                Workspaces
+                                Operational Tools & Preview
                               </div>
 
                               <button
                                 onClick={() => {
                                   setShowUserMenu(false);
-                                  onNavigate('staff_dashboard', undefined, 'pending');
+                                  onNavigate('staff_dashboard', undefined, 'checkin');
                                 }}
                                 className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-bold text-slate-700"
                               >
-                                <Building2 className="w-4 h-4 text-[#1E3A2B]" />
-                                <span>Operations Dashboard Home</span>
+                                <QrCode className="w-4 h-4 text-[#1E3A2B]" />
+                                <span>Front Desk QR Terminal</span>
                               </button>
 
-                              <button
-                                onClick={() => {
-                                  setShowUserMenu(false);
-                                  onNavigate('marketplace');
-                                }}
-                                className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-600"
-                              >
-                                <Compass className="w-4 h-4 text-slate-400" />
-                                <span>Public Marketplace Directory</span>
-                              </button>
+                              {user.hotel_slug && (
+                                <button
+                                  onClick={() => {
+                                    setShowUserMenu(false);
+                                    onNavigate('inn_detail', user.hotel_slug);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-700"
+                                >
+                                  <ExternalLink className="w-4 h-4 text-[#D49B41]" />
+                                  <span>Preview Public Hotel Page</span>
+                                </button>
+                              )}
+
+                              {onOpenSupport && (
+                                <button
+                                  onClick={() => {
+                                    setShowUserMenu(false);
+                                    onOpenSupport();
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-600"
+                                >
+                                  <HelpCircle className="w-4 h-4 text-slate-400" />
+                                  <span>Front Desk Help & SOP</span>
+                                </button>
+                              )}
                             </>
                           )}
 
@@ -789,9 +897,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                               </button>
 
                               {/* Secondary Group */}
+                              {/* Property Expansion & Listing Preview */}
                               <div className="px-2 pt-1.5 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-[#E8E2D8] mt-1">
-                                Property & Personal
+                                Listing Preview & Portals
                               </div>
+
+                              {user.hotel_slug && (
+                                <button
+                                  onClick={() => {
+                                    setShowUserMenu(false);
+                                    onNavigate('inn_detail', user.hotel_slug);
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-700"
+                                >
+                                  <ExternalLink className="w-4 h-4 text-[#D49B41]" />
+                                  <span>View Live Public Listing</span>
+                                </button>
+                              )}
 
                               <button
                                 onClick={() => {
@@ -814,6 +936,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 <CalendarCheck className="w-4 h-4 text-slate-500" />
                                 <span>My Personal Bookings</span>
                               </button>
+
+                              {onOpenSupport && (
+                                <button
+                                  onClick={() => {
+                                    setShowUserMenu(false);
+                                    onOpenSupport();
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-xs hover:bg-[#FAF8F5] transition-colors text-left font-medium text-slate-600"
+                                >
+                                  <HelpCircle className="w-4 h-4 text-slate-400" />
+                                  <span>Owner Dedicated Support</span>
+                                </button>
+                              )}
                             </>
                           )}
 
@@ -1096,42 +1231,55 @@ export const Navbar: React.FC<NavbarProps> = ({
         {isStaff && (
           <>
             <button
-              onClick={() => onNavigate('staff_dashboard')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
-                currentTab === 'staff_dashboard'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+              onClick={() => onNavigate('staff_dashboard', undefined, 'pending')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending')
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
-              <Building2 className={`w-5 h-5 ${currentTab === 'staff_dashboard' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-              <span>Front Desk</span>
+              <Clock className={`w-5 h-5 ${currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending') ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Arrivals</span>
             </button>
 
             <button
-              onClick={() => onNavigate('marketplace')}
-              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold transition-all ${
-                currentTab === 'marketplace'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+              onClick={() => onNavigate('staff_dashboard', undefined, 'checkin')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'staff_dashboard' && currentSubTab === 'checkin'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
-              <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-              <span>Explore</span>
+              <QrCode className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab === 'checkin' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>QR Scan</span>
             </button>
 
             <button
-              onClick={() => {
-                if (onOpenSupport) onOpenSupport();
-              }}
-              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+              onClick={() => onNavigate('staff_dashboard', undefined, 'walkin')}
+              className="flex flex-col items-center -mt-3.5 group active:scale-95 transition-transform"
+              title="Fast Walk-in Registration"
             >
-              <HelpCircle className="w-5 h-5 text-slate-500" />
-              <span>Support</span>
+              <div className="w-12 h-12 rounded-full bg-[#1E3A2B] border-2 border-[#D49B41] shadow-lg shadow-[#1E3A2B]/30 flex items-center justify-center text-white group-hover:bg-[#3B5E43] transition-colors">
+                <PlusCircle className="w-6 h-6 text-[#D49B41]" />
+              </div>
+              <span className="text-[10px] font-black text-[#1E3A2B] mt-0.5">+ Walk-in</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('staff_dashboard', undefined, 'rooms')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'staff_dashboard' && currentSubTab === 'rooms'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Bed className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab === 'rooms' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Rooms</span>
             </button>
 
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl text-[11px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
+              className="flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold text-slate-600 hover:text-[#1E3A2B] transition-all"
             >
               <UserIcon className="w-5 h-5 text-slate-500" />
               <span>{user?.first_name || 'Staff'}</span>
@@ -1143,51 +1291,51 @@ export const Navbar: React.FC<NavbarProps> = ({
         {isHotelAdmin && (
           <>
             <button
-              onClick={() => onNavigate('staff_dashboard')}
+              onClick={() => onNavigate('staff_dashboard', undefined, 'pending')}
               className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
-                currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending' || currentSubTab === 'rooms' || currentSubTab === 'checkin' || currentSubTab === 'requests')
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
-              <Building2 className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab !== 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-              <span>Management</span>
+              <Building2 className={`w-5 h-5 ${currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending' || currentSubTab === 'rooms' || currentSubTab === 'checkin' || currentSubTab === 'requests') ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Operations</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('staff_dashboard', undefined, 'inventory_manage')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'staff_dashboard' && currentSubTab === 'inventory_manage'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <Layers className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab === 'inventory_manage' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Inventory</span>
+            </button>
+
+            <button
+              onClick={() => onNavigate('staff_dashboard', undefined, 'reports')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'staff_dashboard' && currentSubTab === 'reports'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <TrendingUp className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab === 'reports' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Analytics</span>
             </button>
 
             <button
               onClick={() => onNavigate('staff_dashboard', undefined, 'audit_trail')}
               className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
                 currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
               <History className={`w-5 h-5 ${currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
               <span>Audit Trail</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('marketplace')}
-              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
-                currentTab === 'marketplace'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
-                  : 'text-slate-600 hover:text-[#1E3A2B]'
-              }`}
-            >
-              <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-              <span>Explore</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('guest_bookings')}
-              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
-                currentTab === 'guest_bookings'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
-                  : 'text-slate-600 hover:text-[#1E3A2B]'
-              }`}
-            >
-              <CalendarCheck className={`w-5 h-5 ${currentTab === 'guest_bookings' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-              <span>Bookings</span>
             </button>
 
             <button
@@ -1206,20 +1354,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => onNavigate('platform_admin', undefined, 'verifications')}
               className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
-                currentTab === 'platform_admin' && currentSubTab !== 'audit_trail'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                currentTab === 'platform_admin' && (!currentSubTab || currentSubTab === 'verifications' || currentSubTab === 'pending' || currentSubTab === 'approved')
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
-              <ShieldCheck className={`w-5 h-5 ${currentTab === 'platform_admin' && currentSubTab !== 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-              <span>Console</span>
+              <ShieldCheck className={`w-5 h-5 ${currentTab === 'platform_admin' && (!currentSubTab || currentSubTab === 'verifications' || currentSubTab === 'pending' || currentSubTab === 'approved') ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Approvals</span>
             </button>
 
             <button
               onClick={() => onNavigate('platform_admin', undefined, 'audit_trail')}
               className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
                 currentTab === 'platform_admin' && currentSubTab === 'audit_trail'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
@@ -1228,27 +1376,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
+              onClick={() => onNavigate('platform_admin', undefined, 'all')}
+              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
+                currentTab === 'platform_admin' && currentSubTab === 'all'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+              }`}
+            >
+              <TrendingUp className={`w-5 h-5 ${currentTab === 'platform_admin' && currentSubTab === 'all' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
+              <span>Metrics</span>
+            </button>
+
+            <button
               onClick={() => onNavigate('marketplace')}
               className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
                 currentTab === 'marketplace'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
+                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10 font-extrabold'
                   : 'text-slate-600 hover:text-[#1E3A2B]'
               }`}
             >
               <Compass className={`w-5 h-5 ${currentTab === 'marketplace' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
               <span>Directory</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('partner_register')}
-              className={`flex flex-col items-center gap-1 py-1 px-2 rounded-2xl text-[10px] font-bold transition-all ${
-                currentTab === 'partner_register'
-                  ? 'text-[#1E3A2B] bg-[#1E3A2B]/10'
-                  : 'text-slate-600 hover:text-[#1E3A2B]'
-              }`}
-            >
-              <Building className={`w-5 h-5 ${currentTab === 'partner_register' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-              <span>Register</span>
             </button>
 
             <button
@@ -1454,30 +1602,47 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
 
                   <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 dark:border-white/10 mt-1">
-                    Workspaces
+                    Front Desk Tools
                   </div>
 
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      onNavigate('staff_dashboard', undefined, 'pending');
+                      onNavigate('staff_dashboard', undefined, 'checkin');
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold hover:bg-black/5 transition-colors text-left"
                   >
-                    <Building2 className="w-4 h-4 text-[#1E3A2B]" />
-                    <span>Front Desk Operations Home</span>
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center">
+                      <QrCode className="w-4 h-4" />
+                    </div>
+                    <span>QR Code Check-in Terminal</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate('marketplace');
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
-                  >
-                    <Compass className="w-4 h-4 text-slate-400" />
-                    <span>Public Marketplace Directory</span>
-                  </button>
+                  {user.hotel_slug && (
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onNavigate('inn_detail', user.hotel_slug);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-black/5 transition-colors text-left"
+                    >
+                      <ExternalLink className="w-4 h-4 text-[#D49B41]" />
+                      <span>Preview Hotel Public Page</span>
+                    </button>
+                  )}
+
+                  {onOpenSupport && (
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenSupport();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-black/5 transition-colors text-left"
+                    >
+                      <HelpCircle className="w-4 h-4 text-slate-500" />
+                      <span>Front Desk Help & SOP</span>
+                    </button>
+                  )}
                 </>
               )}
 
@@ -1554,8 +1719,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
 
                   <div className="px-2 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-black/5 dark:border-white/10 mt-1">
-                    Property & Personal
+                    Listing Preview & Portals
                   </div>
+
+                  {user.hotel_slug && (
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onNavigate('inn_detail', user.hotel_slug);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-black/5 transition-colors text-left"
+                    >
+                      <ExternalLink className="w-4 h-4 text-[#D49B41]" />
+                      <span>View Live Public Listing</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {
@@ -1578,6 +1756,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <CalendarCheck className="w-4 h-4 text-slate-500" />
                     <span>My Personal Bookings</span>
                   </button>
+
+                  {onOpenSupport && (
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        onOpenSupport();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 hover:bg-black/5 transition-colors text-left"
+                    >
+                      <HelpCircle className="w-4 h-4 text-slate-500" />
+                      <span>Owner Dedicated Support</span>
+                    </button>
+                  )}
                 </>
               )}
 
