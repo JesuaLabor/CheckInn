@@ -17,6 +17,7 @@ class Booking(models.Model):
         ('checked_out', 'Checked Out'),
         ('rejected', 'Rejected'),
         ('cancelled', 'Cancelled'),
+        ('no_show', 'No-Show'),
         ('expired', 'Expired'),
     )
 

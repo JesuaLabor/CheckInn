@@ -770,5 +770,93 @@ class LocalStayCoreTests(TestCase):
         self.assertEqual(b_50.status, 'checked_in')
         self.assertEqual(float(b_50.balance_due), 0.00)
 
+    def test_guest_cancellation_forfeits_deposit_and_releases_room(self):
+        """Guest cancellation frees room inventory while retaining non-refundable deposit."""
+        d1 = date.today() + timedelta(days=10)
+        d2 = date.today() + timedelta(days=12)
+
+        self.client.force_authenticate(user=self.guest)
+        res = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'Cancelling Guest',
+            'guest_email': 'cancel@test.com',
+            'guest_phone': '09171112222',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-CANCEL1'
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        b = Booking.objects.get(id=res.data['booking']['id'])
+
+        # Staff approves and assigns room
+        self.client.force_authenticate(user=self.staff_a)
+        app_res = self.client.post(f'/api/v1/staff/requests/{b.id}/approve/')
+        self.assertEqual(app_res.status_code, status.HTTP_200_OK)
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'confirmed')
+        self.assertEqual(b.room.status, 'occupied')
+
+        # Guest cancels reservation
+        self.client.force_authenticate(user=self.guest)
+        cancel_res = self.client.post(f'/api/v1/bookings/{b.id}/cancel/', {
+            'reason': 'Emergency trip cancellation.'
+        }, format='json')
+        self.assertEqual(cancel_res.status_code, status.HTTP_200_OK)
+        self.assertIn('forfeited', cancel_res.data['message'])
+
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'cancelled')
+        # Room is freed to available
+        b.room.refresh_from_db()
+        self.assertEqual(b.room.status, 'available')
+        # Deposit is preserved and not refunded
+        self.assertEqual(float(b.deposit_amount), 1200.00)
+
+    def test_staff_no_show_forfeits_deposit_and_releases_room(self):
+        """Staff can mark a confirmed booking as No-Show, freeing room inventory and retaining deposit."""
+        d1 = date.today() + timedelta(days=15)
+        d2 = date.today() + timedelta(days=17)
+
+        self.client.force_authenticate(user=self.guest)
+        res = self.client.post('/api/v1/bookings/', {
+            'hotel': self.hotel_a.id,
+            'room_type': self.rt_a.id,
+            'guest_name': 'No Show Guest',
+            'guest_email': 'noshow@test.com',
+            'guest_phone': '09173334444',
+            'guest_count': 1,
+            'check_in': d1.strftime('%Y-%m-%d'),
+            'check_out': d2.strftime('%Y-%m-%d'),
+            'deposit_type': 'fifty_percent',
+            'terms_accepted': True,
+            'payment_method': 'gcash',
+            'payment_reference': 'GCASH-NOSHOW1'
+        }, format='json')
+        b = Booking.objects.get(id=res.data['booking']['id'])
+
+        # Staff approves
+        self.client.force_authenticate(user=self.staff_a)
+        self.client.post(f'/api/v1/staff/requests/{b.id}/approve/')
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'confirmed')
+        self.assertEqual(b.room.status, 'occupied')
+
+        # Guest never arrives -> Staff marks No-Show
+        ns_res = self.client.post(f'/api/v1/staff/bookings/{b.id}/noshow/', {
+            'reason': 'Guest never showed up by midnight cutoff.'
+        }, format='json')
+        self.assertEqual(ns_res.status_code, status.HTTP_200_OK)
+
+        b.refresh_from_db()
+        self.assertEqual(b.status, 'no_show')
+        b.room.refresh_from_db()
+        self.assertEqual(b.room.status, 'available')
+        self.assertEqual(float(b.deposit_amount), 1200.00)
+
 
 

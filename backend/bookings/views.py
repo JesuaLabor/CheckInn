@@ -421,6 +421,119 @@ class CheckOutBookingView(APIView):
         })
 
 
+class GuestCancelBookingView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(id=pk)
+        except Booking.DoesNotExist:
+            return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        is_owner = (booking.guest == request.user)
+        is_staff = hasattr(request.user, 'hotel') and (request.user.hotel == booking.hotel)
+        if not (is_owner or is_staff or request.user.is_superuser):
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if booking.status not in ['pending_approval', 'confirmed']:
+            return Response(
+                {'detail': f'Cannot cancel reservation with status "{booking.get_status_display()}".'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reason = request.data.get('reason', 'Cancelled by guest.')
+        booking.status = 'cancelled'
+        booking.rejection_reason = reason
+        booking.save(update_fields=['status', 'rejection_reason'])
+
+        if booking.room:
+            old_room = booking.room
+            other_active = Booking.objects.filter(
+                room=old_room,
+                status__in=['confirmed', 'checked_in']
+            ).exclude(id=booking.id).exists()
+            if not other_active:
+                old_room.status = 'available'
+                old_room.save(update_fields=['status'])
+
+        log_hotel_activity(
+            hotel=booking.hotel,
+            actor=request.user,
+            request=request,
+            category='booking',
+            action='booking_cancelled_by_guest',
+            severity='warning',
+            summary=f"Reservation {booking.booking_reference} cancelled by {request.user.username}. Deposit ₱{booking.deposit_amount} forfeited per non-refundable policy.",
+            details={
+                'booking_reference': booking.booking_reference,
+                'guest_name': booking.guest_name,
+                'deposit_amount': float(booking.deposit_amount),
+                'reason': reason
+            }
+        )
+
+        serializer = BookingSerializer(booking)
+        return Response({
+            'message': f'Reservation {booking.booking_reference} has been cancelled. As agreed upon booking, your reservation deposit of ₱{booking.deposit_amount:,.2f} is non-refundable and has been forfeited.',
+            'booking': serializer.data
+        })
+
+
+class StaffNoShowBookingView(APIView):
+    permission_classes = [IsHotelStaff]
+
+    def post(self, request, pk):
+        hotel = request.user.hotel
+        try:
+            booking = Booking.objects.get(id=pk, hotel=hotel)
+        except Booking.DoesNotExist:
+            return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if booking.status not in ['confirmed', 'pending_approval']:
+            return Response(
+                {'detail': f'Cannot mark booking with status "{booking.get_status_display()}" as No-Show. Must be confirmed or pending.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reason = request.data.get('reason', 'Guest did not arrive for scheduled stay (No-Show).')
+        booking.status = 'no_show'
+        booking.rejection_reason = reason
+        booking.reviewed_by = request.user
+        booking.save(update_fields=['status', 'rejection_reason', 'reviewed_by'])
+
+        if booking.room:
+            old_room = booking.room
+            other_active = Booking.objects.filter(
+                room=old_room,
+                status__in=['confirmed', 'checked_in']
+            ).exclude(id=booking.id).exists()
+            if not other_active:
+                old_room.status = 'available'
+                old_room.save(update_fields=['status'])
+
+        log_hotel_activity(
+            hotel=hotel,
+            actor=request.user,
+            request=request,
+            category='booking',
+            action='booking_marked_noshow',
+            severity='warning',
+            summary=f"Staff {request.user.username} marked {booking.guest_name} ({booking.booking_reference}) as No-Show. Room {booking.room.room_number if booking.room else 'N/A'} freed.",
+            details={
+                'booking_reference': booking.booking_reference,
+                'guest_name': booking.guest_name,
+                'room': booking.room.room_number if booking.room else None,
+                'deposit_amount': float(booking.deposit_amount)
+            }
+        )
+
+        serializer = BookingSerializer(booking)
+        return Response({
+            'message': f'Booking {booking.booking_reference} marked as No-Show. Room inventory has been freed to available status.',
+            'booking': serializer.data
+        })
+
+
 class StaffRoomStatusBoardView(APIView):
     permission_classes = [IsHotelStaff]
 
