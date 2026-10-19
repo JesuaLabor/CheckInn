@@ -58,6 +58,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isNavVisible, setIsNavVisible] = useState(true);
+  const lastScrollY = useRef(0);
 
   // Dropdown container refs for robust click-outside detection
   const currencyMenuRef = useRef<HTMLDivElement>(null);
@@ -113,14 +115,46 @@ export const Navbar: React.FC<NavbarProps> = ({
     fetchRates();
   }, [fetchRates]);
 
+  // Scroll detection: auto-hide upper and bottom nav on mobile when scrolling down, reveal on scroll up
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 30);
+      const currentY = window.scrollY;
+      setIsScrolled(currentY > 30);
+
+      // Always keep navbars visible at or near the top of the page
+      if (currentY <= 40) {
+        setIsNavVisible(true);
+        lastScrollY.current = currentY;
+        return;
+      }
+
+      const diff = currentY - lastScrollY.current;
+      // 10px delta threshold prevents jitter and momentum bounce
+      if (Math.abs(diff) > 10) {
+        if (diff > 0) {
+          // Scrolling down into content -> hide navigation on mobile
+          setIsNavVisible(false);
+        } else {
+          // Scrolling up towards top -> reveal navigation
+          setIsNavVisible(true);
+        }
+        lastScrollY.current = currentY;
+      }
     };
+
     handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Ensure navigation is always revealed immediately when switching tabs or views
+  const prevNavKey = useRef(`${currentTab}_${currentSubTab}`);
+  if (prevNavKey.current !== `${currentTab}_${currentSubTab}`) {
+    prevNavKey.current = `${currentTab}_${currentSubTab}`;
+    if (!isNavVisible) {
+      setIsNavVisible(true);
+    }
+  }
 
   const isSuperAdmin = user?.role === 'superadmin';
   const isHotelAdmin = user?.role === 'admin';
@@ -147,16 +181,28 @@ export const Navbar: React.FC<NavbarProps> = ({
     toast.info('Signed out successfully.');
   };
 
+  // Auto-hide navigation on mobile when scrolling down unless a sheet/menu is currently opened
+  const isNavHiddenOnMobile = !isNavVisible && !showUserMenu && !showCurrencyMenu;
+
   return (
     <>
       {/* 
         Production Header Container
         - Un-scrolled: Full-width Warm Cream (#FAF8F5) Glass matching the LocalStay palette
         - Scrolled: Centered Floating Pill Bar with Warm Cream (#FAF8F5) backdrop
+        - Mobile Scroll: Smoothly slides up out of view on scroll down, returns on scroll up
       */}
-      <div className="fixed top-0 inset-x-0 z-50 pointer-events-none flex justify-center transition-all duration-300 ease-out">
+      <div
+        className={`fixed top-0 inset-x-0 z-50 pointer-events-none flex justify-center transition-all duration-300 ease-out ${
+          isNavHiddenOnMobile
+            ? 'max-md:-translate-y-full max-md:opacity-0'
+            : 'max-md:translate-y-0 max-md:opacity-100'
+        }`}
+      >
         <header
           className={`pointer-events-auto transition-all duration-300 ease-out ${
+            isNavHiddenOnMobile ? 'max-md:pointer-events-none' : ''
+          } ${
             isDarkConsole
               ? isScrolled
                 ? 'mt-3 sm:mt-4 w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#16191C]/95 backdrop-blur-xl border border-[#2A2E33] shadow-[0_16px_40px_rgba(0,0,0,0.5)] py-2 sm:py-2.5 px-4 sm:px-6 text-white'
@@ -1226,7 +1272,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Floating Bottom Navigation Dock for Mobile Thumbs (Tailored per role with safe-area support) */}
-      <nav ref={mobileDockRef} className="md:hidden fixed bottom-3 inset-x-3 sm:inset-x-4 z-40 bg-[#FAF8F5]/95 backdrop-blur-2xl text-slate-600 rounded-3xl p-1.5 shadow-[0_16px_40px_rgba(33,37,41,0.14)] border border-[#E8E2D8] flex items-center justify-around pb-[max(0.375rem,env(safe-area-inset-bottom))]">
+      <nav
+        ref={mobileDockRef}
+        className={`md:hidden fixed bottom-3 inset-x-3 sm:inset-x-4 z-40 bg-[#FAF8F5]/95 backdrop-blur-2xl text-slate-600 rounded-3xl p-1.5 shadow-[0_16px_40px_rgba(33,37,41,0.14)] border border-[#E8E2D8] flex items-center justify-around pb-[max(0.375rem,env(safe-area-inset-bottom))] transition-all duration-300 ease-out ${
+          isNavHiddenOnMobile
+            ? 'translate-y-36 opacity-0 pointer-events-none'
+            : 'translate-y-0 opacity-100'
+        }`}
+      >
         {/* STAFF MOBILE DOCK */}
         {isStaff && (
           <>

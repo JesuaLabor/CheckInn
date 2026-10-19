@@ -109,10 +109,19 @@ export const HotelMap: React.FC<HotelMapProps> = ({
   const [showSearchAreaBtn, setShowSearchAreaBtn] = useState(false);
   const [showLegend, setShowLegend] = useState(true);
   const [activePopupHotel, setActivePopupHotel] = useState<HotelWithDistance | null>(null);
+  const [popupCoords, setPopupCoords] = useState<{ x: number; y: number } | null>(null);
 
   const rawMapboxToken = (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined)?.trim();
   const hasMapboxToken = Boolean(rawMapboxToken && rawMapboxToken.length > 10);
   const { formatPrice } = useCurrencyStore();
+
+  // Color helper matching the rating legend
+  const getRatingColor = (rating: number, isAvailable: boolean): string => {
+    if (!isAvailable) return '#94A3B8';
+    if (rating >= 4.8) return '#1E3A2B';
+    if (rating >= 4.5) return '#2D5A40';
+    return '#D49B41';
+  };
 
   // Valid hotels with numeric coordinates
   const validHotels = useMemo(
@@ -174,6 +183,10 @@ export const HotelMap: React.FC<HotelMapProps> = ({
 
     map.on('zoomend', () => {
       setCurrentZoom(map.getZoom());
+    });
+
+    map.on('click', () => {
+      setActivePopupHotel(null);
     });
 
     // Invalidate size after mount transition
@@ -291,6 +304,47 @@ export const HotelMap: React.FC<HotelMapProps> = ({
     }
   }, [userLocation]);
 
+  // Focus marker with anchored preview modal card
+  const handleMarkerClick = (hotel: HotelWithDistance) => {
+    setActivePopupHotel(hotel);
+    const map = mapInstanceRef.current;
+    if (map && hotel.latitude && hotel.longitude) {
+      const lat = Number(hotel.latitude);
+      const lng = Number(hotel.longitude);
+      map.panTo([lat, lng], { animate: true, duration: 0.4 });
+    }
+  };
+
+  // Keep anchored popup coordinates synced with map panning and zooming
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !activePopupHotel) {
+      setPopupCoords(null);
+      return;
+    }
+
+    const updateCoords = () => {
+      if (!activePopupHotel.latitude || !activePopupHotel.longitude) return;
+      const pt = map.latLngToContainerPoint([
+        Number(activePopupHotel.latitude),
+        Number(activePopupHotel.longitude),
+      ]);
+      setPopupCoords({ x: pt.x, y: pt.y });
+    };
+
+    updateCoords();
+
+    map.on('move', updateCoords);
+    map.on('zoom', updateCoords);
+    map.on('viewreset', updateCoords);
+
+    return () => {
+      map.off('move', updateCoords);
+      map.off('zoom', updateCoords);
+      map.off('viewreset', updateCoords);
+    };
+  }, [activePopupHotel]);
+
   // Update Hotel Markers with Smart Zoom-Dependent Layers and Clustering
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -402,9 +456,9 @@ export const HotelMap: React.FC<HotelMapProps> = ({
             zIndexOffset: isSelected ? 800 : 200,
           });
 
-          dotMarker.on('click', () => {
-            setActivePopupHotel(hotel);
-            map.panTo(cluster.center, { animate: true, duration: 0.5 });
+          dotMarker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            handleMarkerClick(hotel);
           });
 
           markersLayer.addLayer(dotMarker);
@@ -413,101 +467,53 @@ export const HotelMap: React.FC<HotelMapProps> = ({
       return;
     }
 
-    // --- TIER 2: Zoom 11 to 13.9 (City Browsing: Category Icon + Star Rating, No Price) ---
-    if (currentZoom < MAP_ZOOM_THRESHOLDS.NEIGHBORHOOD_ZOOM) {
-      validHotels.forEach((hotel) => {
-        const lat = Number(hotel.latitude);
-        const lng = Number(hotel.longitude);
-        const isSelected = selectedHotelId === hotel.id;
-        const isNearest = nearestHotelId === hotel.id;
-        const rating = Number(hotel.rating || 4.5);
-        const iconEmoji = getCategoryIcon(hotel.category);
-
-        const badgeHtml = `
-          <div class="relative cursor-pointer select-none transition-transform duration-200 group">
-            <div class="px-2.5 py-1 rounded-full text-xs font-black whitespace-nowrap flex items-center gap-1.5 shadow-md border ${
-              isSelected
-                ? 'bg-[#D49B41] text-[#212529] border-white ring-3 ring-[#D49B41]/50 scale-110'
-                : isNearest
-                ? 'bg-[#1E3A2B] text-white border-[#D49B41] border-2 hover:scale-105'
-                : 'bg-[#1E3A2B] text-white border-white/80 hover:bg-[#2D5A40] hover:scale-105'
-            }">
-              <span>${iconEmoji}</span>
-              <span>★ ${rating.toFixed(1)}</span>
-            </div>
-          </div>
-        `;
-
-        const categoryIcon = L.divIcon({
-          html: badgeHtml,
-          className: 'stay-category-pin',
-          iconSize: [60, 28],
-          iconAnchor: [30, 14],
-        });
-
-        const marker = L.marker([lat, lng], {
-          icon: categoryIcon,
-          zIndexOffset: isSelected ? 800 : isNearest ? 700 : 300,
-        });
-
-        marker.on('click', () => {
-          setActivePopupHotel(hotel);
-          map.panTo([lat, lng], { animate: true, duration: 0.5 });
-        });
-
-        markersLayer.addLayer(marker);
-      });
-      return;
-    }
-
-    // --- TIER 3: Zoom >= 14 (Street / Neighborhood Level: Full Pill with Nightly Price & Rating) ---
+    // --- TIER 2 & 3: Zoom >= 11 (Clean Boutique Hotel Pins with Category Icon - No Price/Rate Clutter) ---
     validHotels.forEach((hotel) => {
       const lat = Number(hotel.latitude);
       const lng = Number(hotel.longitude);
-      const isSelected = selectedHotelId === hotel.id;
+      const isSelected = activePopupHotel?.id === hotel.id || selectedHotelId === hotel.id;
       const isNearest = nearestHotelId === hotel.id;
       const rating = Number(hotel.rating || 4.5);
-      const priceText = formatPrice(Number(hotel.min_rate || 850));
       const isAvailable =
         hotel.available_rooms_count !== undefined ? hotel.available_rooms_count > 0 : true;
+      const pinColor = isSelected ? '#D49B41' : getRatingColor(rating, isAvailable);
+      const iconEmoji = getCategoryIcon(hotel.category);
 
-      const pillHtml = `
-        <div class="relative cursor-pointer select-none transition-transform duration-200 group">
-          <div class="px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap flex items-center gap-1.5 shadow-lg border ${
-            !isAvailable
-              ? 'bg-[#64748B] text-white border-white/60'
-              : isSelected
-              ? 'bg-[#D49B41] text-[#212529] border-2 border-white shadow-xl scale-110 ring-4 ring-[#D49B41]/35'
+      const pinHtml = `
+        <div class="relative cursor-pointer select-none transition-transform duration-200 hover:scale-120 active:scale-95 group flex flex-col items-center">
+          <div class="w-9 h-9 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-base text-white transition-all ${
+            isSelected
+              ? 'ring-4 ring-[#D49B41]/50 scale-110 shadow-2xl'
               : isNearest
-              ? 'bg-[#1E3A2B] text-[#FAF8F5] border-2 border-[#D49B41] shadow-xl hover:scale-105 ring-2 ring-[#D49B41]/30'
-              : 'bg-[#1E3A2B] text-white border border-white/80 hover:bg-[#2D5A40] hover:scale-105'
-          }">
-            <span>${isAvailable ? priceText : 'Sold out'}</span>
-            <span class="text-[10px] text-[#D49B41] font-bold">★ ${rating.toFixed(1)}</span>
+              ? 'ring-2 ring-[#D49B41]'
+              : 'group-hover:shadow-2xl'
+          }" style="background-color: ${pinColor}">
+            <span>${iconEmoji}</span>
           </div>
+          <div class="w-2.5 h-2 -mt-1 shadow-xs" style="background-color: ${pinColor}; clip-path: polygon(50% 100%, 0 0, 100% 0);"></div>
           ${
             isNearest
-              ? '<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#212529] text-[#E2AE55] text-[9px] font-black px-1.5 py-0.2 rounded-full border border-[#D49B41] shadow-xs uppercase tracking-wider">Closest</div>'
+              ? '<div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#212529] text-[#E2AE55] text-[8px] font-black px-1.5 py-0.2 rounded-full border border-[#D49B41] shadow-xs uppercase tracking-wider">Closest</div>'
               : ''
           }
         </div>
       `;
 
-      const pillIcon = L.divIcon({
-        html: pillHtml,
-        className: 'stay-price-pill',
-        iconSize: [80, 32],
-        iconAnchor: [40, 16],
+      const pinIcon = L.divIcon({
+        html: pinHtml,
+        className: 'stay-map-pin',
+        iconSize: [36, 42],
+        iconAnchor: [18, 42],
       });
 
       const marker = L.marker([lat, lng], {
-        icon: pillIcon,
+        icon: pinIcon,
         zIndexOffset: isSelected ? 900 : isNearest ? 800 : 400,
       });
 
-      marker.on('click', () => {
-        setActivePopupHotel(hotel);
-        map.panTo([lat, lng], { animate: true, duration: 0.5 });
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        handleMarkerClick(hotel);
       });
 
       markersLayer.addLayer(marker);
@@ -516,21 +522,17 @@ export const HotelMap: React.FC<HotelMapProps> = ({
     validHotels,
     currentZoom,
     selectedHotelId,
+    activePopupHotel,
     nearestHotelId,
     mapReady,
-    formatPrice,
   ]);
 
   // Sync external selectedHotelId (e.g. from Split view card hover or click)
   useEffect(() => {
     if (!selectedHotelId) return;
     const match = validHotels.find((h) => h.id === selectedHotelId);
-    if (match && mapInstanceRef.current && match.latitude && match.longitude) {
-      setActivePopupHotel(match);
-      mapInstanceRef.current.panTo([Number(match.latitude), Number(match.longitude)], {
-        animate: true,
-        duration: 0.5,
-      });
+    if (match) {
+      handleMarkerClick(match);
     }
   }, [selectedHotelId, validHotels]);
 
@@ -581,6 +583,31 @@ export const HotelMap: React.FC<HotelMapProps> = ({
         animate: true,
       });
     }
+  };
+
+  // Calculate clamped layout so modal card is never clipped by map edges
+  const getClampedModalCoords = () => {
+    if (!popupCoords || !mapContainerRef.current) return null;
+    const mapW = mapContainerRef.current.clientWidth || 800;
+    const mapH = mapContainerRef.current.clientHeight || 600;
+    const cardW = Math.min(325, mapW - 24);
+    const cardH = 315;
+
+    // Show below pin if pin is in upper area (< 450px) so card is never covered by floating navbar
+    const showBelow = popupCoords.y < 450;
+
+    const clampedLeft = Math.max(12, Math.min(mapW - cardW - 12, popupCoords.x - cardW / 2));
+    const idealTop = showBelow ? popupCoords.y + 12 : popupCoords.y - 44 - cardH;
+    const clampedTop = Math.max(88, Math.min(mapH - cardH - 12, idealTop));
+    const arrowX = Math.max(20, Math.min(cardW - 20, popupCoords.x - clampedLeft));
+
+    return {
+      left: clampedLeft,
+      top: clampedTop,
+      width: cardW,
+      arrowX,
+      showBelow,
+    };
   };
 
   return (
@@ -670,17 +697,7 @@ export const HotelMap: React.FC<HotelMapProps> = ({
             return (
               <div
                 onClick={() => {
-                  setActivePopupHotel(nearestHotel);
-                  if (
-                    mapInstanceRef.current &&
-                    nearestHotel.latitude &&
-                    nearestHotel.longitude
-                  ) {
-                    mapInstanceRef.current.panTo(
-                      [Number(nearestHotel.latitude), Number(nearestHotel.longitude)],
-                      { animate: true }
-                    );
-                  }
+                  handleMarkerClick(nearestHotel);
                 }}
                 className="cursor-pointer bg-white/95 backdrop-blur-md p-2.5 rounded-2xl border border-[#D49B41]/60 shadow-xl flex items-center gap-2.5 hover:scale-102 transition-transform active:scale-95"
               >
@@ -706,101 +723,144 @@ export const HotelMap: React.FC<HotelMapProps> = ({
         </div>
       )}
 
-      {/* Anchored Stay Preview Card */}
-      {activePopupHotel && (
-        <div className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-20 animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E8E2D8] text-[#212529]">
-            <div className="relative h-36 w-full bg-slate-900 overflow-hidden">
-              <img
-                src={
-                  activePopupHotel.image_url ||
-                  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80'
-                }
-                alt={activePopupHotel.name}
-                className="w-full h-full object-cover"
+      {/* Anchored Hotel Preview Modal Card (Matching Image 1) */}
+      {activePopupHotel && (() => {
+        const layout = getClampedModalCoords();
+        if (!layout) return null;
+
+        return (
+          <div
+            style={{
+              left: `${layout.left}px`,
+              top: `${layout.top}px`,
+              width: `${layout.width}px`,
+            }}
+            className="absolute z-30 pointer-events-auto select-none transition-all duration-150 animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Pointer arrow on top (if showBelow) */}
+            {layout.showBelow && (
+              <div
+                className="absolute -top-2 -translate-x-1/2 w-0 h-0 border-x-8 border-x-transparent border-b-8 border-b-white drop-shadow-md pointer-events-none"
+                style={{ left: `${layout.arrowX}px` }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+            )}
 
-              {/* Close Button */}
-              <button
-                onClick={() => setActivePopupHotel(null)}
-                className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition-all"
-                title="Dismiss"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            {/* Card Frame */}
+            <div className="w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-black/10 text-[#212529]">
+              {/* Hero Image Section */}
+              <div className="relative h-40 w-full bg-slate-900 overflow-hidden">
+                <img
+                  src={
+                    activePopupHotel.image_url ||
+                    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80'
+                  }
+                  alt={activePopupHotel.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/30" />
 
-              {/* City and Type Badge */}
-              <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                <span className="bg-white/95 text-[#1E3A2B] text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs uppercase tracking-wider">
-                  {activePopupHotel.city || 'Philippines'}
-                </span>
-              </div>
-
-              {/* Star Rating and Category */}
-              <div className="absolute bottom-2.5 inset-x-2.5 flex items-center justify-between text-white text-xs">
-                <span className="bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] font-bold">
-                  {activePopupHotel.category || 'Boutique Stay'}
-                </span>
-                <span className="flex items-center gap-1 bg-[#1E3A2B]/90 backdrop-blur-md px-2 py-0.5 rounded-lg font-black text-[11px]">
-                  <Star className="w-3 h-3 text-[#D49B41] fill-[#D49B41]" />
-                  <span>{Number(activePopupHotel.rating || 4.5).toFixed(1)}</span>
-                </span>
-              </div>
-            </div>
-
-            <div className="p-3.5 space-y-2">
-              <h4 className="font-extrabold text-sm text-[#212529] truncate">
-                {activePopupHotel.name}
-              </h4>
-
-              {userLocation && (
-                <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>
-                    {(() => {
-                      if (activePopupHotel.longitude && activePopupHotel.latitude) {
-                        const d = distance(
-                          [userLocation.lng, userLocation.lat],
-                          [
-                            Number(activePopupHotel.longitude),
-                            Number(activePopupHotel.latitude),
-                          ],
-                          { units: 'kilometers' }
-                        );
-                        return `${formatDistance(d)} away`;
-                      }
-                      return activePopupHotel.distance_km
-                        ? `${formatDistance(activePopupHotel.distance_km)} away`
-                        : '';
-                    })()}
+                {/* Location Badge (Top-Left) */}
+                <div className="absolute top-3 left-3 flex items-center">
+                  <span className="bg-white/95 text-[#1E3A2B] text-[10px] font-black px-3 py-1 rounded-full shadow-md uppercase tracking-wider">
+                    {activePopupHotel.city?.toUpperCase() || 'MALAYBALAY CITY'}
                   </span>
                 </div>
-              )}
 
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block">
-                    From
-                  </span>
-                  <span className="text-base font-black text-[#1E3A2B]">
-                    {formatPrice(Number(activePopupHotel.min_rate || 850))}
-                  </span>
-                  <span className="text-[10px] text-slate-400">/night</span>
-                </div>
-
+                {/* Close Button (Top-Right) */}
                 <button
-                  onClick={() => onSelectHotel(activePopupHotel.slug)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#1E3A2B] hover:bg-[#3B5E43] text-white text-xs font-black shadow-md transition-all active:scale-95"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActivePopupHotel(null);
+                  }}
+                  className="absolute top-3 right-3 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 backdrop-blur-xs text-white flex items-center justify-center transition-all shadow-md active:scale-90 cursor-pointer"
+                  title="Dismiss"
                 >
-                  <span>View Rooms</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-[#D49B41]" />
+                  <X className="w-4 h-4" />
                 </button>
+
+                {/* Category (Bottom-Left) & Star Rating (Bottom-Right) Badges */}
+                <div className="absolute bottom-3 inset-x-3 flex items-center justify-between text-white text-xs">
+                  <span className="bg-black/50 backdrop-blur-xs px-2.5 py-0.5 rounded-lg text-[11px] font-semibold lowercase">
+                    {activePopupHotel.category || 'city'}
+                  </span>
+                  <span className="flex items-center gap-1 bg-[#1E3A2B]/95 backdrop-blur-xs px-2.5 py-0.5 rounded-lg font-black text-xs shadow-xs">
+                    <Star className="w-3.5 h-3.5 text-[#D49B41] fill-[#D49B41]" />
+                    <span>{Number(activePopupHotel.rating || 4.5).toFixed(1)}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Content Section */}
+              <div className="p-4 space-y-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-[#212529] truncate" title={activePopupHotel.name}>
+                    {activePopupHotel.name}
+                  </h3>
+                  {userLocation && (
+                    <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                      <span>
+                        {(() => {
+                          if (activePopupHotel.longitude && activePopupHotel.latitude) {
+                            const d = distance(
+                              [userLocation.lng, userLocation.lat],
+                              [
+                                Number(activePopupHotel.longitude),
+                                Number(activePopupHotel.latitude),
+                              ],
+                              { units: 'kilometers' }
+                            );
+                            return `${formatDistance(d)} away`;
+                          }
+                          return activePopupHotel.distance_km
+                            ? `${formatDistance(activePopupHotel.distance_km)} away`
+                            : '';
+                        })()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-slate-100" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">
+                      FROM
+                    </span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-xl font-black text-[#1E3A2B]">
+                        {formatPrice(Number(activePopupHotel.min_rate || 850))}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-400">/night</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectHotel(activePopupHotel.slug);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#1E3A2B] hover:bg-[#2D5A40] text-white text-xs font-black shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span>View Rooms</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-[#D49B41]" />
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* Pointer arrow on bottom (if not showBelow) */}
+            {!layout.showBelow && (
+              <div
+                className="absolute -bottom-2 -translate-x-1/2 w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-white drop-shadow-md pointer-events-none"
+                style={{ left: `${layout.arrowX}px` }}
+              />
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Rating Tier Color Legend (Accessible & Collapsible) */}
       <div className="absolute bottom-4 left-4 z-10">

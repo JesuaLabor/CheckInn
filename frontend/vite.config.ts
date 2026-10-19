@@ -19,7 +19,9 @@ export default defineConfig({
       manifest: {
         name: 'LocalStay — Boutique Hotels & Inns Booking',
         short_name: 'LocalStay',
+        id: 'com.localstay.app',
         description: 'Marketplace-style digital booking and front-desk platform for boutique hotels, independent inns, and heritage lodgings.',
+        categories: ['travel', 'lifestyle', 'business'],
         theme_color: '#1E3A2B',
         background_color: '#FAF8F5',
         display: 'standalone',
