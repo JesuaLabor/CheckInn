@@ -312,16 +312,16 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-1 gap-2.5 sm:gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {(hotel.room_types || []).map((rt) => {
             const totalPrice = Number(rt.base_rate) * nights;
             return (
               <div
                 key={rt.id}
-                className="bg-white rounded-2xl sm:rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#3B5E43] card-hover-lift transition-all duration-300 flex flex-col md:flex-row active:scale-[0.98]"
+                className="bg-white rounded-2xl sm:rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#3B5E43] card-hover-lift transition-all duration-300 flex flex-col md:flex-row active:scale-[0.99]"
               >
                 {/* Room Image */}
-                <div className="w-full md:w-72 lg:w-80 h-36 sm:h-52 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
+                <div className="w-full md:w-72 lg:w-80 h-44 sm:h-52 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
                   <img
                     src={
                       rt.photos && rt.photos.length > 0
@@ -335,40 +335,41 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                         'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80';
                     }}
                   />
-                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[9px] sm:text-[11px] font-bold flex items-center gap-1 border border-white/10">
-                    <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#D49B41]" />
-                    <span><span className="hidden sm:inline">Up to </span>{rt.capacity} guests</span>
+                  <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 px-2.5 py-1 rounded-full bg-[#212529]/80 backdrop-blur-md text-[#FAF8F5] text-[10px] sm:text-[11px] font-bold flex items-center gap-1 border border-white/10 shadow-xs">
+                    <Users className="w-3 h-3 text-[#D49B41]" />
+                    <span>Up to {rt.capacity} guests</span>
                   </div>
                 </div>
 
                 {/* Room Details & Pricing */}
-                <div className="p-2.5 sm:p-5 md:p-7 flex-1 flex flex-col justify-between space-y-2 sm:space-y-4 min-w-0">
+                <div className="p-4 sm:p-5 md:p-7 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4 min-w-0">
                   <div className="min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 sm:gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1.5 sm:gap-2">
                       <div className="min-w-0">
-                        <h3 className="text-xs sm:text-lg md:text-xl font-extrabold text-[#212529] leading-tight line-clamp-2 sm:line-clamp-none">
+                        <h3 className="text-sm sm:text-lg md:text-xl font-extrabold text-[#212529] leading-tight">
                           {rt.name}
                         </h3>
-                        <p className="hidden sm:block text-xs text-slate-600 mt-1 leading-relaxed">
-                          {rt.description}
-                        </p>
+                        {rt.description && (
+                          <p className="text-xs text-slate-600 mt-1 leading-relaxed line-clamp-2">
+                            {rt.description}
+                          </p>
+                        )}
                       </div>
 
                       <div className="text-left sm:text-right shrink-0 mt-0.5 sm:mt-0">
-                        <div className="text-xs sm:text-xl md:text-2xl font-black text-[#1E3A2B] leading-none">
+                        <div className="text-base sm:text-xl md:text-2xl font-black text-[#1E3A2B] leading-none">
                           {formatPrice(Number(rt.base_rate))}
-                          <span className="text-[9px] sm:text-xs font-normal text-slate-500"> /nt</span>
+                          <span className="text-[10px] sm:text-xs font-normal text-slate-500"> /night</span>
                         </div>
                         {nights > 1 && (
-                          <div className="text-[9px] sm:text-[11px] font-bold text-[#D49B41] mt-0.5">
-                            <span className="sm:hidden">{nights}n: {formatPrice(totalPrice)}</span>
-                            <span className="hidden sm:inline">Total: {formatPrice(totalPrice)} for {nights} nights</span>
+                          <div className="text-[10px] sm:text-[11px] font-bold text-[#D49B41] mt-1">
+                            <span>Total: {formatPrice(totalPrice)} for {nights} nights</span>
                           </div>
                         )}
                         {rt.short_stay_enabled && (
                           <div className="mt-1">
-                            <span className="inline-flex items-center gap-1 text-[9px] sm:text-[11px] font-extrabold text-[#8F611A] bg-[#D49B41]/15 px-2 py-0.5 rounded-full border border-[#D49B41]/30">
-                              <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#D49B41]" />
+                            <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-extrabold text-[#8F611A] bg-[#D49B41]/15 px-2.5 py-0.5 rounded-full border border-[#D49B41]/30">
+                              <Clock className="w-3 h-3 text-[#D49B41]" />
                               <span>Short-stay from {formatPrice(Number(rt.rate_3h || Math.round(Number(rt.base_rate) * 0.3)))} (3h)</span>
                             </span>
                           </div>
@@ -376,65 +377,54 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                       </div>
                     </div>
 
-                    {/* Mobile Compact Amenities Preview */}
+                    {/* Room Amenities Badges */}
                     {rt.amenities && rt.amenities.length > 0 && (
-                      <div className="sm:hidden flex flex-wrap gap-1 mt-1.5 mb-0.5">
-                        {rt.amenities.slice(0, 2).map((a, i) => (
+                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                        {rt.amenities.slice(0, 4).map((a, i) => (
                           <span
                             key={i}
-                            className="inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-slate-700 border border-[#E8E2D8] max-w-[85px] truncate"
+                            className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#FAF8F5] text-slate-700 border border-[#E8E2D8]"
                           >
                             {getAmenityIcon(a)}
-                            <span className="truncate">{a}</span>
+                            <span>{a}</span>
                           </span>
                         ))}
-                        {rt.amenities.length > 2 && (
-                          <span className="text-[9px] font-bold text-slate-400 self-center px-0.5">
-                            +{rt.amenities.length - 2}
+                        {rt.amenities.length > 4 && (
+                          <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 self-center px-1">
+                            +{rt.amenities.length - 4} more
                           </span>
                         )}
                       </div>
                     )}
-
-                    {/* Desktop Room Amenities (Full List) */}
-                    <div className="hidden sm:flex flex-wrap gap-1.5 mt-3.5">
-                      {(rt.amenities || []).map((a, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[#FAF8F5] text-[#212529] border border-[#E8E2D8]"
-                        >
-                          {getAmenityIcon(a)}
-                          <span>{a}</span>
-                        </span>
-                      ))}
-                    </div>
                   </div>
 
                   {/* Guarantee & Reserve Action */}
-                  <div className="pt-2 sm:pt-4 border-t border-[#E8E2D8]/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 mt-auto">
+                  <div className="pt-3 sm:pt-4 border-t border-[#E8E2D8]/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 mt-auto">
                     <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#1E3A2B] font-semibold">
                       <ShieldCheck className="w-4 h-4 text-[#3B5E43] shrink-0" />
                       <span>Mandatory 50% deposit locks room inventory</span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       {rt.short_stay_enabled && (
                         <button
                           onClick={() => handleReserve(rt, 'hourly')}
-                          className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 sm:py-3 min-h-[36px] sm:min-h-[44px] rounded-xl bg-[#FAF8F5] hover:bg-[#E8E2D8]/50 text-[#1E3A2B] border border-[#1E3A2B]/30 font-extrabold text-[10px] sm:text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] rounded-xl bg-[#FAF8F5] hover:bg-[#E8E2D8]/50 text-[#1E3A2B] border border-[#1E3A2B]/30 font-extrabold text-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                          title="Book flexible 3-hour day use or transient stay"
                         >
-                          <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#3B5E43]" />
-                          <span>Short-Stay</span>
+                          <Clock className="w-3.5 h-3.5 text-[#3B5E43] shrink-0" />
+                          <span className="whitespace-nowrap">Short-Stay (3h)</span>
                         </button>
                       )}
 
                       <button
                         onClick={() => handleReserve(rt, 'nightly')}
-                        className="flex-1 sm:flex-initial px-3 sm:px-6 py-2 sm:py-3 min-h-[36px] sm:min-h-[44px] rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-[10px] sm:text-xs shadow-xs sm:shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="flex-1 sm:flex-initial px-4 sm:px-6 py-2.5 sm:py-3 min-h-[44px] rounded-xl bg-gradient-to-r from-[#1E3A2B] to-[#3B5E43] hover:from-[#162C20] hover:to-[#2F4D36] text-white font-extrabold text-xs shadow-xs sm:shadow-md shadow-[#1E3A2B]/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                        title="Reserve overnight stay with guaranteed room lock"
                       >
-                        <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                        <span>Reserve</span>
-                        <ChevronRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5]" />
+                        <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                        <span className="whitespace-nowrap">Reserve Room</span>
+                        <ChevronRight className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
                       </button>
                     </div>
                   </div>
