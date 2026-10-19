@@ -269,7 +269,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
     <div className={`min-h-screen ${viewMode === 'map' ? 'pb-2 sm:pb-6' : 'pb-8 sm:pb-16'}`}>
       {/* Hero Section with Scenic Landscape Background Image - Excluded in Map View for immersive full-screen map experience */}
       {viewMode !== 'map' && (
-        <section className="relative text-white pt-24 pb-20 sm:pt-28 sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden flex flex-col items-center justify-center">
+        <section className="relative text-white pt-[calc(env(safe-area-inset-top,0px)+6rem)] pb-20 sm:pt-[calc(env(safe-area-inset-top,0px)+7rem)] sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden flex flex-col items-center justify-center">
         {/* Background Image with Cinematic Dark Gradient Overlays */}
         <div className="absolute inset-0 z-0">
           <img
@@ -442,7 +442,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
       <main
         id="listings-section"
         className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full min-w-0 ${
-          viewMode === 'map' ? 'pt-20 sm:pt-24' : '-mt-8 sm:-mt-12'
+          viewMode === 'map' ? 'pt-[calc(env(safe-area-inset-top,0px)+5.5rem)] sm:pt-24' : '-mt-8 sm:-mt-12'
         }`}
       >
         {/* Value Trust Ribbon - Only visible in List/Grid view */}
@@ -924,7 +924,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
 
       {/* Mobile Floating Map / List Toggle Pill (Gold-standard Airbnb UX) - Appears when scrolled or when actively in map view */}
       {(showFloatingMapBtn || viewMode === 'map') && (
-        <div className="lg:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="lg:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-auto animate-in fade-in slide-in-from-bottom-4 duration-300">
           <button
             type="button"
             onClick={() => {

@@ -131,7 +131,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-28 md:pb-20 space-y-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-[calc(env(safe-area-inset-top,0px)+5.5rem)] sm:pt-28 pb-28 md:pb-20 space-y-8">
       
       {/* Navigation Breadcrumb */}
       <div className="flex items-center justify-between">

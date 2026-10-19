@@ -140,8 +140,8 @@ export function App() {
         onOpenSupport={() => setIsSupportOpen(true)}
       />
 
-      {/* Main Content Area - pb-24 on mobile ensures floating navigation dock never obscures content */}
-      <main className="flex-1 pb-24 md:pb-0 w-full max-w-full min-w-0">
+      {/* Main Content Area - pb accounts for mobile bottom dock + safe-area-inset-bottom */}
+      <main className="flex-1 pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] md:pb-0 w-full max-w-full min-w-0">
         {currentTab === 'marketplace' && (
           <Marketplace onSelectHotel={handleSelectHotel} />
         )}

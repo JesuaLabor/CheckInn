@@ -347,7 +347,7 @@ export const PartnerRegister: React.FC<PartnerRegisterProps> = ({ onBack, onSucc
   const selectedCategoryObj = CATEGORY_OPTIONS.find((c) => c.id === formData.category) || CATEGORY_OPTIONS[0];
 
   return (
-    <div className="min-h-screen bg-[#15191E] text-slate-100 pt-24 pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#15191E] text-slate-100 pt-[calc(env(safe-area-inset-top,0px)+5.5rem)] pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[450px] bg-gradient-to-b from-[#1E3A2B]/40 via-[#D49B41]/10 to-transparent blur-3xl pointer-events-none -z-0" />
       <div className="absolute top-96 right-0 w-80 h-80 bg-[#1E3A2B]/20 rounded-full blur-3xl pointer-events-none -z-0" />

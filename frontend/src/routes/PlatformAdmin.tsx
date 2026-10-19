@@ -342,7 +342,7 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-28 md:pb-20 space-y-6 text-[#212529]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-[calc(env(safe-area-inset-top,0px)+5.5rem)] sm:pt-28 pb-28 md:pb-20 space-y-6 text-[#212529]">
       {/* Executive Header Banner */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 border border-[#E8E2D8] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

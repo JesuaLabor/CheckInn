@@ -205,11 +205,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           } ${
             isDarkConsole
               ? isScrolled
-                ? 'mt-3 sm:mt-4 w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#16191C]/95 backdrop-blur-xl border border-[#2A2E33] shadow-[0_16px_40px_rgba(0,0,0,0.5)] py-2 sm:py-2.5 px-4 sm:px-6 text-white'
-                : 'w-full rounded-none bg-[#16191C]/95 backdrop-blur-md border-b border-[#2A2E33] shadow-sm py-3 sm:py-3.5 px-4 sm:px-6 lg:px-8 text-white'
+                ? 'mt-[calc(env(safe-area-inset-top,0px)+0.75rem)] w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#16191C]/95 backdrop-blur-xl border border-[#2A2E33] shadow-[0_16px_40px_rgba(0,0,0,0.5)] py-2 sm:py-2.5 px-4 sm:px-6 text-white'
+                : 'w-full rounded-none bg-[#16191C]/95 backdrop-blur-md border-b border-[#2A2E33] shadow-sm pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 sm:py-3.5 px-4 sm:px-6 lg:px-8 text-white'
               : isScrolled
-                ? 'mt-3 sm:mt-4 w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#FAF8F5]/95 backdrop-blur-xl border border-[#E8E2D8] shadow-[0_16px_40px_rgba(33,37,41,0.12)] py-2 sm:py-2.5 px-4 sm:px-6 text-[#212529]'
-                : 'w-full rounded-none bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E8E2D8] shadow-sm py-3 sm:py-3.5 px-4 sm:px-6 lg:px-8 text-[#212529]'
+                ? 'mt-[calc(env(safe-area-inset-top,0px)+0.75rem)] w-[95%] sm:w-[92%] max-w-5xl rounded-full bg-[#FAF8F5]/95 backdrop-blur-xl border border-[#E8E2D8] shadow-[0_16px_40px_rgba(33,37,41,0.12)] py-2 sm:py-2.5 px-4 sm:px-6 text-[#212529]'
+                : 'w-full rounded-none bg-[#FAF8F5]/95 backdrop-blur-md border-b border-[#E8E2D8] shadow-sm pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-3 sm:py-3.5 px-4 sm:px-6 lg:px-8 text-[#212529]'
           }`}
         >
           <div
@@ -1271,12 +1271,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         </header>
       </div>
 
-      {/* Floating Bottom Navigation Dock for Mobile Thumbs (Tailored per role with safe-area support) */}
+      {/* Native iOS Edge-to-Edge Bottom Navigation Dock (Apple & Airbnb UX Standard) */}
       <nav
         ref={mobileDockRef}
-        className={`md:hidden fixed bottom-3 inset-x-3 sm:inset-x-4 z-40 bg-[#FAF8F5]/95 backdrop-blur-2xl text-slate-600 rounded-3xl p-1.5 shadow-[0_16px_40px_rgba(33,37,41,0.14)] border border-[#E8E2D8] flex items-center justify-around pb-[max(0.375rem,env(safe-area-inset-bottom))] transition-all duration-300 ease-out ${
+        className={`md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#FAF8F5]/95 backdrop-blur-2xl text-slate-600 rounded-none pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] px-3 shadow-[0_-8px_24px_rgba(33,37,41,0.08)] border-t border-[#E8E2D8] flex items-center justify-around transition-all duration-300 ease-out ${
           isNavHiddenOnMobile
-            ? 'translate-y-36 opacity-0 pointer-events-none'
+            ? 'translate-y-full opacity-0 pointer-events-none'
             : 'translate-y-0 opacity-100'
         }`}
       >
@@ -1987,7 +1987,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Bottom Sign Out Button */}
-            <div className="px-4 pt-2 pb-1 border-t border-black/5 dark:border-white/10 mt-auto">
+            <div className="px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] border-t border-black/5 dark:border-white/10 mt-auto">
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-extrabold text-xs border border-red-200 dark:border-red-900/50 transition-colors active:scale-98"
