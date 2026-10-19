@@ -13,7 +13,6 @@ import {
   Star,
   ExternalLink,
   X,
-  Info,
   MapPin,
 } from 'lucide-react';
 
@@ -107,7 +106,6 @@ export const HotelMap: React.FC<HotelMapProps> = ({
   const [currentZoom, setCurrentZoom] = useState<number>(12);
   const [mapStyle, setMapStyle] = useState<'satellite' | 'street'>(defaultMapStyle);
   const [showSearchAreaBtn, setShowSearchAreaBtn] = useState(false);
-  const [showLegend, setShowLegend] = useState(true);
   const [activePopupHotel, setActivePopupHotel] = useState<HotelWithDistance | null>(null);
   const [popupCoords, setPopupCoords] = useState<{ x: number; y: number } | null>(null);
 
@@ -862,42 +860,6 @@ export const HotelMap: React.FC<HotelMapProps> = ({
         );
       })()}
 
-      {/* Rating Tier Color Legend (Accessible & Collapsible) */}
-      <div className="absolute bottom-4 left-4 z-10">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-[#E8E2D8] shadow-lg p-2 text-[10px]">
-          <div
-            className="flex items-center justify-between gap-3 cursor-pointer select-none font-black text-slate-700 pb-1"
-            onClick={() => setShowLegend(!showLegend)}
-          >
-            <span className="flex items-center gap-1">
-              <Info className="w-3 h-3 text-[#1E3A2B]" />
-              <span>Rating Legend</span>
-            </span>
-            <span className="text-slate-400">{showLegend ? '−' : '+'}</span>
-          </div>
-
-          {showLegend && (
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1 border-t border-slate-100 font-semibold text-slate-600 text-[10px]">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#1E3A2B] border border-white shrink-0" />
-                <span>4.8+ Top Tier</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#2D5A40] border border-white shrink-0" />
-                <span>4.5 - 4.7 Great</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#D49B41] border border-white shrink-0" />
-                <span>4.0 - 4.4 Good</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#94A3B8] border border-white shrink-0" />
-                <span>Sold out</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
