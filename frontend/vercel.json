@@ -30,7 +30,7 @@
       ]
     },
     {
-      "source": "/hero_bg.webp",
+      "source": "/hero_bg(.*)\\.webp",
       "headers": [
         {
           "key": "Cache-Control",

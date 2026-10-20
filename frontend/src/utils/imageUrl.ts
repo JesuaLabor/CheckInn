@@ -1,5 +1,5 @@
 export const DEFAULT_HOTEL_COVER =
-  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=70';
+  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=400&q=65';
 
 export interface ImageOptimizationOptions {
   width?: number;
@@ -11,11 +11,11 @@ export interface ImageOptimizationOptions {
  */
 export const optimizeImageUrl = (
   url: string,
-  options: ImageOptimizationOptions = { width: 550, quality: 70 }
+  options: ImageOptimizationOptions = { width: 380, quality: 65 }
 ): string => {
   if (!url) return url;
-  const width = options.width ?? 550;
-  const quality = options.quality ?? 70;
+  const width = options.width ?? 380;
+  const quality = options.quality ?? 65;
 
   // Unsplash CDN dynamic optimization: downscale to mobile/card width and lower quality
   if (url.includes('images.unsplash.com')) {

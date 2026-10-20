@@ -8,16 +8,20 @@ import { toast } from './stores/toastStore'
 // Expose toast on window for interactive triggers and console access
 (window as any).toast = toast;
 
-// Register PWA service worker with auto-update
-registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    console.log('[LocalStay PWA] New update available.')
-  },
-  onOfflineReady() {
-    console.log('[LocalStay PWA] Content cached for offline use.')
-  },
-})
+// Register PWA service worker after window load so background precaching doesn't compete with initial LCP
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    registerSW({
+      immediate: false,
+      onNeedRefresh() {
+        console.log('[LocalStay PWA] New update available.');
+      },
+      onOfflineReady() {
+        console.log('[LocalStay PWA] Content cached for offline use.');
+      },
+    });
+  });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

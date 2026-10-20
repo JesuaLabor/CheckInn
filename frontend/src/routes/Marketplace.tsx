@@ -384,15 +384,18 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
         <section className="relative text-white pt-[calc(env(safe-area-inset-top,0px)+6rem)] pb-20 sm:pt-[calc(env(safe-area-inset-top,0px)+7rem)] sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden flex flex-col items-center justify-center">
           {/* Background Image with Cinematic Dark Gradient Overlays */}
           <div className="absolute inset-0 z-0">
-            <img
-              src="/hero_bg.webp"
-              alt="Scenic Mountain Highlands"
-              fetchPriority="high"
-              decoding="async"
-              width={1376}
-              height={768}
-              className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
-            />
+            <picture className="w-full h-full block">
+              <source media="(max-width: 640px)" srcSet="/hero_bg_mobile.webp" type="image/webp" />
+              <img
+                src="/hero_bg.webp"
+                alt="Scenic Mountain Highlands"
+                fetchPriority="high"
+                decoding="async"
+                width={1376}
+                height={768}
+                className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
+              />
+            </picture>
             {/* Deep Forest Green & Charcoal Gradient Overlay for Flawless Text Legibility */}
             <div className="absolute inset-0 bg-gradient-to-b from-[#212529]/80 via-[#1E3A2B]/75 to-[#151916]/95"></div>
             {/* Subtle Radial Vignette for Content Focus */}
