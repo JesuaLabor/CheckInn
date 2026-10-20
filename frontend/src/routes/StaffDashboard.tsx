@@ -50,6 +50,7 @@ import {
   RotateCcw,
   Lock,
 } from 'lucide-react';
+import { resolveImageUrl } from '../utils/imageUrl';
 import {
   Booking,
   Room,
@@ -84,29 +85,6 @@ export type StaffSubTab =
   | 'inventory_manage'
   | 'hotel_settings'
   | 'audit_trail';
-
-const PRESET_HOTEL_PHOTOS = [
-  {
-    label: 'Highland Pine',
-    url: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    label: 'Island Beach',
-    url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    label: 'Heritage Villa',
-    url: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    label: 'Urban Boutique',
-    url: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    label: 'Nature Eco-Lodge',
-    url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80',
-  },
-];
 
 interface StaffDashboardProps {
   initialSubTab?: StaffSubTab;
@@ -897,7 +875,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   const handleResetCoverPhoto = () => {
     setProfileForm((prev) => ({
       ...prev,
-      image_url: hotelProfile?.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
+      image_url: hotelProfile?.image_url || '',
     }));
     setHasCustomCoverSelected(false);
     if (coverFileInputRef.current) {
@@ -2408,11 +2386,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   }`}
                 >
                   <img
-                    src={
-                      profileForm.image_url ||
-                      hotelProfile?.image_url ||
-                      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
-                    }
+                    src={resolveImageUrl(profileForm.image_url || hotelProfile?.image_url)}
                     alt={hotelProfile?.name || 'Property Cover'}
                     onError={(e) => {
                       e.currentTarget.onerror = null;
@@ -2450,7 +2424,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                         {hotelProfile?.name || 'Your Hotel'}
                       </p>
                       <p className="text-[11px] text-slate-200/90 font-medium">
-                        Drag and drop high-resolution image here or click Change Photo
+                        Drag and drop authentic high-resolution image here or click Upload from Device
                       </p>
                     </div>
 
@@ -2477,66 +2451,47 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
                   className="hidden"
                 />
 
-                {/* Upload Controls & Presets Bar */}
-                <div className="space-y-2.5 pt-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                {/* Upload Controls & Format Specs */}
+                <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FAF8F5] p-3.5 rounded-2xl border border-[#E8E2D8]">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => coverFileInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E3A2B] hover:bg-[#284E3A] text-[#FAF8F5] text-xs font-black transition-all cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <UploadCloud className="w-4 h-4 text-[#D49B41]" />
+                      <span>Upload from Device</span>
+                    </button>
+
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-[#E8E2D8] font-bold text-slate-700">
+                        JPG, PNG, WEBP, AVIF
+                      </span>
+                      <span>up to 20MB</span>
+                    </div>
+                  </div>
+
+                  {hasCustomCoverSelected ? (
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-700" />
+                        <span>Ready to Publish</span>
+                      </span>
                       <button
                         type="button"
-                        onClick={() => coverFileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] text-xs font-bold border border-[#E8E2D8] transition-all cursor-pointer shadow-2xs active:scale-95"
+                        onClick={handleResetCoverPhoto}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-rose-600 text-[11px] font-bold transition-all cursor-pointer"
                       >
-                        <UploadCloud className="w-3.5 h-3.5 text-[#1E3A2B]" />
-                        <span>Upload from Device</span>
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Cancel</span>
                       </button>
-
-                      <span className="text-[11px] text-slate-400 hidden sm:inline">
-                        Max 15MB (JPG, PNG, WEBP)
-                      </span>
                     </div>
-
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      Or select a curated preset:
+                  ) : (
+                    <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-[#D49B41]" />
+                      <span>Directly showcased on LocalStay Marketplace</span>
                     </span>
-                  </div>
-
-                  {/* Preset Photo Quick Picker */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
-                    {PRESET_HOTEL_PHOTOS.map((preset, idx) => {
-                      const isSelected = profileForm.image_url === preset.url;
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            setProfileForm((prev) => ({ ...prev, image_url: preset.url }));
-                            setHasCustomCoverSelected(true);
-                            toast.info(`Selected "${preset.label}" preset! Click Save Settings to apply.`);
-                          }}
-                          className={`group relative h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer text-left ${
-                            isSelected
-                              ? 'border-[#3B5E43] ring-2 ring-[#3B5E43]/30 scale-[1.02]'
-                              : 'border-slate-200 hover:border-slate-400 opacity-80 hover:opacity-100'
-                          }`}
-                        >
-                          <img
-                            src={preset.url}
-                            alt={preset.label}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-colors" />
-                          <span className="absolute bottom-1 left-1.5 right-1.5 text-[9px] font-extrabold text-white truncate drop-shadow-sm">
-                            {preset.label}
-                          </span>
-                          {isSelected && (
-                            <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-[#3B5E43] text-white flex items-center justify-center shadow-xs">
-                              <Check className="w-2.5 h-2.5 stroke-[3]" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  )}
                 </div>
               </div>
 

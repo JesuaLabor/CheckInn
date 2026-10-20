@@ -5,6 +5,7 @@ import distance from '@turf/distance';
 import { Hotel } from '../types';
 import { useCurrencyStore } from '../stores/currencyStore';
 import { formatDistance, Coordinates } from '../utils/geo';
+import { resolveImageUrl } from '../utils/imageUrl';
 import {
   Navigation,
   Maximize2,
@@ -749,10 +750,7 @@ export const HotelMap: React.FC<HotelMapProps> = ({
               {/* Hero Image Section */}
               <div className="relative h-40 w-full bg-slate-900 overflow-hidden">
                 <img
-                  src={
-                    activePopupHotel.image_url ||
-                    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80'
-                  }
+                  src={resolveImageUrl(activePopupHotel.image_url)}
                   alt={activePopupHotel.name}
                   onError={(e) => {
                     e.currentTarget.onerror = null;

@@ -195,16 +195,20 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '').strip().strip('"\'')
 CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '').strip().strip('"\'')
 CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '').strip().strip('"\'')
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '').strip().strip('"\'')
 
-if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+if (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET) or CLOUDINARY_URL:
     try:
         import cloudinary
-        cloudinary.config(
-            cloud_name=CLOUDINARY_CLOUD_NAME,
-            api_key=CLOUDINARY_API_KEY,
-            api_secret=CLOUDINARY_API_SECRET,
-            secure=True,
-        )
+        if CLOUDINARY_URL:
+            cloudinary.config(cloudinary_url=CLOUDINARY_URL, secure=True)
+        else:
+            cloudinary.config(
+                cloud_name=CLOUDINARY_CLOUD_NAME,
+                api_key=CLOUDINARY_API_KEY,
+                api_secret=CLOUDINARY_API_SECRET,
+                secure=True,
+            )
     except Exception as e:
         print(f"Warning: Cloudinary configuration failed: {e}")
 

@@ -465,7 +465,7 @@ class HotelManageProfileView(APIView):
         hotel = request.user.hotel
         if not hotel:
             return Response({'error': 'No hotel assigned to this account.'}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = HotelManageSerializer(hotel)
+        serializer = HotelManageSerializer(hotel, context={'request': request})
         return Response(serializer.data)
 
     def patch(self, request):
@@ -482,7 +482,7 @@ class HotelManageProfileView(APIView):
             if raw_image.startswith('data:image/') or raw_image.startswith('http'):
                 data['image_url'] = upload_image_to_storage(raw_image, folder="localstay/hotels")
 
-        serializer = HotelManageSerializer(hotel, data=data, partial=True)
+        serializer = HotelManageSerializer(hotel, data=data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
 

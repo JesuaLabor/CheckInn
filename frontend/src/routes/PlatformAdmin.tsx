@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../api/client';
 import { Hotel, PlatformStats, HotelAuditLog } from '../types';
 import { toast } from '../stores/toastStore';
+import { resolveImageUrl } from '../utils/imageUrl';
 import {
   ShieldCheck,
   Building2,
@@ -895,10 +896,7 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
                       <td className="py-3.5 px-4 sm:px-6">
                         <div className="flex items-center gap-3">
                           <img
-                            src={
-                              hotel.image_url ||
-                              'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=300&q=80'
-                            }
+                            src={resolveImageUrl(hotel.image_url)}
                             alt={hotel.name}
                             onError={(e) => {
                               e.currentTarget.onerror = null;
@@ -1071,10 +1069,7 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
                 <div>
                   <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
                     <img
-                      src={
-                        hotel.image_url ||
-                        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80'
-                      }
+                      src={resolveImageUrl(hotel.image_url)}
                       alt={hotel.name}
                       onError={(e) => {
                         e.currentTarget.onerror = null;
@@ -1587,10 +1582,7 @@ export const PlatformAdmin: React.FC<PlatformAdminProps> = ({
             {/* Header Hero Banner */}
             <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden shrink-0">
               <img
-                src={
-                  inspectingHotel.image_url ||
-                  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
-                }
+                src={resolveImageUrl(inspectingHotel.image_url)}
                 alt={inspectingHotel.name}
                 onError={(e) => {
                   e.currentTarget.onerror = null;

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useNetworkStore } from '../stores/networkStore';
 import { toast } from '../stores/toastStore';
+import { resolveImageUrl } from '../utils/imageUrl';
 
 interface InnDetailProps {
   slug: string;
@@ -215,7 +216,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
       <section className="bg-white rounded-3xl border border-[#E8E2D8] overflow-hidden shadow-sm">
         <div className="relative min-h-[280px] h-72 sm:h-[420px] w-full overflow-hidden bg-[#212529]">
           <img
-            src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'}
+            src={resolveImageUrl(hotel.image_url)}
             alt={hotel.name}
             onError={(e) => {
               e.currentTarget.onerror = null;
@@ -389,11 +390,7 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
                 {/* Room Image */}
                 <div className="w-full md:w-72 lg:w-80 h-44 sm:h-52 md:h-auto shrink-0 relative bg-[#212529] overflow-hidden">
                   <img
-                    src={
-                      rt.photos && rt.photos.length > 0
-                        ? rt.photos[0]
-                        : 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80'
-                    }
+                    src={resolveImageUrl(rt.photos?.[0], 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80')}
                     alt={rt.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {

@@ -29,20 +29,24 @@ def upload_image_to_storage(image_input, folder="localstay/hotels", default=DEFA
     cloud_name = str(getattr(settings, 'CLOUDINARY_CLOUD_NAME', '') or os.environ.get('CLOUDINARY_CLOUD_NAME', '')).strip().strip('"\'')
     api_key = str(getattr(settings, 'CLOUDINARY_API_KEY', '') or os.environ.get('CLOUDINARY_API_KEY', '')).strip().strip('"\'')
     api_secret = str(getattr(settings, 'CLOUDINARY_API_SECRET', '') or os.environ.get('CLOUDINARY_API_SECRET', '')).strip().strip('"\'')
+    cloudinary_url = str(getattr(settings, 'CLOUDINARY_URL', '') or os.environ.get('CLOUDINARY_URL', '')).strip().strip('"\'')
 
-    has_cloudinary = bool(cloud_name and api_key and api_secret)
+    has_cloudinary = bool((cloud_name and api_key and api_secret) or cloudinary_url)
 
     if has_cloudinary:
         try:
             import cloudinary
             import cloudinary.uploader
 
-            cloudinary.config(
-                cloud_name=cloud_name,
-                api_key=api_key,
-                api_secret=api_secret,
-                secure=True,
-            )
+            if cloudinary_url:
+                cloudinary.config(cloudinary_url=cloudinary_url, secure=True)
+            else:
+                cloudinary.config(
+                    cloud_name=cloud_name,
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    secure=True,
+                )
 
             # Cloudinary handles file-like objects, bytes, and base64 strings directly!
             upload_target = image_input

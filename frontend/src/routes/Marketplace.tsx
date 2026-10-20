@@ -33,6 +33,7 @@ import {
 import heroBgImage from '../assets/hero_bg.jpg';
 import { HotelMap, MapBounds } from '../components/HotelMap';
 import { calculateDistanceKm, formatDistance, getCurrentCoordinates, Coordinates } from '../utils/geo';
+import { resolveImageUrl } from '../utils/imageUrl';
 import { toast } from '../stores/toastStore';
 import { useNetworkStore } from '../stores/networkStore';
 
@@ -771,7 +772,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                   >
                     <div className="relative w-full sm:w-48 h-44 sm:h-auto overflow-hidden bg-[#212529] shrink-0">
                       <img
-                        src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'}
+                        src={resolveImageUrl(hotel.image_url)}
                         alt={hotel.name}
                         onError={(e) => {
                           e.currentTarget.onerror = null;
@@ -886,7 +887,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                   {/* Image Banner */}
                   <div className="relative h-36 sm:h-64 overflow-hidden bg-[#212529] shrink-0">
                     <img
-                      src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80'}
+                      src={resolveImageUrl(hotel.image_url)}
                       alt={hotel.name}
                       onError={(e) => {
                         e.currentTarget.onerror = null;

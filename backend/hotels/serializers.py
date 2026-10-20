@@ -1,22 +1,44 @@
+import os
+from django.conf import settings
 from rest_framework import serializers
 from .models import Hotel, RoomType, Room, HotelAuditLog, Review
 
 DEFAULT_HOTEL_IMAGE = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
 DEFAULT_ROOM_IMAGE = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80'
 
-CATEGORY_PRESETS = {
-    'beach': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
-    'mountain': 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
-    'heritage': 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80',
-    'city': 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=1200&q=80',
-    'eco': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=1200&q=80',
-}
 
+def resolve_hotel_image_url(url, request=None):
+    """
+    Resolves the hotel or room image URL.
+    - Preserves user-uploaded Cloudinary CDN URLs, external image URLs, and Base64 previews.
+    - If it's a relative media URL (e.g. /media/hotels/xxx.jpg), turns it into an absolute URL
+      using the current request context or backend host so it renders across external frontends (Vercel).
+    - Falls back to DEFAULT_HOTEL_IMAGE only when no image exists.
+    """
+    if not url:
+        return DEFAULT_HOTEL_IMAGE
 
-def resolve_hotel_image_url(url, category=None):
-    if not url or (isinstance(url, str) and url.startswith('/media/')):
-        return CATEGORY_PRESETS.get(category, DEFAULT_HOTEL_IMAGE)
-    return url
+    url_str = str(url).strip()
+    if not url_str:
+        return DEFAULT_HOTEL_IMAGE
+
+    # If it's already an absolute URL (Cloudinary, Unsplash, etc.) or data URI
+    if url_str.startswith('http://') or url_str.startswith('https://') or url_str.startswith('data:'):
+        return url_str
+
+    # If it's a relative path (e.g. /media/...)
+    if url_str.startswith('/'):
+        if request:
+            try:
+                return request.build_absolute_uri(url_str)
+            except Exception:
+                pass
+        backend_host = getattr(settings, 'BACKEND_URL', '') or os.environ.get('BACKEND_URL', '')
+        if backend_host:
+            return f"{backend_host.rstrip('/')}{url_str}"
+        return url_str
+
+    return url_str
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -46,13 +68,12 @@ class RoomTypeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        request = self.context.get('request')
         photos = data.get('photos') or []
         cleaned_photos = []
         for p in photos:
-            if p and isinstance(p, str) and p.startswith('/media/'):
-                cleaned_photos.append(DEFAULT_ROOM_IMAGE)
-            elif p:
-                cleaned_photos.append(p)
+            if p:
+                cleaned_photos.append(resolve_hotel_image_url(p, request))
         data['photos'] = cleaned_photos or [DEFAULT_ROOM_IMAGE]
         return data
 
@@ -86,6 +107,7 @@ class HotelListSerializer(serializers.ModelSerializer):
         return obj.rooms.filter(is_active=True, status='available').count()
 
     def get_room_types_summary(self, obj):
+        request = self.context.get('request')
         return [
             {
                 'id': rt.id,
@@ -97,19 +119,20 @@ class HotelListSerializer(serializers.ModelSerializer):
                 'rate_12h': rt.rate_12h,
                 'rate_24h': rt.rate_24h,
                 'capacity': rt.capacity,
-                'photo': rt.photos[0] if (rt.photos and len(rt.photos) > 0) else None,
+                'photo': resolve_hotel_image_url(rt.photos[0], request) if (rt.photos and len(rt.photos) > 0) else None,
             }
             for rt in obj.room_types.all()
         ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        request = self.context.get('request')
         url = data.get('image_url')
         if not url:
             first_rt = instance.room_types.first()
             if first_rt and first_rt.photos and len(first_rt.photos) > 0:
                 url = first_rt.photos[0]
-        data['image_url'] = resolve_hotel_image_url(url, instance.category)
+        data['image_url'] = resolve_hotel_image_url(url, request)
         return data
 
 
@@ -135,12 +158,13 @@ class HotelDetailSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        request = self.context.get('request')
         url = data.get('image_url')
         if not url:
             first_rt = instance.room_types.first()
             if first_rt and first_rt.photos and len(first_rt.photos) > 0:
                 url = first_rt.photos[0]
-        data['image_url'] = resolve_hotel_image_url(url, instance.category)
+        data['image_url'] = resolve_hotel_image_url(url, request)
         return data
 
 
@@ -184,12 +208,13 @@ class PlatformHotelSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        request = self.context.get('request')
         url = data.get('image_url')
         if not url:
             first_rt = instance.room_types.first()
             if first_rt and first_rt.photos and len(first_rt.photos) > 0:
                 url = first_rt.photos[0]
-        data['image_url'] = resolve_hotel_image_url(url, instance.category)
+        data['image_url'] = resolve_hotel_image_url(url, request)
         return data
 
 
@@ -211,7 +236,8 @@ class HotelManageSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['image_url'] = resolve_hotel_image_url(data.get('image_url'), instance.category)
+        request = self.context.get('request')
+        data['image_url'] = resolve_hotel_image_url(data.get('image_url'), request)
         return data
 
 
