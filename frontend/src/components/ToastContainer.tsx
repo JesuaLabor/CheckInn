@@ -12,28 +12,48 @@ export const ToastContainer: React.FC = () => {
     switch (type) {
       case 'error':
         return (
-          <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center shrink-0 text-rose-400 shadow-sm shadow-rose-500/20">
-            <AlertCircle className="w-4 h-4" />
-          </div>
+          <>
+            <div className="sm:hidden shrink-0 text-rose-400">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <div className="hidden sm:flex w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 items-center justify-center shrink-0 text-rose-400 shadow-sm shadow-rose-500/20">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+          </>
         );
       case 'success':
         return (
-          <div className="w-8 h-8 rounded-xl bg-[#3B5E43]/30 border border-[#3B5E43]/50 flex items-center justify-center shrink-0 text-emerald-400 shadow-sm shadow-emerald-500/20">
-            <CheckCircle2 className="w-4 h-4" />
-          </div>
+          <>
+            <div className="sm:hidden shrink-0 text-emerald-400">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div className="hidden sm:flex w-8 h-8 rounded-xl bg-[#3B5E43]/30 border border-[#3B5E43]/50 items-center justify-center shrink-0 text-emerald-400 shadow-sm shadow-emerald-500/20">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </>
         );
       case 'warning':
         return (
-          <div className="w-8 h-8 rounded-xl bg-[#D49B41]/25 border border-[#D49B41]/45 flex items-center justify-center shrink-0 text-[#E2AE55] shadow-sm shadow-[#D49B41]/20">
-            <AlertTriangle className="w-4 h-4" />
-          </div>
+          <>
+            <div className="sm:hidden shrink-0 text-[#E2AE55]">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div className="hidden sm:flex w-8 h-8 rounded-xl bg-[#D49B41]/25 border border-[#D49B41]/45 items-center justify-center shrink-0 text-[#E2AE55] shadow-sm shadow-[#D49B41]/20">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </>
         );
       case 'info':
       default:
         return (
-          <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-500/40 flex items-center justify-center shrink-0 text-sky-400 shadow-sm shadow-sky-500/20">
-            <Info className="w-4 h-4" />
-          </div>
+          <>
+            <div className="sm:hidden shrink-0 text-sky-400">
+              <Info className="w-4 h-4" />
+            </div>
+            <div className="hidden sm:flex w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-500/40 items-center justify-center shrink-0 text-sky-400 shadow-sm shadow-sky-500/20">
+              <Info className="w-4 h-4" />
+            </div>
+          </>
         );
     }
   };
@@ -80,45 +100,61 @@ export const ToastContainer: React.FC = () => {
     }
   };
 
+  const isGenericTitle = (title?: string) => {
+    if (!title) return true;
+    const lower = title.toLowerCase().trim();
+    return (
+      lower === 'information' ||
+      lower === 'success' ||
+      lower === 'action required' ||
+      lower === 'notice'
+    );
+  };
+
   return (
     <div
       aria-live="polite"
-      className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[100] max-w-sm sm:max-w-md w-[calc(100%-2rem)] sm:w-full flex flex-col gap-3 pointer-events-none"
+      className="fixed top-[max(0.75rem,env(safe-area-inset-top,0.75rem))] left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:top-6 sm:right-6 z-[100] w-max max-w-[92vw] sm:max-w-md sm:w-full flex flex-col items-center sm:items-end gap-2 sm:gap-3 pointer-events-none"
     >
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto relative overflow-hidden w-full flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl shadow-[0_20px_45px_-12px_rgba(0,0,0,0.65)] backdrop-blur-2xl border transition-all animate-in fade-in slide-in-from-right-8 duration-300 ease-out group ${getContainerStyle(
+          className={`pointer-events-auto relative overflow-hidden flex items-center sm:items-start gap-2.5 sm:gap-3 py-2 px-3.5 sm:p-4 rounded-full sm:rounded-2xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.6)] backdrop-blur-2xl border transition-all animate-in fade-in slide-in-from-top-4 sm:slide-in-from-right-8 duration-300 ease-out group ${getContainerStyle(
             toast.type
           )}`}
         >
           {renderIcon(toast.type)}
 
-          <div className="flex-1 min-w-0 pr-1 pt-0.5">
+          <div className="flex-1 min-w-0 pr-0.5 sm:pr-1 sm:pt-0.5">
             <h4
-              className={`text-[11px] font-black uppercase tracking-wider mb-0.5 leading-none ${getTitleColor(
+              className={`hidden sm:block text-[11px] font-black uppercase tracking-wider mb-0.5 leading-none ${getTitleColor(
                 toast.type
               )}`}
             >
               {toast.title}
             </h4>
-            <p className="text-xs font-semibold text-slate-100 leading-snug break-words">
+            <p className="text-xs font-semibold text-slate-100 leading-tight sm:leading-snug break-words">
+              {!isGenericTitle(toast.title) && (
+                <span className="font-black text-white mr-1 sm:hidden">
+                  {toast.title}:
+                </span>
+              )}
               {toast.message}
             </p>
           </div>
 
           <button
             onClick={() => removeToast(toast.id)}
-            className="w-6 h-6 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center shrink-0 active:scale-90 cursor-pointer -mr-1 -mt-0.5"
+            className="w-5 h-5 sm:w-6 sm:h-6 rounded-full sm:rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center shrink-0 active:scale-90 cursor-pointer ml-1 sm:-mr-1 sm:-mt-0.5"
             aria-label="Dismiss notification"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           </button>
 
           {/* Animated Auto-Dismiss Countdown Bar */}
           {toast.duration > 0 && (
             <div
-              className={`absolute bottom-0 left-0 h-[2.5px] ${getProgressBarColor(
+              className={`absolute bottom-0 left-0 h-[2px] sm:h-[2.5px] opacity-80 ${getProgressBarColor(
                 toast.type
               )}`}
               style={{
