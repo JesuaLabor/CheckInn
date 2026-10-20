@@ -30,7 +30,7 @@ import {
   Bed,
   CloudOff,
 } from 'lucide-react';
-import heroBgImage from '../assets/hero_bg.jpg';
+import heroBgImage from '../assets/hero_bg.webp';
 import { HotelMap, MapBounds } from '../components/HotelMap';
 import { calculateDistanceKm, formatDistance, getCurrentCoordinates, Coordinates } from '../utils/geo';
 import { resolveImageUrl } from '../utils/imageUrl';
@@ -378,6 +378,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
             <img
               src={heroBgImage}
               alt="Scenic Mountain Highlands"
+              fetchPriority="high"
+              decoding="async"
+              width={1376}
+              height={768}
               className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
             />
             {/* Deep Forest Green & Charcoal Gradient Overlay for Flawless Text Legibility */}

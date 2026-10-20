@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import localstayLogo from '../assets/localstay_icon_with_text.png';
+import localstayLogo from '../assets/localstay_icon_with_text.webp';
 import {
   CalendarCheck,
   Building2,

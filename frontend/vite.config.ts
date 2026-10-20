@@ -77,7 +77,7 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -157,6 +157,33 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    target: 'es2020',
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('html5-qrcode')) {
+              return 'vendor-scanner';
+            }
+            if (id.includes('leaflet') || id.includes('@turf') || id.includes('mapbox-gl')) {
+              return 'vendor-maps';
+            }
+            if (id.includes('canvas-confetti')) {
+              return 'vendor-confetti';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('zustand') || id.includes('axios')) {
+              return 'vendor-core';
+            }
+          }
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     host: true,

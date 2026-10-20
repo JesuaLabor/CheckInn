@@ -64,6 +64,11 @@ class Hotel(models.Model):
 
     class Meta:
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['status', 'is_active']),
+            models.Index(fields=['city']),
+            models.Index(fields=['category']),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.slug:

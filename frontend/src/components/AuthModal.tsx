@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toastStore';
 import { api } from '../api/client';
-import localstayIcon from '../assets/logo_icon.png';
+import localstayIcon from '../assets/logo_icon.webp';
 import {
   X,
   Lock,
