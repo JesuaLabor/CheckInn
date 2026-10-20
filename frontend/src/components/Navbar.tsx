@@ -635,20 +635,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {/* Desktop Profile Shortcut Dropdown Menu (Hidden on mobile < sm, visible >= sm) */}
                   {showUserMenu && (
                     <div
-                      className={`hidden sm:block absolute right-0 mt-2 w-80 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 duration-150 ${
+                      className={`hidden sm:flex flex-col absolute right-0 mt-2 w-80 max-h-[min(620px,calc(100vh-5.5rem))] rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 overflow-hidden ${
                           isDarkConsole
                             ? 'bg-[#181B1F] border border-[#2E3339] text-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.6)]'
                             : 'bg-white border border-[#E8E2D8] text-[#212529] shadow-[0_20px_50px_rgba(33,37,41,0.18)]'
                         }`}
                       >
-                        {/* Profile Header Card */}
-                        <div
-                          className={`px-3 py-3 border-b rounded-xl mb-1.5 ${
-                            isDarkConsole
-                              ? 'bg-[#1E2228] border-[#2A2E33]'
-                              : 'bg-[#FAF8F5] border-[#E8E2D8]'
-                          }`}
-                        >
+                        {/* Fixed Profile Header Card */}
+                        <div className="p-2.5 pb-0 shrink-0">
+                          <div
+                            className={`px-3 py-3 border-b rounded-xl ${
+                              isDarkConsole
+                                ? 'bg-[#1E2228] border-[#2A2E33]'
+                                : 'bg-[#FAF8F5] border-[#E8E2D8]'
+                            }`}
+                          >
                           <div className="flex items-center gap-3">
                             <div
                               className={`w-10 h-10 rounded-full text-white text-sm font-black flex items-center justify-center uppercase shrink-0 shadow-sm ${
@@ -706,10 +707,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                             </div>
                           )}
                         </div>
+                      </div>
 
-                        {/* Role-Specific Shortcut Items */}
-                        <div className="space-y-1">
-                          {/* 1. FRONT DESK STAFF SHORTCUTS */}
+                      {/* Scrollable Role-Specific Shortcut Items */}
+                      <div className="p-2.5 pt-1.5 overflow-y-auto flex-1 overscroll-contain space-y-1">
+                        {/* 1. FRONT DESK STAFF SHORTCUTS */}
                           {isStaff && (
                             <>
                               <div className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
@@ -1201,25 +1203,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                               </button>
                             </>
                           )}
+                        </div>
 
-                          {/* Sign Out Action */}
-                          <div
-                            className={`pt-1.5 mt-1 border-t ${
-                              isDarkConsole ? 'border-[#2A2E33]' : 'border-[#E8E2D8]'
+                        {/* Pinned / Sticky Sign Out Action Footer */}
+                        <div
+                          className={`p-2.5 pt-2 shrink-0 border-t ${
+                            isDarkConsole
+                              ? 'bg-[#181B1F] border-[#2A2E33]'
+                              : 'bg-white border-[#E8E2D8]'
+                          }`}
+                        >
+                          <button
+                            onClick={handleSignOut}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors text-left cursor-pointer ${
+                              isDarkConsole
+                                ? 'text-rose-400 hover:bg-rose-950/40'
+                                : 'text-rose-600 hover:bg-rose-50'
                             }`}
                           >
-                            <button
-                              onClick={handleSignOut}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors text-left ${
-                                isDarkConsole
-                                  ? 'text-rose-400 hover:bg-rose-950/40'
-                                  : 'text-rose-600 hover:bg-rose-50'
-                              }`}
-                            >
-                              <LogOut className="w-3.5 h-3.5" />
-                              <span>{isStaff ? 'Sign out & End Shift' : 'Sign out'}</span>
-                            </button>
-                          </div>
+                            <LogOut className="w-3.5 h-3.5" />
+                            <span>{isStaff ? 'Sign out & End Shift' : 'Sign out'}</span>
+                          </button>
                         </div>
                       </div>
                   )}
