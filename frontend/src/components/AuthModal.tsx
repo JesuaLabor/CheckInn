@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toastStore';
 import { api } from '../api/client';
@@ -27,6 +27,34 @@ const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
   '547965168394-3cej3iirv1390lvpirr2rpv8t22upotb.apps.googleusercontent.com';
 
+// Dynamically load Google GSI on-demand so it doesn't block initial page load / FCP
+const loadGoogleGsiScript = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+      resolve();
+      return;
+    }
+    const existing = document.getElementById('google-gsi-client') as HTMLScriptElement | null;
+    if (existing) {
+      if ((window as any).google?.accounts?.oauth2) {
+        resolve();
+      } else {
+        existing.addEventListener('load', () => resolve(), { once: true });
+        existing.addEventListener('error', () => reject(new Error('Google GSI load failed')), { once: true });
+      }
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'google-gsi-client';
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Identity Services'));
+    document.head.appendChild(script);
+  });
+};
+
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const { login, loginWithGoogle, quickLogin, isLoading, error } = useAuthStore();
@@ -49,6 +77,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
   // Google OAuth loading state
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Warm up Google GSI script in background while user views auth modal
+      loadGoogleGsiScript().catch(() => {});
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -99,16 +134,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     }
   };
 
-  const handleGoogleClick = () => {
-    const google = (window as any).google;
-
-    if (!google?.accounts?.oauth2) {
-      toast.warning('Google services are still loading. Please try again in a moment.');
-      return;
-    }
-
+  const handleGoogleClick = async () => {
     try {
       setGoogleLoading(true);
+      await loadGoogleGsiScript();
+      const google = (window as any).google;
+
+      if (!google?.accounts?.oauth2) {
+        toast.warning('Google services could not be reached. Please check your connection.');
+        setGoogleLoading(false);
+        return;
+      }
+
       const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'email profile openid',

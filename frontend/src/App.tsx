@@ -2,7 +2,6 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuthStore } from './stores/authStore';
 import { useBookingDraftStore } from './stores/bookingDraftStore';
 import { Navbar } from './components/Navbar';
-import { AuthModal } from './components/AuthModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { ToastContainer } from './components/ToastContainer';
 import { ConfirmModal } from './components/ConfirmModal';
@@ -20,6 +19,7 @@ const PartnerRegister = lazy(() => import('./routes/PartnerRegister').then((m) =
 const PlatformAdmin = lazy(() => import('./routes/PlatformAdmin').then((m) => ({ default: m.PlatformAdmin })));
 const BookingModal = lazy(() => import('./components/BookingModal').then((m) => ({ default: m.BookingModal })));
 const SupportModal = lazy(() => import('./components/SupportModal').then((m) => ({ default: m.SupportModal })));
+const AuthModal = lazy(() => import('./components/AuthModal').then((m) => ({ default: m.AuthModal })));
 
 const RouteLoadingFallback = () => (
   <div className="min-h-[45vh] flex flex-col items-center justify-center p-8 space-y-3">
@@ -247,31 +247,35 @@ export function App() {
         />
       </Suspense>
 
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onSuccess={() => {
-          const { isModalOpen } = useBookingDraftStore.getState();
-          const loggedInUser = useAuthStore.getState().user;
-          if (!isModalOpen && draft?.hotel && draft?.roomType) {
-            openBookingModal(draft.hotel, draft.roomType, {
-              checkIn: draft.checkIn,
-              checkOut: draft.checkOut,
-              guests: draft.guestCount,
-            });
-          } else if (loggedInUser) {
-            if (loggedInUser.role === 'superadmin') {
-              setCurrentTab('platform_admin');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else if (loggedInUser.role === 'staff' || loggedInUser.role === 'admin') {
-              setCurrentTab('staff_dashboard');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else if (loggedInUser.role === 'guest' && currentTab !== 'marketplace') {
-              setCurrentTab('marketplace');
-            }
-          }
-        }}
-      />
+      <Suspense fallback={null}>
+        {isAuthOpen && (
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => setIsAuthOpen(false)}
+            onSuccess={() => {
+              const { isModalOpen } = useBookingDraftStore.getState();
+              const loggedInUser = useAuthStore.getState().user;
+              if (!isModalOpen && draft?.hotel && draft?.roomType) {
+                openBookingModal(draft.hotel, draft.roomType, {
+                  checkIn: draft.checkIn,
+                  checkOut: draft.checkOut,
+                  guests: draft.guestCount,
+                });
+              } else if (loggedInUser) {
+                if (loggedInUser.role === 'superadmin') {
+                  setCurrentTab('platform_admin');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (loggedInUser.role === 'staff' || loggedInUser.role === 'admin') {
+                  setCurrentTab('staff_dashboard');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (loggedInUser.role === 'guest' && currentTab !== 'marketplace') {
+                  setCurrentTab('marketplace');
+                }
+              }
+            }}
+          />
+        )}
+      </Suspense>
 
       {/* PWA Install Prompt & Offline Banner */}
       <PWAInstallPrompt />

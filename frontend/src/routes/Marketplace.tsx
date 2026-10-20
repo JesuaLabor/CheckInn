@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { api } from '../api/client';
 import { Hotel } from '../types';
 import { useCurrencyStore } from '../stores/currencyStore';
@@ -30,10 +30,19 @@ import {
   Bed,
   CloudOff,
 } from 'lucide-react';
-import heroBgImage from '../assets/hero_bg.webp';
-import { HotelMap, MapBounds } from '../components/HotelMap';
+import type { MapBounds } from '../components/HotelMap';
 import { calculateDistanceKm, formatDistance, getCurrentCoordinates, Coordinates } from '../utils/geo';
 import { resolveImageUrl } from '../utils/imageUrl';
+
+// Lazy-load heavy Leaflet/Turf maps so initial grid view loads with 0ms map overhead
+const HotelMap = lazy(() => import('../components/HotelMap').then((m) => ({ default: m.HotelMap })));
+
+const MapLoadingFallback: React.FC<{ heightClass?: string }> = ({ heightClass = 'h-[460px] sm:h-[720px]' }) => (
+  <div className={`w-full ${heightClass} rounded-2xl sm:rounded-3xl bg-[#FAF8F5] border border-[#E8E2D8] flex flex-col items-center justify-center p-6 space-y-3`}>
+    <div className="w-8 h-8 border-3 border-[#1E3A2B]/20 border-t-[#1E3A2B] rounded-full animate-spin" />
+    <span className="text-xs font-bold text-slate-500">Loading interactive map...</span>
+  </div>
+);
 import { toast } from '../stores/toastStore';
 import { useNetworkStore } from '../stores/networkStore';
 
@@ -376,7 +385,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
           {/* Background Image with Cinematic Dark Gradient Overlays */}
           <div className="absolute inset-0 z-0">
             <img
-              src={heroBgImage}
+              src="/hero_bg.webp"
               alt="Scenic Mountain Highlands"
               fetchPriority="high"
               decoding="async"
@@ -744,17 +753,19 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
         ) : viewMode === 'map' ? (
           /* Full Interactive Map View */
           <div className="space-y-4">
-            <HotelMap
-              hotels={hotels}
-              userLocation={userLocation}
-              nearestHotelId={nearestHotelId}
-              selectedHotelId={hoveredHotelId}
-              onSelectHotel={onSelectHotel}
-              onLocateUser={handleNearMe}
-              onSearchArea={handleSearchArea}
-              isLocating={locating}
-              className="h-[calc(100dvh-185px)] min-h-[460px] sm:h-[720px] w-full"
-            />
+            <Suspense fallback={<MapLoadingFallback heightClass="h-[calc(100dvh-185px)] min-h-[460px] sm:h-[720px]" />}>
+              <HotelMap
+                hotels={hotels}
+                userLocation={userLocation}
+                nearestHotelId={nearestHotelId}
+                selectedHotelId={hoveredHotelId}
+                onSelectHotel={onSelectHotel}
+                onLocateUser={handleNearMe}
+                onSearchArea={handleSearchArea}
+                isLocating={locating}
+                className="h-[calc(100dvh-185px)] min-h-[460px] sm:h-[720px] w-full"
+              />
+            </Suspense>
           </div>
         ) : viewMode === 'split' ? (
           /* Split View: Left List Cards | Right Sticky Map */
@@ -860,17 +871,19 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
             </div>
 
             <div className="hidden lg:block lg:col-span-6 sticky top-24">
-              <HotelMap
-                hotels={hotels}
-                userLocation={userLocation}
-                nearestHotelId={nearestHotelId}
-                selectedHotelId={hoveredHotelId}
-                onSelectHotel={onSelectHotel}
-                onLocateUser={handleNearMe}
-                onSearchArea={handleSearchArea}
-                isLocating={locating}
-                className="h-[750px] w-full"
-              />
+              <Suspense fallback={<MapLoadingFallback heightClass="h-[750px]" />}>
+                <HotelMap
+                  hotels={hotels}
+                  userLocation={userLocation}
+                  nearestHotelId={nearestHotelId}
+                  selectedHotelId={hoveredHotelId}
+                  onSelectHotel={onSelectHotel}
+                  onLocateUser={handleNearMe}
+                  onSearchArea={handleSearchArea}
+                  isLocating={locating}
+                  className="h-[750px] w-full"
+                />
+              </Suspense>
             </div>
           </div>
         ) : (

@@ -8,8 +8,8 @@ from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_HOTEL_COVER = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
-DEFAULT_ROOM_PHOTO = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80'
+DEFAULT_HOTEL_COVER = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=75'
+DEFAULT_ROOM_PHOTO = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=75'
 
 
 def upload_image_to_storage(image_input, folder="localstay/hotels", default=DEFAULT_HOTEL_COVER):
