@@ -270,180 +270,177 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
       {/* Hero Section with Scenic Landscape Background Image - Excluded in Map View for immersive full-screen map experience */}
       {viewMode !== 'map' && (
         <section className="relative text-white pt-[calc(env(safe-area-inset-top,0px)+6rem)] pb-20 sm:pt-[calc(env(safe-area-inset-top,0px)+7rem)] sm:pb-24 px-4 sm:px-6 lg:px-8 overflow-hidden flex flex-col items-center justify-center">
-        {/* Background Image with Cinematic Dark Gradient Overlays */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src={heroBgImage}
-            alt="Scenic Mountain Highlands"
-            className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
-          />
-          {/* Deep Forest Green & Charcoal Gradient Overlay for Flawless Text Legibility */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#212529]/80 via-[#1E3A2B]/75 to-[#151916]/95"></div>
-          {/* Subtle Radial Vignette for Content Focus */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#212529]/30 to-[#121614]/90"></div>
-          {/* Subtle Golden Hour Ambient Sun Glow */}
-          <div className="absolute -top-32 right-1/4 w-[450px] h-[450px] bg-[#D49B41]/15 rounded-full blur-3xl pointer-events-none"></div>
-          {/* Micro Grid Texture */}
-          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#D49B41_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
-        </div>
+          {/* Background Image with Cinematic Dark Gradient Overlays */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src={heroBgImage}
+              alt="Scenic Mountain Highlands"
+              className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
+            />
+            {/* Deep Forest Green & Charcoal Gradient Overlay for Flawless Text Legibility */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#212529]/80 via-[#1E3A2B]/75 to-[#151916]/95"></div>
+            {/* Subtle Radial Vignette for Content Focus */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-[#212529]/30 to-[#121614]/90"></div>
+            {/* Subtle Golden Hour Ambient Sun Glow */}
+            <div className="absolute -top-32 right-1/4 w-[450px] h-[450px] bg-[#D49B41]/15 rounded-full blur-3xl pointer-events-none"></div>
+            {/* Micro Grid Texture */}
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#D49B41_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none"></div>
+          </div>
 
-        <div className="relative max-w-4xl mx-auto text-center space-y-4 sm:space-y-5 w-full min-w-0">
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight text-white leading-[1.18] drop-shadow-sm max-w-3xl mx-auto px-1">
-            Stay Authentic Across the Philippines & Beyond
-          </h1>
+          <div className="relative max-w-4xl mx-auto text-center space-y-4 sm:space-y-5 w-full min-w-0">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-[54px] font-black tracking-tight text-white leading-[1.18] drop-shadow-sm max-w-3xl mx-auto px-1">
+              LocalStay: Simplifying bookings, improving stays.
+            </h1>
 
-          <p className="text-xs sm:text-sm md:text-[15px] text-slate-200/90 max-w-xl mx-auto font-normal leading-relaxed px-2">
-            Discover verified boutique hotels, mountain lodges, and coastal inns with guaranteed room reservations and paperless QR check-in.
-          </p>
+            <p className="text-xs sm:text-sm md:text-[15px] text-slate-200/90 max-w-xl mx-auto font-normal leading-relaxed px-2">
+              Discover verified boutique hotels, mountain lodges, and coastal inns with guaranteed room reservations and paperless QR check-in.
+            </p>
 
-          {/* Curated Experience / Travel Style Segmented Glass Dock (Above Search for Intuitive Intent Filter) */}
-          <div className="pt-2 w-full max-w-full overflow-hidden flex justify-center px-1 sm:px-2">
-            <div className="flex items-center gap-1 p-1 rounded-2xl bg-black/45 backdrop-blur-xl border border-white/20 shadow-lg max-w-full overflow-x-auto no-scrollbar touch-pan-x min-w-0">
-              {[
-                { key: 'all', label: 'All Stays', icon: Compass },
-                { key: 'beach', label: 'Beach & Island', icon: Palmtree },
-                { key: 'mountain', label: 'Highlands & Peaks', icon: Mountain },
-                { key: 'heritage', label: 'Heritage & Culture', icon: Landmark },
-                { key: 'city', label: 'Urban & City', icon: Building },
-                { key: 'eco', label: 'Eco & Nature', icon: Trees },
-              ].map((cat) => {
-                const Icon = cat.icon;
-                const isActive = activeCategory === cat.key;
-                return (
-                  <button
-                    key={cat.key}
-                    type="button"
-                    onClick={() => setActiveCategory(cat.key as TravelCategory)}
-                    className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${
-                      isActive
+            {/* Curated Experience / Travel Style Segmented Glass Dock (Above Search for Intuitive Intent Filter) */}
+            <div className="pt-2 w-full max-w-full overflow-hidden flex justify-center px-1 sm:px-2">
+              <div className="flex items-center gap-1 p-1 rounded-2xl bg-black/45 backdrop-blur-xl border border-white/20 shadow-lg max-w-full overflow-x-auto no-scrollbar touch-pan-x min-w-0">
+                {[
+                  { key: 'all', label: 'All Stays', icon: Compass },
+                  { key: 'beach', label: 'Beach & Island', icon: Palmtree },
+                  { key: 'mountain', label: 'Highlands & Peaks', icon: Mountain },
+                  { key: 'heritage', label: 'Heritage & Culture', icon: Landmark },
+                  { key: 'city', label: 'Urban & City', icon: Building },
+                  { key: 'eco', label: 'Eco & Nature', icon: Trees },
+                ].map((cat) => {
+                  const Icon = cat.icon;
+                  const isActive = activeCategory === cat.key;
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => setActiveCategory(cat.key as TravelCategory)}
+                      className={`px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap active:scale-95 ${isActive
                         ? 'bg-[#FAF8F5] text-[#1E3A2B] shadow-sm font-black'
                         : 'text-white/80 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D49B41]' : 'text-white/60'}`} />
-                    <span>{cat.label}</span>
-                  </button>
-                );
-              })}
+                        }`}
+                    >
+                      <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D49B41]' : 'text-white/60'}`} />
+                      <span>{cat.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Floating Search Container */}
-          <div className="max-w-4xl mx-auto w-full min-w-0 px-1 sm:px-0">
-            <form
-              onSubmit={handleSearchSubmit}
-              className="bg-white/95 backdrop-blur-xl text-slate-800 rounded-3xl sm:rounded-full shadow-[0_20px_60px_rgba(0,0,0,0.35)] p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-stretch border border-white/60 w-full min-w-0"
-            >
-              {/* Destination Search */}
-              <div className="flex-1 relative flex items-center px-3.5 py-1 sm:py-0 min-h-[44px] min-w-0">
-                <Search className="w-5 h-5 text-slate-400 shrink-0 mr-2.5" />
-                <input
-                  type="text"
-                  placeholder="Where to? Search city, inn, or landmark..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full min-w-0 py-2.5 text-xs sm:text-sm font-medium bg-transparent border-0 focus:ring-0 focus:outline-none placeholder-slate-400"
-                />
-              </div>
-
-              <div className="h-6 w-px bg-slate-200 hidden sm:block self-center"></div>
-
-              {/* Guests Filter */}
-              <div className="flex items-center px-3.5 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 min-h-[44px] min-w-0">
-                <Users className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-                <select
-                  value={guestFilter}
-                  onChange={(e) => setGuestFilter(e.target.value)}
-                  className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer py-2 sm:py-0"
-                >
-                  <option value="">Any Guests</option>
-                  <option value="1">1 Guest</option>
-                  <option value="2">2 Guests</option>
-                  <option value="3">3 Guests</option>
-                  <option value="4">4+ Guests</option>
-                </select>
-              </div>
-
-              <div className="h-6 w-px bg-slate-200 hidden sm:block self-center"></div>
-
-              {/* Budget Filter */}
-              <div className="flex items-center px-3.5 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 min-h-[44px] min-w-0">
-                <SlidersHorizontal className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-                <select
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer py-2 sm:py-0"
-                >
-                  <option value="">Any Budget</option>
-                  <option value="1500">{formatPrice(1500)}</option>
-                  <option value="2500">{formatPrice(2500)}</option>
-                  <option value="4000">{formatPrice(4000)}</option>
-                </select>
-              </div>
-
-              {/* Submit CTA */}
-              <button
-                type="submit"
-                className="w-full sm:w-auto px-6 py-3 rounded-2xl sm:rounded-full bg-gradient-to-r from-[#D49B41] to-[#BF8832] hover:brightness-105 text-[#212529] font-black text-xs shadow-md shadow-[#D49B41]/30 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 min-h-[44px]"
+            {/* Floating Search Container */}
+            <div className="max-w-4xl mx-auto w-full min-w-0 px-1 sm:px-0">
+              <form
+                onSubmit={handleSearchSubmit}
+                className="bg-white/95 backdrop-blur-xl text-slate-800 rounded-3xl sm:rounded-full shadow-[0_20px_60px_rgba(0,0,0,0.35)] p-2 sm:p-2.5 flex flex-col sm:flex-row gap-2 items-stretch border border-white/60 w-full min-w-0"
               >
-                <span>Find Rooms</span>
-                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-              </button>
-            </form>
+                {/* Destination Search */}
+                <div className="flex-1 relative flex items-center px-3.5 py-1 sm:py-0 min-h-[44px] min-w-0">
+                  <Search className="w-5 h-5 text-slate-400 shrink-0 mr-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Where to? Search city, inn, or landmark..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full min-w-0 py-2.5 text-xs sm:text-sm font-medium bg-transparent border-0 focus:ring-0 focus:outline-none placeholder-slate-400"
+                  />
+                </div>
 
-            {/* Streamlined Trending Destinations Helper Row */}
-            <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 pt-3 text-xs px-2 w-full min-w-0">
-              <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider flex items-center gap-1 mr-0.5">
-                <Globe className="w-3 h-3 text-[#D49B41]" /> Trending:
-              </span>
-              {[
-                { label: 'All', value: '' },
-                { label: 'Boracay', value: 'Boracay' },
-                { label: 'Siargao', value: 'Siargao' },
-                { label: 'Baguio', value: 'Baguio' },
-                { label: 'Cebu', value: 'Cebu' },
-                { label: 'Malaybalay', value: 'Malaybalay' },
-                { label: 'Tokyo', value: 'Tokyo' },
-              ].map((dest) => (
+                <div className="h-6 w-px bg-slate-200 hidden sm:block self-center"></div>
+
+                {/* Guests Filter */}
+                <div className="flex items-center px-3.5 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 min-h-[44px] min-w-0">
+                  <Users className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                  <select
+                    value={guestFilter}
+                    onChange={(e) => setGuestFilter(e.target.value)}
+                    className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer py-2 sm:py-0"
+                  >
+                    <option value="">Any Guests</option>
+                    <option value="1">1 Guest</option>
+                    <option value="2">2 Guests</option>
+                    <option value="3">3 Guests</option>
+                    <option value="4">4+ Guests</option>
+                  </select>
+                </div>
+
+                <div className="h-6 w-px bg-slate-200 hidden sm:block self-center"></div>
+
+                {/* Budget Filter */}
+                <div className="flex items-center px-3.5 sm:w-36 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 min-h-[44px] min-w-0">
+                  <SlidersHorizontal className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+                  <select
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="w-full text-xs font-semibold text-slate-700 bg-transparent border-0 focus:ring-0 outline-none cursor-pointer py-2 sm:py-0"
+                  >
+                    <option value="">Any Budget</option>
+                    <option value="1500">{formatPrice(1500)}</option>
+                    <option value="2500">{formatPrice(2500)}</option>
+                    <option value="4000">{formatPrice(4000)}</option>
+                  </select>
+                </div>
+
+                {/* Submit CTA */}
                 <button
-                  key={dest.value}
-                  type="button"
-                  onClick={() => {
-                    setSelectedDestination(dest.value);
-                    setSearchQuery(dest.value);
-                  }}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all backdrop-blur-sm active:scale-95 ${
-                    selectedDestination === dest.value
+                  type="submit"
+                  className="w-full sm:w-auto px-6 py-3 rounded-2xl sm:rounded-full bg-gradient-to-r from-[#D49B41] to-[#BF8832] hover:brightness-105 text-[#212529] font-black text-xs shadow-md shadow-[#D49B41]/30 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 min-h-[44px]"
+                >
+                  <span>Find Rooms</span>
+                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </form>
+
+              {/* Streamlined Trending Destinations Helper Row */}
+              <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 pt-3 text-xs px-2 w-full min-w-0">
+                <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider flex items-center gap-1 mr-0.5">
+                  <Globe className="w-3 h-3 text-[#D49B41]" /> Trending:
+                </span>
+                {[
+                  { label: 'All', value: '' },
+                  { label: 'Boracay', value: 'Boracay' },
+                  { label: 'Siargao', value: 'Siargao' },
+                  { label: 'Baguio', value: 'Baguio' },
+                  { label: 'Cebu', value: 'Cebu' },
+                  { label: 'Malaybalay', value: 'Malaybalay' },
+                  { label: 'Tokyo', value: 'Tokyo' },
+                ].map((dest) => (
+                  <button
+                    key={dest.value}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDestination(dest.value);
+                      setSearchQuery(dest.value);
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all backdrop-blur-sm active:scale-95 ${selectedDestination === dest.value
                       ? 'bg-[#D49B41] text-[#212529] font-bold shadow-sm'
                       : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/15'
-                  }`}
-                >
-                  {dest.label}
-                </button>
-              ))}
+                      }`}
+                  >
+                    {dest.label}
+                  </button>
+                ))}
 
-              <button
-                type="button"
-                onClick={handleNearMe}
-                disabled={locating}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/80 hover:bg-emerald-500 text-white text-[11px] font-bold border border-emerald-400/40 shadow-xs transition-all active:scale-95"
-                title="Search lodgings closest to your location"
-              >
-                <Navigation className={`w-3 h-3 ${locating ? 'animate-spin' : ''}`} />
-                <span>{locating ? 'Locating...' : 'Near Me'}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleNearMe}
+                  disabled={locating}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-600/80 hover:bg-emerald-500 text-white text-[11px] font-bold border border-emerald-400/40 shadow-xs transition-all active:scale-95"
+                  title="Search lodgings closest to your location"
+                >
+                  <Navigation className={`w-3 h-3 ${locating ? 'animate-spin' : ''}`} />
+                  <span>{locating ? 'Locating...' : 'Near Me'}</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
       )}
 
       {/* Main Content Area */}
       <main
         id="listings-section"
-        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full min-w-0 ${
-          viewMode === 'map' ? 'pt-[calc(env(safe-area-inset-top,0px)+5.5rem)] sm:pt-24' : '-mt-8 sm:-mt-12'
-        }`}
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full min-w-0 ${viewMode === 'map' ? 'pt-[calc(env(safe-area-inset-top,0px)+5.5rem)] sm:pt-24' : '-mt-8 sm:-mt-12'
+          }`}
       >
         {/* Value Trust Ribbon - Only visible in List/Grid view */}
         {viewMode !== 'map' && (
@@ -505,11 +502,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-[#1E3A2B] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-[#1E3A2B]'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${viewMode === 'grid'
+                  ? 'bg-[#1E3A2B] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+                  }`}
                 title="Cards Grid View"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -519,11 +515,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               <button
                 type="button"
                 onClick={() => setViewMode('map')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  viewMode === 'map'
-                    ? 'bg-[#1E3A2B] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-[#1E3A2B]'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${viewMode === 'map'
+                  ? 'bg-[#1E3A2B] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+                  }`}
                 title="Full Map View"
               >
                 <MapIcon className="w-3.5 h-3.5" />
@@ -533,11 +528,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
               <button
                 type="button"
                 onClick={() => setViewMode('split')}
-                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  viewMode === 'split'
-                    ? 'bg-[#1E3A2B] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-[#1E3A2B]'
-                }`}
+                className={`hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${viewMode === 'split'
+                  ? 'bg-[#1E3A2B] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-[#1E3A2B]'
+                  }`}
                 title="Split List & Map View"
               >
                 <Columns2 className="w-3.5 h-3.5" />
@@ -644,11 +638,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                     onClick={() => onSelectHotel(hotel.slug)}
                     onMouseEnter={() => setHoveredHotelId(hotel.id)}
                     onMouseLeave={() => setHoveredHotelId(null)}
-                    className={`group bg-white rounded-3xl border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col sm:flex-row ${
-                      isNearest
-                        ? 'border-[#D49B41] ring-2 ring-[#D49B41]/20'
-                        : 'border-[#E8E2D8] hover:border-[#1E3A2B]'
-                    }`}
+                    className={`group bg-white rounded-3xl border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col sm:flex-row ${isNearest
+                      ? 'border-[#D49B41] ring-2 ring-[#D49B41]/20'
+                      : 'border-[#E8E2D8] hover:border-[#1E3A2B]'
+                      }`}
                   >
                     <div className="relative w-full sm:w-48 h-44 sm:h-auto overflow-hidden bg-[#212529] shrink-0">
                       <img
@@ -755,11 +748,10 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                 <article
                   key={hotel.id}
                   onClick={() => onSelectHotel(hotel.slug)}
-                  className={`group bg-white rounded-2xl sm:rounded-3xl border overflow-hidden shadow-xs hover:shadow-xl card-hover-lift cursor-pointer flex flex-col transition-all duration-300 active:scale-[0.98] ${
-                    isNearest
-                      ? 'border-[#D49B41] ring-2 ring-[#D49B41]/25'
-                      : 'border-[#E8E2D8] hover:border-[#3B5E43]'
-                  }`}
+                  className={`group bg-white rounded-2xl sm:rounded-3xl border overflow-hidden shadow-xs hover:shadow-xl card-hover-lift cursor-pointer flex flex-col transition-all duration-300 active:scale-[0.98] ${isNearest
+                    ? 'border-[#D49B41] ring-2 ring-[#D49B41]/25'
+                    : 'border-[#E8E2D8] hover:border-[#3B5E43]'
+                    }`}
                 >
                   {/* Image Banner */}
                   <div className="relative h-36 sm:h-64 overflow-hidden bg-[#212529] shrink-0">
