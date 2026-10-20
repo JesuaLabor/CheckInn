@@ -640,6 +640,52 @@ class HotelManageStaffView(APIView):
 class HotelManageStaffDetailView(APIView):
     permission_classes = [IsHotelOwnerOrAdmin]
 
+    def patch(self, request, pk):
+        hotel = request.user.hotel
+        try:
+            staff_user = User.objects.get(pk=pk, hotel=hotel)
+        except User.DoesNotExist:
+            return Response({'error': 'Staff member not found under your hotel.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if staff_user == request.user:
+            return Response({'error': 'You cannot modify your own administrator account status.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        is_active = request.data.get('is_active')
+        if is_active is not None:
+            staff_user.is_active = bool(is_active)
+            staff_user.save()
+
+            action = 'staff_reactivated' if staff_user.is_active else 'staff_deactivated'
+            status_text = 'reactivated' if staff_user.is_active else 'deactivated'
+            full_name = f"{staff_user.first_name} {staff_user.last_name}".strip() or staff_user.username
+            summary = (
+                f"Reactivated staff account \"{staff_user.username}\" ({full_name})"
+                if staff_user.is_active
+                else f"Deactivated staff account \"{staff_user.username}\" ({full_name})"
+            )
+
+            log_hotel_activity(
+                hotel=hotel,
+                actor=request.user,
+                request=request,
+                category='staff',
+                action=action,
+                severity='info' if staff_user.is_active else 'warning',
+                summary=summary,
+                details={'username': staff_user.username, 'role': staff_user.role, 'is_active': staff_user.is_active}
+            )
+
+            return Response({
+                'message': f'Staff member "{full_name}" {status_text} successfully.',
+                'staff': {
+                    'id': staff_user.id,
+                    'username': staff_user.username,
+                    'is_active': staff_user.is_active,
+                }
+            })
+
+        return Response({'error': 'No valid update fields provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
     def delete(self, request, pk):
         hotel = request.user.hotel
         try:
@@ -654,6 +700,7 @@ class HotelManageStaffDetailView(APIView):
         staff_user.is_active = False
         staff_user.save()
 
+        full_name = f"{staff_user.first_name} {staff_user.last_name}".strip() or staff_user.username
         log_hotel_activity(
             hotel=hotel,
             actor=request.user,
@@ -661,11 +708,11 @@ class HotelManageStaffDetailView(APIView):
             category='staff',
             action='staff_deactivated',
             severity='warning',
-            summary=f"Deactivated staff account \"{staff_user.username}\"",
-            details={'username': staff_user.username, 'role': staff_user.role}
+            summary=f"Deactivated staff account \"{staff_user.username}\" ({full_name})",
+            details={'username': staff_user.username, 'role': staff_user.role, 'is_active': False}
         )
 
-        return Response({'message': f'Staff member "{staff_user.username}" deactivated.'})
+        return Response({'message': f'Staff member "{full_name}" deactivated.'})
 
 
 class HotelManageRoomTypeView(APIView):

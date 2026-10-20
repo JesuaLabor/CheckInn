@@ -45,6 +45,10 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
+  UserCheck,
+  UserX,
+  RotateCcw,
+  Lock,
 } from 'lucide-react';
 import {
   Booking,
@@ -124,6 +128,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   // Hotel Owner SaaS state
   const [hotelProfile, setHotelProfile] = useState<Hotel | null>(null);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [staffFilter, setStaffFilter] = useState<'all' | 'active' | 'suspended'>('all');
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
 
   // Owner Modals
@@ -453,7 +458,11 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
-  const handleDeleteStaff = async (staffId: number | string, staffName?: string) => {
+  const handleToggleStaffStatus = async (
+    staffId: number | string,
+    currentActive: boolean,
+    staffName?: string
+  ) => {
     const targetMember = staffList.find((s) => s.id === staffId);
     const displayName =
       staffName ||
@@ -463,23 +472,49 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
           : targetMember.username
         : 'this staff account');
 
-    const confirmed = await confirmModal({
-      title: 'Deactivate Staff Account',
-      message: `Are you sure you want to deactivate ${displayName}? They will immediately lose access to front desk check-in, walk-in registration, and hotel operations.`,
-      confirmText: 'Deactivate Staff',
-      cancelText: 'Keep Account',
-      variant: 'danger',
-      icon: 'user-x',
-    });
-    if (!confirmed) return;
+    if (currentActive) {
+      // Suspend flow
+      const confirmed = await confirmModal({
+        title: 'Suspend Staff Account',
+        message: `Are you sure you want to suspend access for ${displayName}? They will immediately be blocked from logging into the front desk system and processing bookings.`,
+        confirmText: 'Suspend Account',
+        cancelText: 'Keep Active',
+        variant: 'danger',
+        icon: 'user-x',
+      });
+      if (!confirmed) return;
 
-    try {
-      await api.delete(`/hotel-manage/staff/${staffId}/`);
-      toast.success(`Staff account "${displayName}" deactivated.`, 'Account Deactivated');
-      fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to remove staff member.', 'Deactivation Failed');
+      try {
+        await api.patch(`/hotel-manage/staff/${staffId}/`, { is_active: false });
+        toast.success(`Staff account "${displayName}" has been suspended.`, 'Account Suspended');
+        fetchDashboardData();
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Failed to suspend staff member.', 'Action Failed');
+      }
+    } else {
+      // Reactivate flow
+      const confirmed = await confirmModal({
+        title: 'Reactivate Staff Account',
+        message: `Restore front desk and operations access for ${displayName}? They will immediately be able to log in with their credentials again.`,
+        confirmText: 'Reactivate Account',
+        cancelText: 'Keep Suspended',
+        variant: 'primary',
+        icon: 'check',
+      });
+      if (!confirmed) return;
+
+      try {
+        await api.patch(`/hotel-manage/staff/${staffId}/`, { is_active: true });
+        toast.success(`Staff account "${displayName}" has been reactivated!`, 'Account Reactivated');
+        fetchDashboardData();
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Failed to reactivate staff member.', 'Action Failed');
+      }
     }
+  };
+
+  const handleDeleteStaff = async (staffId: number | string, staffName?: string) => {
+    handleToggleStaffStatus(staffId, true, staffName);
   };
 
   const handleAddRoomType = async (e: React.FormEvent) => {
@@ -1784,66 +1819,224 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             </button>
           </div>
 
+          {/* Filter Pills & Roster Counters */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setStaffFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none ${
+                staffFilter === 'all'
+                  ? 'bg-[#1E3A2B] text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-[#FAF8F5]'
+              }`}
+            >
+              <span>All Team</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  staffFilter === 'all'
+                    ? 'bg-white/20 text-white font-black'
+                    : 'bg-slate-100 text-slate-600 font-extrabold'
+                }`}
+              >
+                {staffList.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStaffFilter('active')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none ${
+                staffFilter === 'active'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-[#FAF8F5]'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>Active</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  staffFilter === 'active'
+                    ? 'bg-white/20 text-white font-black'
+                    : 'bg-emerald-50 text-emerald-700 font-extrabold'
+                }`}
+              >
+                {staffList.filter((s) => s.is_active).length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStaffFilter('suspended')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none ${
+                staffFilter === 'suspended'
+                  ? 'bg-rose-700 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-[#FAF8F5]'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+              <span>Suspended</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  staffFilter === 'suspended'
+                    ? 'bg-white/20 text-white font-black'
+                    : 'bg-rose-50 text-rose-700 font-extrabold'
+                }`}
+              >
+                {staffList.filter((s) => !s.is_active).length}
+              </span>
+            </button>
+          </div>
+
           <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-2xs">
             {staffList.length === 0 ? (
               <div className="p-12 text-center text-slate-400 text-xs">
                 <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <span>No additional staff accounts created yet.</span>
+                <span>No staff accounts registered yet for this hotel.</span>
+              </div>
+            ) : staffList.filter((s) => {
+                if (staffFilter === 'active') return s.is_active;
+                if (staffFilter === 'suspended') return !s.is_active;
+                return true;
+              }).length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <span>No staff accounts found in this filter category.</span>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {staffList.map((member) => (
-                  <div
-                    key={member.id}
-                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-[#FAF8F5] transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-[#1E3A2B]/10 border border-[#1E3A2B]/20 flex items-center justify-center font-bold text-[#1E3A2B] text-xs">
-                        {member.first_name ? member.first_name[0] : member.username[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-[#212529]">{member.full_name}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF8F5] text-slate-600 border border-slate-200 uppercase">
-                            {member.role}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                          <span>@{member.username}</span>
-                          {member.phone_number && (
-                            <>
-                              <span>•</span>
-                              <span>{member.phone_number}</span>
-                            </>
-                          )}
-                          {member.email && (
-                            <>
-                              <span>•</span>
-                              <span>{member.email}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {member.id !== user?.id && member.role === 'staff' && (
-                      <button
-                        onClick={() =>
-                          handleDeleteStaff(
-                            member.id,
-                            member.first_name
-                              ? `${member.first_name} ${member.last_name || ''}`.trim()
-                              : member.username
-                          )
-                        }
-                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Deactivate staff member"
+                {staffList
+                  .filter((s) => {
+                    if (staffFilter === 'active') return s.is_active;
+                    if (staffFilter === 'suspended') return !s.is_active;
+                    return true;
+                  })
+                  .map((member) => {
+                    const isActive = member.is_active;
+                    return (
+                      <div
+                        key={member.id}
+                        className={`p-4 sm:p-5 flex items-center justify-between gap-4 transition-colors ${
+                          isActive ? 'hover:bg-[#FAF8F5]' : 'bg-slate-50/60 hover:bg-slate-50'
+                        }`}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Monogram Avatar with Status Dot */}
+                          <div
+                            className={`w-10 h-10 rounded-2xl border flex items-center justify-center font-bold text-xs shrink-0 relative ${
+                              isActive
+                                ? 'bg-[#1E3A2B]/10 border-[#1E3A2B]/20 text-[#1E3A2B]'
+                                : 'bg-slate-100 border-slate-200 text-slate-400'
+                            }`}
+                          >
+                            {member.first_name ? member.first_name[0] : member.username[0].toUpperCase()}
+                            {!isActive && (
+                              <span
+                                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-rose-500 border-2 border-white flex items-center justify-center text-white shadow-2xs"
+                                title="Account suspended"
+                              >
+                                <Lock className="w-2.5 h-2.5" />
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`text-xs font-black truncate ${
+                                  isActive ? 'text-[#212529]' : 'text-slate-600'
+                                }`}
+                              >
+                                {member.full_name}
+                              </span>
+
+                              {/* Role Badge */}
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF8F5] text-slate-600 border border-slate-200 uppercase">
+                                {member.role}
+                              </span>
+
+                              {/* Semantic Status Badge */}
+                              {isActive ? (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200/80 shadow-2xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                  Suspended
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
+                              <span>@{member.username}</span>
+                              {member.phone_number && (
+                                <>
+                                  <span>•</span>
+                                  <span>{member.phone_number}</span>
+                                </>
+                              )}
+                              {member.email && (
+                                <>
+                                  <span>•</span>
+                                  <span>{member.email}</span>
+                                </>
+                              )}
+                            </div>
+
+                            {!isActive && (
+                              <div className="text-[11px] font-semibold text-rose-600/90 mt-1 flex items-center gap-1">
+                                <span>Access revoked · Blocked from login and front desk operations</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Contextual Action Button (Suspend vs Reactivate) */}
+                        {member.id !== user?.id && member.role === 'staff' && (
+                          <div className="shrink-0">
+                            {isActive ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleToggleStaffStatus(
+                                    member.id,
+                                    true,
+                                    member.first_name
+                                      ? `${member.first_name} ${member.last_name || ''}`.trim()
+                                      : member.username
+                                  )
+                                }
+                                className="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                title="Suspend staff account"
+                              >
+                                <UserX className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Suspend</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleToggleStaffStatus(
+                                    member.id,
+                                    false,
+                                    member.first_name
+                                      ? `${member.first_name} ${member.last_name || ''}`.trim()
+                                      : member.username
+                                  )
+                                }
+                                className="px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                title="Reactivate staff account"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Reactivate</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
