@@ -6,6 +6,7 @@ from rest_framework import serializers
 from hotels.models import Hotel, RoomType, Room
 from hotels.serializers import ReviewSerializer
 from .models import Booking, GuestRequest, Payment
+from .permissions import get_user_hotel
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -382,7 +383,7 @@ class WalkInCreateSerializer(serializers.ModelSerializer):
             if check_in >= check_out:
                 raise serializers.ValidationError({'check_out': 'Check-out date must be after check-in date.'})
 
-        staff_hotel = self.context['request'].user.hotel
+        staff_hotel = get_user_hotel(self.context['request'].user)
         room_id = data.get('room_id')
 
         try:
@@ -400,6 +401,7 @@ class WalkInCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         room = self.context['room']
         staff = self.context['request'].user
+        hotel = get_user_hotel(staff)
         payment_method = validated_data.pop('payment_method', 'cash')
         payment_status = validated_data.pop('payment_status', 'paid')
         validated_data.pop('room_id')
@@ -440,7 +442,7 @@ class WalkInCreateSerializer(serializers.ModelSerializer):
             total_amount = room.room_type.base_rate * nights
 
         booking = Booking.objects.create(
-            hotel=staff.hotel,
+            hotel=hotel,
             room_type=room.room_type,
             room=room,
             guest=None,

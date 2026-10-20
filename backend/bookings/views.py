@@ -11,7 +11,7 @@ from hotels.models import Room, Review, recalculate_hotel_rating
 from hotels.audit import log_hotel_activity
 from hotels.serializers import ReviewSerializer
 from .models import Booking, GuestRequest, Payment
-from .permissions import IsHotelStaff, IsHotelAdmin
+from .permissions import IsHotelStaff, IsHotelAdmin, get_user_hotel
 from .serializers import (
     BookingSerializer,
     BookingCreateSerializer,
@@ -64,7 +64,7 @@ class BookingDetailView(generics.RetrieveAPIView):
             return obj
         if obj.guest == user:
             return obj
-        if user.is_hotel_staff and obj.hotel == user.hotel:
+        if user.is_hotel_staff and obj.hotel == get_user_hotel(user):
             return obj
         self.permission_denied(self.request, message='You do not have permission to view this booking.')
 
@@ -73,7 +73,9 @@ class StaffPendingRequestsView(APIView):
     permission_classes = [IsHotelStaff]
 
     def get(self, request):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
+        if not hotel:
+            return Response({'detail': 'No hotel assigned.'}, status=status.HTTP_403_FORBIDDEN)
 
         pending_bookings = Booking.objects.filter(
             hotel=hotel,
@@ -94,7 +96,9 @@ class StaffAllBookingsView(generics.ListAPIView):
     permission_classes = [IsHotelStaff]
 
     def get_queryset(self):
-        hotel = self.request.user.hotel
+        hotel = get_user_hotel(self.request.user)
+        if not hotel:
+            return Booking.objects.none()
         queryset = Booking.objects.filter(hotel=hotel).select_related('room_type', 'room', 'guest', 'payment')
 
         status_param = self.request.query_params.get('status')
@@ -112,7 +116,9 @@ class StaffApproveRequestView(APIView):
     permission_classes = [IsHotelStaff]
 
     def post(self, request, pk):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
+        if not hotel:
+            return Response({'detail': 'No hotel assigned.'}, status=status.HTTP_403_FORBIDDEN)
         now = timezone.now()
 
         with transaction.atomic():
@@ -222,7 +228,9 @@ class StaffRejectRequestView(APIView):
     permission_classes = [IsHotelStaff]
 
     def post(self, request, pk):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
+        if not hotel:
+            return Response({'detail': 'No hotel assigned.'}, status=status.HTTP_403_FORBIDDEN)
         try:
             booking = Booking.objects.get(id=pk, hotel=hotel)
         except Booking.DoesNotExist:
@@ -309,7 +317,9 @@ class CheckInBookingView(APIView):
     permission_classes = [IsHotelStaff]
 
     def post(self, request, pk):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
+        if not hotel:
+            return Response({'detail': 'No hotel associated with this staff or owner account.'}, status=status.HTTP_403_FORBIDDEN)
         try:
             booking = Booking.objects.get(id=pk, hotel=hotel)
         except Booking.DoesNotExist:
@@ -378,7 +388,9 @@ class CheckOutBookingView(APIView):
     permission_classes = [IsHotelStaff]
 
     def post(self, request, pk):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
+        if not hotel:
+            return Response({'detail': 'No hotel assigned.'}, status=status.HTTP_403_FORBIDDEN)
         try:
             booking = Booking.objects.get(id=pk, hotel=hotel)
         except Booking.DoesNotExist:
@@ -479,7 +491,8 @@ class GuestCancelBookingView(APIView):
             return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         is_owner = (booking.guest == request.user)
-        is_staff = hasattr(request.user, 'hotel') and (request.user.hotel == booking.hotel)
+        user_hotel = get_user_hotel(request.user)
+        is_staff = user_hotel is not None and user_hotel == booking.hotel
         if not (is_owner or is_staff or request.user.is_superuser):
             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -531,7 +544,9 @@ class StaffNoShowBookingView(APIView):
     permission_classes = [IsHotelStaff]
 
     def post(self, request, pk):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
+        if not hotel:
+            return Response({'detail': 'No hotel assigned.'}, status=status.HTTP_403_FORBIDDEN)
         try:
             booking = Booking.objects.get(id=pk, hotel=hotel)
         except Booking.DoesNotExist:
@@ -586,7 +601,9 @@ class StaffRoomStatusBoardView(APIView):
     permission_classes = [IsHotelStaff]
 
     def get(self, request):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
+        if not hotel:
+            return Response({'detail': 'No hotel assigned.'}, status=status.HTTP_403_FORBIDDEN)
         rooms = Room.objects.filter(hotel=hotel, is_active=True).select_related('room_type').order_by('room_number')
 
         today = date.today()
@@ -688,7 +705,7 @@ class StaffRoomStatusBoardView(APIView):
 
     def patch(self, request):
         """Allow staff to update room status (e.g. from cleaning to available)"""
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
         room_id = request.data.get('room_id')
         new_status = request.data.get('status')
 
@@ -726,7 +743,7 @@ class StaffExtendStayView(APIView):
     permission_classes = [IsHotelStaff]
 
     def post(self, request, pk):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
         booking = get_object_or_404(Booking, pk=pk, hotel=hotel)
 
         if booking.status != 'checked_in':
@@ -806,7 +823,7 @@ class ServiceRequestListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.is_hotel_staff:
-            return GuestRequest.objects.filter(booking__hotel=user.hotel)
+            return GuestRequest.objects.filter(booking__hotel=get_user_hotel(user))
         return GuestRequest.objects.filter(booking__guest=user)
 
     def create(self, request, *args, **kwargs):
@@ -829,7 +846,7 @@ class ServiceRequestUpdateView(APIView):
     permission_classes = [IsHotelStaff]
 
     def patch(self, request, pk):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
         try:
             req_obj = GuestRequest.objects.get(id=pk, booking__hotel=hotel)
         except GuestRequest.DoesNotExist:
@@ -849,7 +866,7 @@ class AdminOccupancyReportView(APIView):
     permission_classes = [IsHotelStaff]
 
     def get(self, request):
-        hotel = request.user.hotel
+        hotel = get_user_hotel(request.user)
         total_rooms = Room.objects.filter(hotel=hotel, is_active=True).count()
         occupied_rooms = Room.objects.filter(hotel=hotel, is_active=True, status='occupied').count()
 

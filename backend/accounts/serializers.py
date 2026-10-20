@@ -59,10 +59,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['role'] = user.role
         token['email'] = user.email
         try:
-            if user.hotel:
-                token['hotel_id'] = str(user.hotel.id)
-                token['hotel_name'] = str(user.hotel.name)
-                token['hotel_slug'] = str(user.hotel.slug)
+            hotel = getattr(user, 'effective_hotel', None) or getattr(user, 'hotel', None)
+            if hotel:
+                token['hotel_id'] = str(hotel.id)
+                token['hotel_name'] = str(hotel.name)
+                token['hotel_slug'] = str(hotel.slug)
         except Exception:
             pass
         return token

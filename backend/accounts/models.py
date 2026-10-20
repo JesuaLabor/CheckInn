@@ -22,12 +22,20 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=30, blank=True, default='')
 
     @property
+    def effective_hotel(self):
+        if self.hotel:
+            return self.hotel
+        if hasattr(self, 'owned_hotels'):
+            return self.owned_hotels.first()
+        return None
+
+    @property
     def is_hotel_staff(self):
-        return self.role in ('staff', 'admin') and self.hotel is not None
+        return self.role in ('staff', 'admin') and self.effective_hotel is not None
 
     @property
     def is_hotel_admin(self):
-        return self.role == 'admin' and self.hotel is not None
+        return self.role == 'admin' and self.effective_hotel is not None
 
     def __str__(self):
         hotel_str = f" @ {self.hotel.name}" if self.hotel else ""

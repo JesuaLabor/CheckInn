@@ -1010,7 +1010,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       }
 
       const res = await api.post(`/bookings/${match.id}/checkin/`, {
-        qr_token: match.qr_token,
+        qr_token: rawCode || match.qr_token || match.booking_reference,
       });
 
       setActionSuccess(res.data.message || `Guest ${match.guest_name} checked in successfully!`);
@@ -1581,7 +1581,20 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setQrInput('CHK-DEMO-CONFIRMED')}
+                  onClick={async () => {
+                    try {
+                      const res = await api.get('/staff/bookings/');
+                      const bookings: Booking[] = res.data.results || res.data || [];
+                      const confirmed = bookings.find((b) => b.status === 'confirmed');
+                      if (confirmed) {
+                        setQrInput(confirmed.booking_reference);
+                      } else {
+                        setQrInput('CHK-DEMO-CONFIRMED');
+                      }
+                    } catch {
+                      setQrInput('CHK-DEMO-CONFIRMED');
+                    }
+                  }}
                   className="px-3.5 py-3 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl active:scale-95 transition-all"
                   title="Insert sample confirmed reference code"
                 >

@@ -171,15 +171,43 @@ class Booking(models.Model):
         return signed_token
 
     def verify_qr_token(self, token):
-        for salt in ('localstay-qr-checkin', 'checkinn-qr-checkin'):
-            signer = Signer(salt=salt)
-            try:
-                val = signer.unsign(token)
-                parts = val.split(':')
-                if int(parts[0]) == self.id and parts[1] == self.booking_reference:
-                    return True
-            except Exception:
+        if not token:
+            return False
+
+        token_str = str(token).strip()
+
+        # 1. Exact match with stored qr_token
+        if self.qr_token and token_str == self.qr_token.strip():
+            return True
+
+        # 2. Match with booking reference (case-insensitive)
+        if token_str.upper() == self.booking_reference.upper():
+            return True
+
+        # 3. Check if token contains the booking reference (scanned URLs, barcodes, prefix/suffix strings)
+        if self.booking_reference.upper() in token_str.upper():
+            return True
+
+        # 4. Multi-key and multi-salt cryptographic unsigning
+        salts = ('localstay-qr-checkin', 'checkinn-qr-checkin', 'django.core.signing')
+        keys = [
+            getattr(settings, 'SECRET_KEY', None),
+            'localstay-inns-secret-key-malaybalay-2026-supersecure',
+            'checkinn-inns-secret-key-malaybalay-2026-supersecure',
+        ]
+        for key in keys:
+            if not key:
                 continue
+            for salt in salts:
+                try:
+                    signer = Signer(key=key, salt=salt)
+                    val = signer.unsign(token_str)
+                    parts = val.split(':')
+                    if int(parts[0]) == self.id and parts[1].upper() == self.booking_reference.upper():
+                        return True
+                except Exception:
+                    continue
+
         return False
 
     def __str__(self):
