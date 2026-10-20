@@ -131,15 +131,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         error_callback: (err: any) => {
           console.warn('Google OAuth popup error:', err);
           setGoogleLoading(false);
-          toast.error('Google sign-in was closed or could not be completed.');
+          if (err?.type === 'popup_closed') {
+            toast.info('Google sign-in was cancelled.');
+            return;
+          }
+          toast.error(
+            err?.message || 'Google sign-in was blocked or closed. Please verify domain authorization in Google Cloud.'
+          );
         },
       });
 
       tokenClient.requestAccessToken({ prompt: 'select_account' });
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Google OAuth2 error:', err);
       setGoogleLoading(false);
-      toast.error('Could not initialize Google sign-in.');
+      toast.error(err?.message || 'Could not initialize Google sign-in.');
     }
   };
 
