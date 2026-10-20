@@ -85,6 +85,29 @@ export type StaffSubTab =
   | 'hotel_settings'
   | 'audit_trail';
 
+const PRESET_HOTEL_PHOTOS = [
+  {
+    label: 'Highland Pine',
+    url: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    label: 'Island Beach',
+    url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    label: 'Heritage Villa',
+    url: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    label: 'Urban Boutique',
+    url: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    label: 'Nature Eco-Lodge',
+    url: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80',
+  },
+];
+
 interface StaffDashboardProps {
   initialSubTab?: StaffSubTab;
   /** Changes on every navbar deep-link so the same shortcut can be re-applied */
@@ -245,7 +268,12 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   });
 
   const [profileSaving, setProfileSaving] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDraggingCover, setIsDraggingCover] = useState(false);
+  const [hasCustomCoverSelected, setHasCustomCoverSelected] = useState(false);
+
   const [profileForm, setProfileForm] = useState<{
+    image_url: string;
     tagline: string;
     description: string;
     contact_phone: string;
@@ -256,6 +284,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     latitude: number | null;
     longitude: number | null;
   }>({
+    image_url: '',
     tagline: '',
     description: '',
     contact_phone: '',
@@ -416,6 +445,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
         if (profileRes.status === 'fulfilled') {
           setHotelProfile(profileRes.value.data);
           setProfileForm({
+            image_url: profileRes.value.data.image_url || '',
             tagline: profileRes.value.data.tagline || '',
             description: profileRes.value.data.description || '',
             contact_phone: profileRes.value.data.contact_phone || '',
@@ -426,6 +456,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
             latitude: profileRes.value.data.latitude !== null && profileRes.value.data.latitude !== undefined ? Number(profileRes.value.data.latitude) : null,
             longitude: profileRes.value.data.longitude !== null && profileRes.value.data.longitude !== undefined ? Number(profileRes.value.data.longitude) : null,
           });
+          setHasCustomCoverSelected(false);
         }
         if (staffRes.status === 'fulfilled') {
           setStaffList(staffRes.value.data || []);
@@ -797,16 +828,56 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
+  const processCoverPhotoFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (PNG, JPG, JPEG, WEBP, AVIF).', 'Invalid File Type');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('Image size must be less than 15MB.', 'File Too Large');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfileForm((prev) => ({ ...prev, image_url: reader.result as string }));
+      setHasCustomCoverSelected(true);
+      toast.info('New photo selected! Click "Save Settings" below to publish to Cloudinary.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processCoverPhotoFile(file);
+    }
+  };
+
+  const handleResetCoverPhoto = () => {
+    setProfileForm((prev) => ({
+      ...prev,
+      image_url: hotelProfile?.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
+    }));
+    setHasCustomCoverSelected(false);
+    if (coverFileInputRef.current) {
+      coverFileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveHotelProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileSaving(true);
     setActionError('');
     try {
       await api.patch('/hotel-manage/profile/', profileForm);
-      setActionSuccess('Property profile and payout settings updated successfully!');
+      setActionSuccess('Property profile and cover photo updated successfully!');
+      toast.success('Property profile and cover photo updated successfully!');
+      setHasCustomCoverSelected(false);
       fetchDashboardData();
     } catch (err: any) {
-      setActionError(err.response?.data?.error || 'Failed to save settings.');
+      const msg = err.response?.data?.error || 'Failed to save settings.';
+      setActionError(msg);
+      toast.error(msg, 'Save Failed');
     } finally {
       setProfileSaving(false);
     }
@@ -2236,6 +2307,185 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
           <form onSubmit={handleSaveHotelProfile} className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-2xs space-y-5 max-w-3xl">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Property Cover Photo Showcase & Uploader */}
+              <div className="sm:col-span-2 space-y-3 pb-5 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-[#1E3A2B]" />
+                      <span>Property Cover & Facade Photo</span>
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Primary showcase image presented across LocalStay Marketplace, Map pins, and Booking views.
+                    </p>
+                  </div>
+                  {hasCustomCoverSelected ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold self-start sm:self-auto animate-pulse">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      New Photo Staged (Cloudinary Sync on Save)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold self-start sm:self-auto">
+                      Current Active Cover
+                    </span>
+                  )}
+                </div>
+
+                {/* Cover Photo Preview Canvas */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDraggingCover(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDraggingCover(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDraggingCover(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) processCoverPhotoFile(file);
+                  }}
+                  className={`relative w-full h-52 sm:h-64 rounded-2xl overflow-hidden bg-[#212529] border-2 transition-all ${
+                    isDraggingCover
+                      ? 'border-[#3B5E43] ring-4 ring-[#3B5E43]/20 scale-[1.01]'
+                      : 'border-[#E8E2D8] hover:border-[#1E3A2B]/40'
+                  }`}
+                >
+                  <img
+                    src={
+                      profileForm.image_url ||
+                      hotelProfile?.image_url ||
+                      'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+                    }
+                    alt={hotelProfile?.name || 'Property Cover'}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 pointer-events-none" />
+
+                  {/* Top overlay metadata */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-extrabold uppercase tracking-wider border border-white/20">
+                        {hotelProfile?.category || 'Boutique'}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/20">
+                        {hotelProfile?.city || 'Malaybalay City'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => coverFileInputRef.current?.click()}
+                      className="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white text-[#1E3A2B] text-xs font-black shadow-lg backdrop-blur-md active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-[#1E3A2B]" />
+                      <span>Change Photo</span>
+                    </button>
+                  </div>
+
+                  {/* Bottom Overlay Info & Quick Actions */}
+                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                    <div className="text-white drop-shadow-sm">
+                      <p className="text-sm sm:text-base font-black truncate max-w-md">
+                        {hotelProfile?.name || 'Your Hotel'}
+                      </p>
+                      <p className="text-[11px] text-slate-200/90 font-medium">
+                        Drag and drop high-resolution image here or click Change Photo
+                      </p>
+                    </div>
+
+                    {hasCustomCoverSelected && (
+                      <button
+                        type="button"
+                        onClick={handleResetCoverPhoto}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-200 text-[10px] font-bold border border-white/20 transition-all cursor-pointer"
+                        title="Revert to original photo"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Revert</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Hidden File Input */}
+                <input
+                  ref={coverFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverFileChange}
+                  className="hidden"
+                />
+
+                {/* Upload Controls & Presets Bar */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => coverFileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#FAF8F5] hover:bg-[#E8E2D8]/60 text-[#1E3A2B] text-xs font-bold border border-[#E8E2D8] transition-all cursor-pointer shadow-2xs active:scale-95"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5 text-[#1E3A2B]" />
+                        <span>Upload from Device</span>
+                      </button>
+
+                      <span className="text-[11px] text-slate-400 hidden sm:inline">
+                        Max 15MB (JPG, PNG, WEBP)
+                      </span>
+                    </div>
+
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Or select a curated preset:
+                    </span>
+                  </div>
+
+                  {/* Preset Photo Quick Picker */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                    {PRESET_HOTEL_PHOTOS.map((preset, idx) => {
+                      const isSelected = profileForm.image_url === preset.url;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setProfileForm((prev) => ({ ...prev, image_url: preset.url }));
+                            setHasCustomCoverSelected(true);
+                            toast.info(`Selected "${preset.label}" preset! Click Save Settings to apply.`);
+                          }}
+                          className={`group relative h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer text-left ${
+                            isSelected
+                              ? 'border-[#3B5E43] ring-2 ring-[#3B5E43]/30 scale-[1.02]'
+                              : 'border-slate-200 hover:border-slate-400 opacity-80 hover:opacity-100'
+                          }`}
+                        >
+                          <img
+                            src={preset.url}
+                            alt={preset.label}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-colors" />
+                          <span className="absolute bottom-1 left-1.5 right-1.5 text-[9px] font-extrabold text-white truncate drop-shadow-sm">
+                            {preset.label}
+                          </span>
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-[#3B5E43] text-white flex items-center justify-center shadow-xs">
+                              <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
               <div className="sm:col-span-2">
                 <label className="block text-xs font-bold text-slate-700 mb-1">Tagline</label>
                 <input
