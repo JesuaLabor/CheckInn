@@ -27,10 +27,14 @@ export const resolveImageUrl = (
 
   // Relative backend media path (e.g. /media/hotels/...)
   if (trimmed.startsWith('/')) {
-    const envUrl = import.meta.env.VITE_API_URL as string | undefined;
-    if (envUrl) {
+    const envUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+    if (envUrl && envUrl.startsWith('http')) {
       const origin = envUrl.replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '');
       return `${origin}${trimmed}`;
+    }
+    // Reliable fallback for Vercel deployment pointing to Render backend
+    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+      return `https://localstay-backend.onrender.com${trimmed}`;
     }
   }
 

@@ -20,6 +20,14 @@ services:
         sync: false
       - key: MONGODB_DATABASE
         value: "localstay_db"
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
 
 databases:
   - name: localstay-postgres

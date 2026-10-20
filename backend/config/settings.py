@@ -192,15 +192,34 @@ CELERY_TIMEZONE = 'Asia/Manila'
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 
 # Cloudinary Configuration
-CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '').strip().strip('"\'')
-CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '').strip().strip('"\'')
-CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '').strip().strip('"\'')
-CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '').strip().strip('"\'')
+CLOUDINARY_CLOUD_NAME = (
+    os.environ.get('CLOUDINARY_CLOUD_NAME')
+    or os.environ.get('CLOUD_NAME')
+    or os.environ.get('CLOUDINARY_NAME')
+    or ''
+).strip().strip('"\'')
+CLOUDINARY_API_KEY = (
+    os.environ.get('CLOUDINARY_API_KEY')
+    or os.environ.get('CLOUDINARY_KEY')
+    or os.environ.get('API_KEY')
+    or ''
+).strip().strip('"\'')
+CLOUDINARY_API_SECRET = (
+    os.environ.get('CLOUDINARY_API_SECRET')
+    or os.environ.get('CLOUDINARY_SECRET')
+    or os.environ.get('API_SECRET')
+    or ''
+).strip().strip('"\'')
+CLOUDINARY_URL = (
+    os.environ.get('CLOUDINARY_URL')
+    or ''
+).strip().strip('"\'')
 
 if (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET) or CLOUDINARY_URL:
     try:
         import cloudinary
         if CLOUDINARY_URL:
+            os.environ['CLOUDINARY_URL'] = CLOUDINARY_URL
             cloudinary.config(cloudinary_url=CLOUDINARY_URL, secure=True)
         else:
             cloudinary.config(

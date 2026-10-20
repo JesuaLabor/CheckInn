@@ -2,6 +2,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/media/:match*",
+      "destination": "https://localstay-backend.onrender.com/media/:match*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

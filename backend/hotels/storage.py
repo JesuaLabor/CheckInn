@@ -26,10 +26,28 @@ def upload_image_to_storage(image_input, folder="localstay/hotels", default=DEFA
         return image_input
 
     # 2. Check if Cloudinary credentials are configured
-    cloud_name = str(getattr(settings, 'CLOUDINARY_CLOUD_NAME', '') or os.environ.get('CLOUDINARY_CLOUD_NAME', '')).strip().strip('"\'')
-    api_key = str(getattr(settings, 'CLOUDINARY_API_KEY', '') or os.environ.get('CLOUDINARY_API_KEY', '')).strip().strip('"\'')
-    api_secret = str(getattr(settings, 'CLOUDINARY_API_SECRET', '') or os.environ.get('CLOUDINARY_API_SECRET', '')).strip().strip('"\'')
-    cloudinary_url = str(getattr(settings, 'CLOUDINARY_URL', '') or os.environ.get('CLOUDINARY_URL', '')).strip().strip('"\'')
+    cloud_name = str(
+        getattr(settings, 'CLOUDINARY_CLOUD_NAME', '')
+        or os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+        or os.environ.get('CLOUD_NAME', '')
+        or os.environ.get('CLOUDINARY_NAME', '')
+    ).strip().strip('"\'')
+    api_key = str(
+        getattr(settings, 'CLOUDINARY_API_KEY', '')
+        or os.environ.get('CLOUDINARY_API_KEY', '')
+        or os.environ.get('CLOUDINARY_KEY', '')
+        or os.environ.get('API_KEY', '')
+    ).strip().strip('"\'')
+    api_secret = str(
+        getattr(settings, 'CLOUDINARY_API_SECRET', '')
+        or os.environ.get('CLOUDINARY_API_SECRET', '')
+        or os.environ.get('CLOUDINARY_SECRET', '')
+        or os.environ.get('API_SECRET', '')
+    ).strip().strip('"\'')
+    cloudinary_url = str(
+        getattr(settings, 'CLOUDINARY_URL', '')
+        or os.environ.get('CLOUDINARY_URL', '')
+    ).strip().strip('"\'')
 
     has_cloudinary = bool((cloud_name and api_key and api_secret) or cloudinary_url)
 
@@ -39,6 +57,7 @@ def upload_image_to_storage(image_input, folder="localstay/hotels", default=DEFA
             import cloudinary.uploader
 
             if cloudinary_url:
+                os.environ['CLOUDINARY_URL'] = cloudinary_url
                 cloudinary.config(cloudinary_url=cloudinary_url, secure=True)
             else:
                 cloudinary.config(
