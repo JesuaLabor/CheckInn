@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toastStore';
 import { api } from '../api/client';
+import localstayIcon from '../assets/logo_icon.png';
 import {
   X,
   Lock,
@@ -150,8 +151,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         {/* Header - Fixed & Pinned */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#E8E2D8]/70 shrink-0 bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#1E3A2B] to-[#3B5E43] flex items-center justify-center shadow-md shadow-[#1E3A2B]/20 text-[#D49B41]">
-              <Compass className="w-5 h-5" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden shadow-sm border border-[#E8E2D8] bg-[#FAF8F5] flex items-center justify-center shrink-0 group">
+              <img
+                src={localstayIcon}
+                alt="LocalStay"
+                className="w-full h-full object-cover transition-transform group-hover:scale-105"
+              />
             </div>
             <div>
               <h2 className="text-lg font-black text-[#212529] tracking-tight leading-tight">
