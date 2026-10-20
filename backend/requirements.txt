@@ -16,3 +16,4 @@ django-mongodb-backend>=6.1.0
 pymongo>=4.7.0
 dnspython>=2.6.0
 certifi>=2024.2.2
+cloudinary>=1.40.0

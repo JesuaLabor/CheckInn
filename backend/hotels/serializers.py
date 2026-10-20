@@ -1,6 +1,23 @@
 from rest_framework import serializers
 from .models import Hotel, RoomType, Room, HotelAuditLog, Review
 
+DEFAULT_HOTEL_IMAGE = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+DEFAULT_ROOM_IMAGE = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80'
+
+CATEGORY_PRESETS = {
+    'beach': 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+    'mountain': 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80',
+    'heritage': 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1200&q=80',
+    'city': 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=1200&q=80',
+    'eco': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=1200&q=80',
+}
+
+
+def resolve_hotel_image_url(url, category=None):
+    if not url or (isinstance(url, str) and url.startswith('/media/')):
+        return CATEGORY_PRESETS.get(category, DEFAULT_HOTEL_IMAGE)
+    return url
+
 
 class RoomSerializer(serializers.ModelSerializer):
     room_type_name = serializers.CharField(source='room_type.name', read_only=True)
@@ -26,6 +43,18 @@ class RoomTypeSerializer(serializers.ModelSerializer):
 
     def get_available_count(self, obj):
         return obj.rooms.filter(is_active=True, status='available').count()
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        photos = data.get('photos') or []
+        cleaned_photos = []
+        for p in photos:
+            if p and isinstance(p, str) and p.startswith('/media/'):
+                cleaned_photos.append(DEFAULT_ROOM_IMAGE)
+            elif p:
+                cleaned_photos.append(p)
+        data['photos'] = cleaned_photos or [DEFAULT_ROOM_IMAGE]
+        return data
 
 
 class HotelListSerializer(serializers.ModelSerializer):
@@ -75,10 +104,12 @@ class HotelListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if not data.get('image_url'):
+        url = data.get('image_url')
+        if not url:
             first_rt = instance.room_types.first()
             if first_rt and first_rt.photos and len(first_rt.photos) > 0:
-                data['image_url'] = first_rt.photos[0]
+                url = first_rt.photos[0]
+        data['image_url'] = resolve_hotel_image_url(url, instance.category)
         return data
 
 
@@ -101,6 +132,16 @@ class HotelDetailSerializer(serializers.ModelSerializer):
     def get_min_rate(self, obj):
         rates = [rt.base_rate for rt in obj.room_types.all()]
         return min(rates) if rates else None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        url = data.get('image_url')
+        if not url:
+            first_rt = instance.room_types.first()
+            if first_rt and first_rt.photos and len(first_rt.photos) > 0:
+                url = first_rt.photos[0]
+        data['image_url'] = resolve_hotel_image_url(url, instance.category)
+        return data
 
 
 class PlatformHotelSerializer(serializers.ModelSerializer):
@@ -141,6 +182,16 @@ class PlatformHotelSerializer(serializers.ModelSerializer):
     def get_total_bookings(self, obj):
         return obj.bookings.count() if hasattr(obj, 'bookings') else 0
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        url = data.get('image_url')
+        if not url:
+            first_rt = instance.room_types.first()
+            if first_rt and first_rt.photos and len(first_rt.photos) > 0:
+                url = first_rt.photos[0]
+        data['image_url'] = resolve_hotel_image_url(url, instance.category)
+        return data
+
 
 class HotelManageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -155,6 +206,11 @@ class HotelManageSerializer(serializers.ModelSerializer):
             'commission_rate'
         ]
         read_only_fields = ['id', 'slug', 'status', 'rejection_reason', 'commission_rate']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['image_url'] = resolve_hotel_image_url(data.get('image_url'), instance.category)
+        return data
 
 
 class StaffMemberSerializer(serializers.Serializer):

@@ -30,6 +30,7 @@ from .serializers import (
     ReviewSerializer,
 )
 from .audit import log_hotel_activity
+from .storage import upload_image_to_storage, DEFAULT_HOTEL_COVER, DEFAULT_ROOM_PHOTO
 
 User = get_user_model()
 
@@ -304,33 +305,9 @@ class PartnerRegisterView(APIView):
             lng = None
 
         # 4. Process Cover Photo (supports attached file, base64 data URI, or preset/external URL)
-        default_cover = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
-        final_image_url = default_cover
-
         uploaded_image = request.FILES.get('image') or request.FILES.get('cover_photo') or request.FILES.get('image_url')
-        if uploaded_image:
-            ext = os.path.splitext(uploaded_image.name)[1].lower() or '.jpg'
-            if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
-                ext = '.jpg'
-            filename = f"hotels/{uuid.uuid4().hex}{ext}"
-            file_path = default_storage.save(filename, uploaded_image)
-            final_image_url = f"/media/{file_path}"
-        else:
-            raw_image = data.get('image_url', '')
-            if isinstance(raw_image, str) and raw_image.strip():
-                raw_image = raw_image.strip()
-                if raw_image.startswith('data:image/') and ';base64,' in raw_image:
-                    try:
-                        header, b64data = raw_image.split(';base64,', 1)
-                        mime = header.split(';')[0].replace('data:image/', '')
-                        ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
-                        filename = f"hotels/{uuid.uuid4().hex}.{ext}"
-                        file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
-                        final_image_url = f"/media/{file_path}"
-                    except Exception:
-                        final_image_url = default_cover
-                else:
-                    final_image_url = raw_image
+        image_input = uploaded_image or data.get('image_url', '')
+        final_image_url = upload_image_to_storage(image_input, folder="localstay/hotels", default=DEFAULT_HOTEL_COVER)
 
         # 5. Create Hotel Entity with pending status
         hotel = Hotel.objects.create(
@@ -499,24 +476,11 @@ class HotelManageProfileView(APIView):
         data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
         uploaded_image = request.FILES.get('image') or request.FILES.get('cover_photo') or request.FILES.get('image_url')
         if uploaded_image:
-            ext = os.path.splitext(uploaded_image.name)[1].lower() or '.jpg'
-            if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
-                ext = '.jpg'
-            filename = f"hotels/{uuid.uuid4().hex}{ext}"
-            file_path = default_storage.save(filename, uploaded_image)
-            data['image_url'] = f"/media/{file_path}"
+            data['image_url'] = upload_image_to_storage(uploaded_image, folder="localstay/hotels")
         elif 'image_url' in data and isinstance(data['image_url'], str):
             raw_image = data['image_url'].strip()
-            if raw_image.startswith('data:image/') and ';base64,' in raw_image:
-                try:
-                    header, b64data = raw_image.split(';base64,', 1)
-                    mime = header.split(';')[0].replace('data:image/', '')
-                    ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
-                    filename = f"hotels/{uuid.uuid4().hex}.{ext}"
-                    file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
-                    data['image_url'] = f"/media/{file_path}"
-                except Exception:
-                    pass
+            if raw_image.startswith('data:image/') or raw_image.startswith('http'):
+                data['image_url'] = upload_image_to_storage(raw_image, folder="localstay/hotels")
 
         serializer = HotelManageSerializer(hotel, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -745,12 +709,9 @@ class HotelManageRoomTypeView(APIView):
         uploaded_files = request.FILES.getlist('photos') or ([request.FILES.get('photo')] if request.FILES.get('photo') else [])
         for f in uploaded_files:
             if f:
-                ext = os.path.splitext(f.name)[1].lower() or '.jpg'
-                if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
-                    ext = '.jpg'
-                filename = f"rooms/{uuid.uuid4().hex}{ext}"
-                file_path = default_storage.save(filename, f)
-                saved_photos.append(f"/media/{file_path}")
+                url = upload_image_to_storage(f, folder="localstay/rooms", default=DEFAULT_ROOM_PHOTO)
+                if url:
+                    saved_photos.append(url)
 
         # 2. Handle base64 encoded photo or photo list
         raw_photos = data.get('photos', [])
@@ -763,21 +724,12 @@ class HotelManageRoomTypeView(APIView):
         for p in raw_photos:
             if not p:
                 continue
-            if p.startswith('data:image/') and ';base64,' in p:
-                try:
-                    header, b64data = p.split(';base64,', 1)
-                    mime = header.split(';')[0].replace('data:image/', '')
-                    ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
-                    filename = f"rooms/{uuid.uuid4().hex}.{ext}"
-                    file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
-                    saved_photos.append(f"/media/{file_path}")
-                except Exception:
-                    pass
-            elif p.startswith('http://') or p.startswith('https://') or p.startswith('/media/'):
-                saved_photos.append(p)
+            url = upload_image_to_storage(p, folder="localstay/rooms", default=DEFAULT_ROOM_PHOTO)
+            if url:
+                saved_photos.append(url)
 
         if not saved_photos:
-            saved_photos = ['https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80']
+            saved_photos = [DEFAULT_ROOM_PHOTO]
 
         short_stay_enabled = data.get('short_stay_enabled', True)
         if isinstance(short_stay_enabled, str):
@@ -958,12 +910,9 @@ class HotelManageRoomTypeDetailView(APIView):
         uploaded_files = request.FILES.getlist('photos') or ([request.FILES.get('photo')] if request.FILES.get('photo') else [])
         for f in uploaded_files:
             if f:
-                ext = os.path.splitext(f.name)[1].lower() or '.jpg'
-                if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.avif']:
-                    ext = '.jpg'
-                filename = f"rooms/{uuid.uuid4().hex}{ext}"
-                file_path = default_storage.save(filename, f)
-                new_photos.append(f"/media/{file_path}")
+                url = upload_image_to_storage(f, folder="localstay/rooms", default=DEFAULT_ROOM_PHOTO)
+                if url:
+                    new_photos.append(url)
 
         raw_photos = data.get('photos', [])
         if isinstance(raw_photos, str):
@@ -975,18 +924,9 @@ class HotelManageRoomTypeDetailView(APIView):
         for p in raw_photos:
             if not p:
                 continue
-            if p.startswith('data:image/') and ';base64,' in p:
-                try:
-                    header, b64data = p.split(';base64,', 1)
-                    mime = header.split(';')[0].replace('data:image/', '')
-                    ext = 'png' if 'png' in mime else 'webp' if 'webp' in mime else 'jpg'
-                    filename = f"rooms/{uuid.uuid4().hex}.{ext}"
-                    file_path = default_storage.save(filename, ContentFile(base64.b64decode(b64data)))
-                    new_photos.append(f"/media/{file_path}")
-                except Exception:
-                    pass
-            elif p.startswith('http://') or p.startswith('https://') or p.startswith('/media/'):
-                new_photos.append(p)
+            url = upload_image_to_storage(p, folder="localstay/rooms", default=DEFAULT_ROOM_PHOTO)
+            if url:
+                new_photos.append(url)
 
         if new_photos:
             rt.photos = new_photos

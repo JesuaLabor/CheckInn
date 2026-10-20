@@ -217,6 +217,10 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
           <img
             src={hotel.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'}
             alt={hotel.name}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
+            }}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#212529]/95 via-[#212529]/35 to-transparent"></div>
