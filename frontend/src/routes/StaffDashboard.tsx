@@ -828,22 +828,63 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
-  const processCoverPhotoFile = (file: File) => {
+  const compressImage = (file: File, maxDimension = 1920, quality = 0.85): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => {
+        const fallbackReader = new FileReader();
+        fallbackReader.onload = () => resolve(fallbackReader.result as string);
+        fallbackReader.readAsDataURL(file);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const processCoverPhotoFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please upload an image file (PNG, JPG, JPEG, WEBP, AVIF).', 'Invalid File Type');
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      toast.error('Image size must be less than 15MB.', 'File Too Large');
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Image size must be less than 20MB.', 'File Too Large');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setProfileForm((prev) => ({ ...prev, image_url: reader.result as string }));
+    try {
+      toast.info('Optimizing photo for fast upload...');
+      const optimizedDataUrl = await compressImage(file, 1920, 0.85);
+      setProfileForm((prev) => ({ ...prev, image_url: optimizedDataUrl }));
       setHasCustomCoverSelected(true);
-      toast.info('New photo selected! Click "Save Settings" below to publish to Cloudinary.');
-    };
-    reader.readAsDataURL(file);
+      toast.success('Photo ready! Click "Save Settings" below to publish to Cloudinary.');
+    } catch {
+      toast.error('Failed to process image file.');
+    }
   };
 
   const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -875,7 +916,20 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       setHasCustomCoverSelected(false);
       fetchDashboardData();
     } catch (err: any) {
-      const msg = err.response?.data?.error || 'Failed to save settings.';
+      const errData = err.response?.data;
+      let msg = 'Failed to save settings.';
+      if (typeof errData === 'string') {
+        msg = errData;
+      } else if (errData?.error) {
+        msg = errData.error;
+      } else if (errData?.detail) {
+        msg = errData.detail;
+      } else if (errData && typeof errData === 'object') {
+        const firstKey = Object.keys(errData)[0];
+        const firstVal = errData[firstKey];
+        const valText = Array.isArray(firstVal) ? firstVal.join(', ') : String(firstVal);
+        msg = `${firstKey.replace(/_/g, ' ')}: ${valText}`;
+      }
       setActionError(msg);
       toast.error(msg, 'Save Failed');
     } finally {

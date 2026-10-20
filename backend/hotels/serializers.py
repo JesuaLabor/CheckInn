@@ -194,6 +194,8 @@ class PlatformHotelSerializer(serializers.ModelSerializer):
 
 
 class HotelManageSerializer(serializers.ModelSerializer):
+    image_url = serializers.CharField(max_length=2000, required=False, allow_blank=True)
+
     class Meta:
         model = Hotel
         fields = [

@@ -26,9 +26,9 @@ def upload_image_to_storage(image_input, folder="localstay/hotels", default=DEFA
         return image_input
 
     # 2. Check if Cloudinary credentials are configured
-    cloud_name = getattr(settings, 'CLOUDINARY_CLOUD_NAME', '') or os.environ.get('CLOUDINARY_CLOUD_NAME', '')
-    api_key = getattr(settings, 'CLOUDINARY_API_KEY', '') or os.environ.get('CLOUDINARY_API_KEY', '')
-    api_secret = getattr(settings, 'CLOUDINARY_API_SECRET', '') or os.environ.get('CLOUDINARY_API_SECRET', '')
+    cloud_name = str(getattr(settings, 'CLOUDINARY_CLOUD_NAME', '') or os.environ.get('CLOUDINARY_CLOUD_NAME', '')).strip().strip('"\'')
+    api_key = str(getattr(settings, 'CLOUDINARY_API_KEY', '') or os.environ.get('CLOUDINARY_API_KEY', '')).strip().strip('"\'')
+    api_secret = str(getattr(settings, 'CLOUDINARY_API_SECRET', '') or os.environ.get('CLOUDINARY_API_SECRET', '')).strip().strip('"\'')
 
     has_cloudinary = bool(cloud_name and api_key and api_secret)
 
@@ -55,13 +55,14 @@ def upload_image_to_storage(image_input, folder="localstay/hotels", default=DEFA
                 upload_target,
                 folder=folder,
                 resource_type="image",
+                overwrite=True,
             )
             secure_url = res.get('secure_url') or res.get('url')
             if secure_url:
                 logger.info(f"[Cloudinary] Image uploaded successfully: {secure_url}")
                 return secure_url
         except Exception as e:
-            logger.error(f"[Cloudinary] Upload failed: {e}. Falling back to default storage.")
+            logger.exception(f"[Cloudinary] Upload failed: {e}. Falling back to storage fallback.")
 
     # 3. Fallback: Base64 string decoding to local storage
     if isinstance(image_input, str):
