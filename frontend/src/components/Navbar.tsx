@@ -273,6 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {isSuperAdmin && (
                 <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-white text-xs font-bold shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <ShieldCheck className="w-3.5 h-3.5 text-[#D49B41]" />
                   <span className="truncate">Platform Governance</span>
                   <span className="text-[10px] text-amber-400 font-extrabold hidden md:inline">
@@ -386,10 +387,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* 3. SUPER ADMIN CENTER NAV */}
             {isSuperAdmin && (
-              <nav className="hidden md:flex items-center gap-1 sm:gap-1.5">
+              <nav className="hidden md:flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={() => onNavigate('platform_admin', undefined, 'verifications')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'platform_admin' && (!currentSubTab || currentSubTab === 'verifications' || currentSubTab === 'pending' || currentSubTab === 'approved')
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
@@ -402,7 +403,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => onNavigate('platform_admin', undefined, 'audit_trail')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'platform_admin' && currentSubTab === 'audit_trail'
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
@@ -410,12 +411,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   title="Platform-wide Security & Multi-Hotel Activity Logs"
                 >
                   <History className={`w-3.5 h-3.5 ${currentTab === 'platform_admin' && currentSubTab === 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-                  <span>Platform Audit Trail</span>
+                  <span>Audit Trail</span>
                 </button>
 
                 <button
                   onClick={() => onNavigate('platform_admin', undefined, 'all')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'platform_admin' && currentSubTab === 'all'
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
@@ -428,7 +429,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => onNavigate('marketplace')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'marketplace'
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
@@ -581,13 +582,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
 
 
-              {/* Superadmin: Live System Status Pill */}
-              {isSuperAdmin && (
-                <div className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/90 text-emerald-900 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Platform Active</span>
-                </div>
-              )}
+
 
               {/* User Profile Pill OR Sign In Button */}
               {user ? (
