@@ -28,11 +28,13 @@ import {
   LayoutGrid,
   Columns2,
   Bed,
+  CloudOff,
 } from 'lucide-react';
 import heroBgImage from '../assets/hero_bg.jpg';
 import { HotelMap, MapBounds } from '../components/HotelMap';
 import { calculateDistanceKm, formatDistance, getCurrentCoordinates, Coordinates } from '../utils/geo';
 import { toast } from '../stores/toastStore';
+import { useNetworkStore } from '../stores/networkStore';
 
 interface HotelWithDistance extends Hotel {
   distance_km?: number | null;
@@ -48,6 +50,7 @@ type ViewMode = 'grid' | 'map' | 'split';
 export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
   const [hotels, setHotels] = useState<HotelWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isServingCached, setIsServingCached] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [guestFilter, setGuestFilter] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -61,10 +64,17 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
   const [showFloatingMapBtn, setShowFloatingMapBtn] = useState(false);
 
   const { formatPrice, currency } = useCurrencyStore();
+  const { isOnline } = useNetworkStore();
 
   useEffect(() => {
     fetchHotels();
   }, [activeCategory, selectedDestination]);
+
+  useEffect(() => {
+    if (isOnline && isServingCached) {
+      fetchHotels();
+    }
+  }, [isOnline]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,6 +104,17 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
       const res = await api.get('/inns/', { params });
       let results: HotelWithDistance[] = res.data.results || res.data || [];
 
+      // Save to localStorage when fetching with default/broad filters so we have the full catalog offline
+      const isDefaultQuery = !searchQuery && !guestFilter && !maxPrice && activeCategory === 'all' && !selectedDestination;
+      if (isDefaultQuery && results.length > 0) {
+        try {
+          localStorage.setItem('localstay_cached_hotels', JSON.stringify(results));
+        } catch (e) {
+          console.warn('Could not cache hotels to localStorage', e);
+        }
+      }
+      setIsServingCached(false);
+
       // If user location is known, attach distances and sort by proximity
       if (userLocation) {
         results = results.map((h) => {
@@ -121,8 +142,89 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
       }
 
       setHotels(results);
-    } catch {
-      console.error('Failed to load hotels');
+    } catch (err) {
+      console.warn('Network request failed, falling back to local cached hotels if available', err);
+      try {
+        const cachedRaw = localStorage.getItem('localstay_cached_hotels');
+        if (cachedRaw) {
+          let cachedList: HotelWithDistance[] = JSON.parse(cachedRaw);
+
+          if (activeCategory !== 'all') {
+            cachedList = cachedList.filter(
+              (h) => (h.category?.toLowerCase() || '') === activeCategory.toLowerCase()
+            );
+          }
+          if (selectedDestination) {
+            const dest = selectedDestination.toLowerCase();
+            cachedList = cachedList.filter(
+              (h) =>
+                (h.city || '').toLowerCase().includes(dest) ||
+                (h.province || '').toLowerCase().includes(dest)
+            );
+          }
+          if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            cachedList = cachedList.filter(
+              (h) =>
+                (h.name || '').toLowerCase().includes(q) ||
+                (h.city || '').toLowerCase().includes(q) ||
+                (h.description || '').toLowerCase().includes(q)
+            );
+          }
+          if (guestFilter) {
+            const g = parseInt(guestFilter, 10);
+            if (!isNaN(g)) {
+              cachedList = cachedList.filter((h) => {
+                if (h.room_types_summary && h.room_types_summary.length > 0) {
+                  return h.room_types_summary.some((rt) => rt.capacity >= g);
+                }
+                return true;
+              });
+            }
+          }
+          if (maxPrice) {
+            const max = parseFloat(maxPrice);
+            if (!isNaN(max)) {
+              cachedList = cachedList.filter((h) => {
+                const price = Number(h.min_rate || 0);
+                return price > 0 ? price <= max : true;
+              });
+            }
+          }
+
+          if (userLocation) {
+            cachedList = cachedList.map((h) => {
+              if (h.latitude !== null && h.latitude !== undefined && h.longitude !== null && h.longitude !== undefined) {
+                const dist = calculateDistanceKm(
+                  userLocation.lat,
+                  userLocation.lng,
+                  Number(h.latitude),
+                  Number(h.longitude)
+                );
+                return { ...h, distance_km: dist };
+              }
+              return { ...h, distance_km: null };
+            });
+
+            cachedList.sort((a, b) => {
+              if (a.distance_km === null) return 1;
+              if (b.distance_km === null) return -1;
+              return (a.distance_km || 0) - (b.distance_km || 0);
+            });
+
+            if (cachedList.length > 0 && cachedList[0].distance_km !== null) {
+              setNearestHotelId(cachedList[0].id);
+            }
+          }
+
+          setHotels(cachedList);
+          setIsServingCached(true);
+        } else {
+          setHotels([]);
+        }
+      } catch {
+        setHotels([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -474,6 +576,30 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
                 <p className="text-[11px] text-slate-500 leading-snug">Scan at the front desk for fast, paperless check-in.</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Offline Cache Indicator Banner */}
+        {(!isOnline || isServingCached) && (
+          <div className="mb-6 flex items-center justify-between bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 sm:px-5 sm:py-3 text-amber-900 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-300/50 flex items-center justify-center shrink-0">
+                <CloudOff className="w-4 h-4 text-amber-700" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-amber-950">
+                  Offline Mode Active
+                </p>
+                <p className="text-[11px] text-amber-800/90 leading-tight">
+                  Showing saved stays and room info. Connecting to the internet is required for new bookings and payments.
+                </p>
+              </div>
+            </div>
+            {isServingCached && (
+              <span className="hidden md:inline-flex text-[10px] uppercase tracking-wider font-extrabold bg-amber-200/70 border border-amber-300 text-amber-900 px-2.5 py-1 rounded-full">
+                Saved Offline
+              </span>
+            )}
           </div>
         )}
 

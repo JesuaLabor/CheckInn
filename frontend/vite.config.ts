@@ -113,7 +113,7 @@ export default defineConfig({
             options: {
               cacheName: 'hotel-images-cache',
               expiration: {
-                maxEntries: 50,
+                maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {
@@ -122,14 +122,28 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /\/api\/v1\/inns\/.*/i,
+            urlPattern: /^https?:\/\/.*\/media\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'hotel-media-uploads-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https?:\/\/.*\/api\/v1\/inns\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-inns-cache',
-              networkTimeoutSeconds: 4,
+              networkTimeoutSeconds: 3,
               expiration: {
-                maxEntries: 30,
-                maxAgeSeconds: 60 * 60 * 24
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7
               },
               cacheableResponse: {
                 statuses: [0, 200]

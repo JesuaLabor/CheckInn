@@ -9,6 +9,7 @@ import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { ToastContainer } from './components/ToastContainer';
 import { ConfirmModal } from './components/ConfirmModal';
 import { toast } from './stores/toastStore';
+import { useNetworkStore } from './stores/networkStore';
 import { Marketplace } from './routes/Marketplace';
 import { InnDetail } from './routes/InnDetail';
 import { GuestPortal } from './routes/GuestPortal';
@@ -34,9 +35,11 @@ export function App() {
 
   useEffect(() => {
     loadUser();
+    const cleanupNetwork = useNetworkStore.getState().initNetworkListeners();
     if (window.location.hash === '#login') {
       setIsAuthOpen(true);
     }
+    return cleanupNetwork;
   }, []);
 
   useEffect(() => {

@@ -21,7 +21,10 @@ import {
   Bed,
   Wind,
   Coffee,
+  CloudOff,
 } from 'lucide-react';
+import { useNetworkStore } from '../stores/networkStore';
+import { toast } from '../stores/toastStore';
 
 interface InnDetailProps {
   slug: string;
@@ -33,6 +36,9 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
   const [hotel, setHotel] = useState<Hotel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isServingCached, setIsServingCached] = useState(false);
+
+  const { isOnline } = useNetworkStore();
 
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -66,6 +72,12 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
     fetchHotelDetail();
   }, [slug]);
 
+  useEffect(() => {
+    if (isOnline && isServingCached) {
+      fetchHotelDetail();
+    }
+  }, [isOnline]);
+
   const fetchHotelDetail = async () => {
     setLoading(true);
     setError('');
@@ -76,8 +88,47 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
       ]);
       setHotel(resHotel.data);
       setReviews(resReviews.data?.reviews || []);
-    } catch {
-      setError('Failed to load lodging details.');
+      setIsServingCached(false);
+
+      // Cache details in localStorage for offline access
+      try {
+        localStorage.setItem(
+          `localstay_cached_inn_${slug}`,
+          JSON.stringify({
+            hotel: resHotel.data,
+            reviews: resReviews.data?.reviews || [],
+          })
+        );
+      } catch (e) {
+        console.warn('Could not cache inn detail to localStorage', e);
+      }
+    } catch (err) {
+      console.warn('Network request failed, attempting offline cache for:', slug, err);
+      try {
+        const cachedRaw = localStorage.getItem(`localstay_cached_inn_${slug}`);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw);
+          setHotel(parsed.hotel);
+          setReviews(parsed.reviews || []);
+          setIsServingCached(true);
+        } else {
+          // Fallback 2: Check if hotel exists in marketplace catalog cache
+          const catalogRaw = localStorage.getItem('localstay_cached_hotels');
+          if (catalogRaw) {
+            const catalog: Hotel[] = JSON.parse(catalogRaw);
+            const matched = catalog.find((h) => h.slug === slug);
+            if (matched) {
+              setHotel(matched);
+              setReviews([]);
+              setIsServingCached(true);
+              return;
+            }
+          }
+          setError('Failed to load lodging details. Please check your internet connection.');
+        }
+      } catch {
+        setError('Failed to load lodging details.');
+      }
     } finally {
       setLoading(false);
     }
@@ -98,6 +149,10 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
   const nights = calculateNights();
 
   const handleReserve = (roomType: RoomType, stayType?: 'nightly' | 'hourly') => {
+    if (!navigator.onLine || !isOnline) {
+      toast.warning('Reservation and deposit payment require an internet connection. Please reconnect to book.', 'Offline Mode');
+      return;
+    }
     if (!hotel) return;
     openBookingModal(hotel, roomType, { checkIn, checkOut, guests, stayType: stayType || 'nightly' });
   };
@@ -143,10 +198,17 @@ export const InnDetail: React.FC<InnDetailProps> = ({ slug, onBack }) => {
           <span>Back to All Lodgings</span>
         </button>
 
-        <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A2B] bg-[#3B5E43]/15 px-3 py-1.5 rounded-full border border-[#3B5E43]/30">
-          <span className="w-2 h-2 rounded-full bg-[#3B5E43] animate-pulse"></span>
-          <span>Live Front Desk Online</span>
-        </div>
+        {!isOnline || isServingCached ? (
+          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-500/15 px-3 py-1.5 rounded-full border border-amber-500/30">
+            <CloudOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span>Offline Mode — Saved Details</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A2B] bg-[#3B5E43]/15 px-3 py-1.5 rounded-full border border-[#3B5E43]/30">
+            <span className="w-2 h-2 rounded-full bg-[#3B5E43] animate-pulse"></span>
+            <span>Live Front Desk Online</span>
+          </div>
+        )}
       </div>
 
       {/* Hero Showcase Card */}
