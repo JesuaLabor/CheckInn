@@ -247,14 +247,27 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
 
               {isHotelAdmin && (
-                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-[#D49B41]/40 text-[#8F611A] text-xs font-bold shadow-2xs">
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50/80 border border-[#D49B41]/40 text-[#8F611A] text-xs font-bold shadow-2xs">
                   <span className="text-[11px]">👑</span>
-                  <span className="max-w-[130px] md:max-w-[190px] truncate">
+                  <span className="max-w-[120px] lg:max-w-[170px] truncate">
                     {user.hotel_name || 'Property'}
                   </span>
-                  <span className="text-[10px] text-[#8F611A]/80 font-medium hidden md:inline">
+                  <span className="text-[10px] text-[#8F611A]/80 font-medium hidden lg:inline">
                     • Owner Portal
                   </span>
+                  {user.hotel_slug && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigate('inn_detail', user.hotel_slug);
+                      }}
+                      className="ml-0.5 p-0.5 rounded-md hover:bg-amber-100/80 text-[#8F611A] transition-colors cursor-pointer"
+                      title="View Live Public Listing"
+                    >
+                      <ExternalLink className="w-3 h-3 text-[#D49B41]" />
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -329,10 +342,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* 2. HOTEL OWNER / ADMIN CENTER NAV */}
             {isHotelAdmin && (
-              <nav className="hidden md:flex items-center gap-1 sm:gap-1.5">
+              <nav className="hidden md:flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={() => onNavigate('staff_dashboard', undefined, 'pending')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'staff_dashboard' && (!currentSubTab || currentSubTab === 'pending' || currentSubTab === 'rooms' || currentSubTab === 'checkin' || currentSubTab === 'requests')
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
@@ -345,7 +358,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => onNavigate('staff_dashboard', undefined, 'inventory_manage')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'staff_dashboard' && currentSubTab === 'inventory_manage'
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
@@ -358,7 +371,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => onNavigate('staff_dashboard', undefined, 'reports')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
+                  className={`whitespace-nowrap flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
                     currentTab === 'staff_dashboard' && currentSubTab === 'reports'
                       ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
                       : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
@@ -566,23 +579,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               )}
 
-              {/* Hotel Owner: View Public Listing Quick Button */}
-              {isHotelAdmin && (
-                <button
-                  onClick={() => {
-                    if (user.hotel_slug) {
-                      onNavigate('inn_detail', user.hotel_slug);
-                    } else {
-                      onNavigate('marketplace');
-                    }
-                  }}
-                  className="hidden sm:inline-flex items-center gap-1.5 bg-white border border-slate-200 hover:border-[#1E3A2B] text-slate-700 hover:text-[#1E3A2B] text-xs font-bold px-3 py-2 rounded-xl shadow-2xs transition-all active:scale-95 shrink-0"
-                  title="View your public hotel listing page"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-[#D49B41]" />
-                  <span>View Live Listing</span>
-                </button>
-              )}
+
 
               {/* Superadmin: Live System Status Pill */}
               {isSuperAdmin && (
