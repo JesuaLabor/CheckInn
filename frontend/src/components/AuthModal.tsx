@@ -151,7 +151,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         {/* Header - Fixed & Pinned */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[#E8E2D8]/70 shrink-0 bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden shadow-sm border border-[#E8E2D8] bg-[#FAF8F5] flex items-center justify-center shrink-0 group">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden shadow-sm border border-[#D8D1C4]/90 flex items-center justify-center shrink-0 group">
               <img
                 src={localstayIcon}
                 alt="LocalStay"
