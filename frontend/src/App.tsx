@@ -7,6 +7,7 @@ import { SupportModal } from './components/SupportModal';
 import { BookingModal } from './components/BookingModal';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { ToastContainer } from './components/ToastContainer';
+import { ConfirmModal } from './components/ConfirmModal';
 import { toast } from './stores/toastStore';
 import { Marketplace } from './routes/Marketplace';
 import { InnDetail } from './routes/InnDetail';
@@ -259,6 +260,9 @@ export function App() {
 
       {/* Global Toast Notification System */}
       <ToastContainer />
+
+      {/* Universal Responsive Confirmation Modal */}
+      <ConfirmModal />
     </div>
   );
 }

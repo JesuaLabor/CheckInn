@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Booking, GuestRequest } from '../types';
 import { useAuthStore } from '../stores/authStore';
+import { toast } from '../stores/toastStore';
 import { QRCodeModal } from '../components/QRCodeModal';
 import {
   CalendarCheck,
@@ -83,7 +84,7 @@ export const GuestPortal: React.FC = () => {
         fetchMyBookings();
       }, 1500);
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to submit rating.');
+      toast.error(err.response?.data?.detail || 'Failed to submit rating.', 'Rating Failed');
     } finally {
       setSubmittingRating(false);
     }
@@ -139,7 +140,7 @@ export const GuestPortal: React.FC = () => {
         fetchMyBookings();
       }, 1500);
     } catch {
-      alert('Failed to submit service request.');
+      toast.error('Failed to submit service request.', 'Request Failed');
     } finally {
       setSubmittingService(false);
     }
@@ -647,12 +648,12 @@ export const GuestPortal: React.FC = () => {
                   const res = await api.post(`/bookings/${cancellingBooking.id}/cancel/`, {
                     reason: cancelReason || 'Personal cancellation by guest.',
                   });
-                  alert(res.data.message || 'Reservation cancelled.');
+                  toast.success(res.data.message || 'Reservation cancelled.', 'Reservation Cancelled');
                   setCancellingBooking(null);
                   setCancelReason('');
                   fetchMyBookings();
                 } catch (err: any) {
-                  alert(err.response?.data?.detail || 'Failed to cancel reservation.');
+                  toast.error(err.response?.data?.detail || 'Failed to cancel reservation.', 'Cancellation Failed');
                 } finally {
                   setCancelLoading(false);
                 }

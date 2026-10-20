@@ -188,7 +188,7 @@ export const Marketplace: React.FC<MarketplaceProps> = ({ onSelectHotel }) => {
         section.scrollIntoView({ behavior: 'smooth' });
       }
     } catch {
-      alert('Could not determine your location. Please ensure location permissions are granted in your browser.');
+      toast.error('Could not determine your location. Please ensure location permissions are granted in your browser.', 'Location Access');
     } finally {
       setLocating(false);
     }

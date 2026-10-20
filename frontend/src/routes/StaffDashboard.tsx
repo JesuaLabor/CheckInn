@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/toastStore';
+import { confirmModal } from '../stores/confirmStore';
 import { WalkInModal } from '../components/WalkInModal';
 import { CameraQRScannerModal } from '../components/CameraQRScannerModal';
 import { LocationPickerMap } from '../components/LocationPickerMap';
@@ -452,14 +453,32 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
-  const handleDeleteStaff = async (staffId: number | string) => {
-    if (!confirm('Are you sure you want to deactivate this staff account?')) return;
+  const handleDeleteStaff = async (staffId: number | string, staffName?: string) => {
+    const targetMember = staffList.find((s) => s.id === staffId);
+    const displayName =
+      staffName ||
+      (targetMember
+        ? targetMember.first_name
+          ? `${targetMember.first_name} ${targetMember.last_name || ''}`.trim()
+          : targetMember.username
+        : 'this staff account');
+
+    const confirmed = await confirmModal({
+      title: 'Deactivate Staff Account',
+      message: `Are you sure you want to deactivate ${displayName}? They will immediately lose access to front desk check-in, walk-in registration, and hotel operations.`,
+      confirmText: 'Deactivate Staff',
+      cancelText: 'Keep Account',
+      variant: 'danger',
+      icon: 'user-x',
+    });
+    if (!confirmed) return;
+
     try {
       await api.delete(`/hotel-manage/staff/${staffId}/`);
-      setActionSuccess('Staff member deactivated.');
+      toast.success(`Staff account "${displayName}" deactivated.`, 'Account Deactivated');
       fetchDashboardData();
     } catch (err: any) {
-      setActionError(err.response?.data?.error || 'Failed to remove staff member.');
+      toast.error(err.response?.data?.error || 'Failed to remove staff member.', 'Deactivation Failed');
     }
   };
 
@@ -664,9 +683,16 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   };
 
   const handleDeleteRoomType = async (rt: RoomType) => {
-    if (!window.confirm(`Are you sure you want to delete room category "${rt.name}"? This action cannot be undone.`)) {
-      return;
-    }
+    const confirmed = await confirmModal({
+      title: 'Delete Room Category',
+      message: `Are you sure you want to delete room category "${rt.name}"? This action cannot be undone and will permanently remove all associated rates and unit assignments.`,
+      confirmText: 'Delete Category',
+      cancelText: 'Keep Category',
+      variant: 'danger',
+      icon: 'trash',
+    });
+    if (!confirmed) return;
+
     try {
       await api.delete(`/hotel-manage/room-types/${rt.id}/`);
       toast.success(`Room category "${rt.name}" deleted.`, 'Category Deleted');
@@ -712,9 +738,16 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
   };
 
   const handleDeleteRoom = async (rm: Room) => {
-    if (!window.confirm(`Are you sure you want to delete Room "${rm.room_number}"?`)) {
-      return;
-    }
+    const confirmed = await confirmModal({
+      title: 'Delete Room Unit',
+      message: `Are you sure you want to delete Room "${rm.room_number}"? Active or upcoming guest reservations assigned to this unit should be reassigned first.`,
+      confirmText: 'Delete Room',
+      cancelText: 'Keep Room',
+      variant: 'danger',
+      icon: 'trash',
+    });
+    if (!confirmed) return;
+
     try {
       await api.delete(`/hotel-manage/rooms/${rm.id}/`);
       toast.success(`Room "${rm.room_number}" deleted from inventory.`, 'Room Deleted');
@@ -864,7 +897,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
     }
   };
 
-  const handleCheckOut = (bookingId: number | string, occupant?: any, roomNumber?: string) => {
+  const handleCheckOut = async (bookingId: number | string, occupant?: any, roomNumber?: string) => {
     if (occupant) {
       setCheckoutModal({
         bookingId,
@@ -879,7 +912,15 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
       return;
     }
     // Fallback if occupant info not passed
-    if (!window.confirm('Confirm checkout for this guest? Room will be flagged for cleaning.')) return;
+    const confirmed = await confirmModal({
+      title: 'Confirm Guest Checkout',
+      message: 'Confirm checkout for this guest? The room will immediately be flagged for housekeeping and sanitation inspection.',
+      confirmText: 'Complete Checkout',
+      cancelText: 'Keep Checked In',
+      variant: 'primary',
+      icon: 'check',
+    });
+    if (!confirmed) return;
     performCheckoutDirect(bookingId);
   };
 
@@ -1787,8 +1828,15 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({
 
                     {member.id !== user?.id && member.role === 'staff' && (
                       <button
-                        onClick={() => handleDeleteStaff(member.id)}
-                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        onClick={() =>
+                          handleDeleteStaff(
+                            member.id,
+                            member.first_name
+                              ? `${member.first_name} ${member.last_name || ''}`.trim()
+                              : member.username
+                          )
+                        }
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Deactivate staff member"
                       >
                         <Trash2 className="w-4 h-4" />

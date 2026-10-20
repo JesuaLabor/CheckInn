@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { toast } from '../stores/toastStore';
 import {
   MapPin,
   Navigation,
@@ -247,7 +248,7 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
   // Device GPS Geolocation
   const handleUseCurrentGPS = () => {
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+      toast.warning('Geolocation is not supported by your browser.', 'Location Unavailable');
       return;
     }
 
@@ -266,7 +267,7 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
       (err) => {
         console.warn('Geolocation error:', err.message);
         setIsLocating(false);
-        alert('Could not retrieve device location. Please enable location permissions or click manually on the map.');
+        toast.error('Could not retrieve device location. Please enable location permissions or click manually on the map.', 'Location Error');
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
