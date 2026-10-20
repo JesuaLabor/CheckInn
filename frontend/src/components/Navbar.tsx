@@ -368,32 +368,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <TrendingUp className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'reports' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
                   <span>Analytics</span>
                 </button>
-
-                <button
-                  onClick={() => onNavigate('staff_dashboard', undefined, 'staff_manage')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
-                    currentTab === 'staff_dashboard' && currentSubTab === 'staff_manage'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
-                  }`}
-                  title="Staff Accounts & Role Permissions"
-                >
-                  <Users className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'staff_manage' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-                  <span>Staff Team</span>
-                </button>
-
-                <button
-                  onClick={() => onNavigate('staff_dashboard', undefined, 'audit_trail')}
-                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs transition-all ${
-                    currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail'
-                      ? 'bg-[#1E3A2B] text-white shadow-xs font-extrabold'
-                      : 'text-slate-700 hover:text-[#1E3A2B] hover:bg-[#1E3A2B]/5 font-bold'
-                  }`}
-                  title="Immutable Activity Log & Rate Changes"
-                >
-                  <History className={`w-3.5 h-3.5 ${currentTab === 'staff_dashboard' && currentSubTab === 'audit_trail' ? 'text-[#D49B41]' : 'text-slate-500'}`} />
-                  <span>Audit Trail</span>
-                </button>
               </nav>
             )}
 
