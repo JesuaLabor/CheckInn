@@ -6,6 +6,8 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+    hotel = serializers.SerializerMethodField()
     hotel_name = serializers.CharField(source='hotel.name', read_only=True)
     hotel_slug = serializers.CharField(source='hotel.slug', read_only=True)
 
@@ -16,6 +18,17 @@ class UserSerializer(serializers.ModelSerializer):
             'role', 'hotel', 'hotel_name', 'hotel_slug', 'phone_number'
         ]
         read_only_fields = ['id', 'role', 'hotel', 'hotel_name', 'hotel_slug']
+
+    def get_id(self, obj):
+        return str(obj.id) if obj.id is not None else None
+
+    def get_hotel(self, obj):
+        try:
+            if obj.hotel_id:
+                return str(obj.hotel_id)
+        except Exception:
+            pass
+        return None
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -45,10 +58,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['role'] = user.role
         token['email'] = user.email
-        if user.hotel:
-            token['hotel_id'] = user.hotel.id
-            token['hotel_name'] = user.hotel.name
-            token['hotel_slug'] = user.hotel.slug
+        try:
+            if user.hotel:
+                token['hotel_id'] = str(user.hotel.id)
+                token['hotel_name'] = str(user.hotel.name)
+                token['hotel_slug'] = str(user.hotel.slug)
+        except Exception:
+            pass
         return token
 
     def validate(self, attrs):

@@ -40,8 +40,8 @@ urlpatterns = [
     path('hotel-manage/staff/', HotelManageStaffView.as_view(), name='hotel_manage_staff'),
     path('hotel-manage/staff/<str:pk>/', HotelManageStaffDetailView.as_view(), name='hotel_manage_staff_detail'),
     path('hotel-manage/room-types/', HotelManageRoomTypeView.as_view(), name='hotel_manage_room_types'),
-    path('hotel-manage/room-types/<int:pk>/', HotelManageRoomTypeDetailView.as_view(), name='hotel_manage_room_type_detail'),
+    path('hotel-manage/room-types/<str:pk>/', HotelManageRoomTypeDetailView.as_view(), name='hotel_manage_room_type_detail'),
     path('hotel-manage/rooms/', HotelManageRoomView.as_view(), name='hotel_manage_rooms'),
-    path('hotel-manage/rooms/<int:pk>/', HotelManageRoomDetailView.as_view(), name='hotel_manage_room_detail'),
+    path('hotel-manage/rooms/<str:pk>/', HotelManageRoomDetailView.as_view(), name='hotel_manage_room_detail'),
     path('hotel-manage/audit-logs/', HotelAuditLogListView.as_view(), name='hotel_manage_audit_logs'),
 ]

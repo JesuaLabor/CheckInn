@@ -158,7 +158,7 @@ class HotelManageSerializer(serializers.ModelSerializer):
 
 
 class StaffMemberSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+    id = serializers.CharField(read_only=True)
     username = serializers.CharField(max_length=150)
     email = serializers.EmailField(required=False, allow_blank=True)
     first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)

@@ -563,7 +563,7 @@ class HotelManageStaffView(APIView):
         staff_users = User.objects.filter(hotel=hotel, role__in=['staff', 'admin']).order_by('-date_joined')
         data = [
             {
-                'id': u.id,
+                'id': str(u.id),
                 'username': u.username,
                 'email': u.email,
                 'first_name': u.first_name,
@@ -623,7 +623,7 @@ class HotelManageStaffView(APIView):
         return Response({
             'message': f'Staff member "{staff_user.username}" registered successfully.',
             'staff': {
-                'id': staff_user.id,
+                'id': str(staff_user.id),
                 'username': staff_user.username,
                 'email': staff_user.email,
                 'first_name': staff_user.first_name,
@@ -678,7 +678,7 @@ class HotelManageStaffDetailView(APIView):
             return Response({
                 'message': f'Staff member "{full_name}" {status_text} successfully.',
                 'staff': {
-                    'id': staff_user.id,
+                    'id': str(staff_user.id),
                     'username': staff_user.username,
                     'is_active': staff_user.is_active,
                 }
